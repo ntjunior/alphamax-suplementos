@@ -47,9 +47,9 @@ a { text-decoration: none; color: inherit; }
 /* ===== HEADER ===== */
 .store-header {
   position: sticky; top: 0; z-index: 100;
-  background: var(--navy);
-  border-bottom: 1px solid rgba(255,255,255,0.06);
-  backdrop-filter: blur(12px);
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.07);
 }
 .store-header-inner {
   max-width: 1320px; margin: 0 auto; padding: 0 28px;
@@ -64,16 +64,16 @@ a { text-decoration: none; color: inherit; }
 .store-search { flex: 1; position: relative; max-width: 580px; }
 .store-search input {
   width: 100%; padding: 12px 48px 12px 20px;
-  border: 1.5px solid rgba(255,255,255,0.1); border-radius: 10px;
-  font-size: 14px; background: rgba(255,255,255,0.07);
-  color: #fff; outline: none; transition: all 0.25s;
+  border: 1.5px solid var(--border); border-radius: 10px;
+  font-size: 14px; background: var(--bg);
+  color: var(--text); outline: none; transition: all 0.25s;
   font-family: inherit;
 }
-.store-search input::placeholder { color: rgba(255,255,255,0.4); }
-.store-search input:focus { border-color: var(--red); background: rgba(255,255,255,0.1); }
+.store-search input::placeholder { color: var(--text-muted); }
+.store-search input:focus { border-color: var(--red); background: #fff; }
 .store-search-icon {
   position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
-  color: rgba(255,255,255,0.45); display: flex; cursor: pointer;
+  color: var(--text-muted); display: flex; cursor: pointer;
 }
 .btn-cart {
   background: var(--red); color: #fff;
@@ -92,13 +92,13 @@ a { text-decoration: none; color: inherit; }
   display: flex; align-items: center; justify-content: center;
 }
 .btn-admin {
-  font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6);
-  border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
-  padding: 10px 16px; background: rgba(255,255,255,0.04); cursor: pointer;
+  font-size: 13px; font-weight: 600; color: var(--text-muted);
+  border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 10px 16px; background: none; cursor: pointer;
   white-space: nowrap; display: flex; align-items: center; gap: 6px;
   text-decoration: none; transition: all 0.2s; font-family: inherit;
 }
-.btn-admin:hover { color: #fff; border-color: rgba(255,255,255,0.35); background: rgba(255,255,255,0.08); }
+.btn-admin:hover { color: var(--red); border-color: var(--red); background: #fff3f3; }
 
 /* ===== CATEGORY NAV ===== */
 .cat-nav {
