@@ -160,9 +160,13 @@ a { text-decoration: none; color: inherit; }
   width: 60px; height: 2px; background: var(--red);
 }
 .cat-section-title {
-  font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 8px;
+  font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 10px;
 }
-.cat-section-title .cat-emoji { font-size: 22px; }
+.cat-icon {
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--navy); color: #fff;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 .btn-ver-todos {
   font-size: 13px; font-weight: 600; color: var(--red);
   border: 1px solid var(--red); border-radius: 6px;
@@ -254,7 +258,12 @@ a { text-decoration: none; color: inherit; }
   display: flex; gap: 12px; padding: 14px 0;
   border-bottom: 1px solid var(--border); align-items: flex-start;
 }
-.cart-item-emoji { font-size: 30px; flex-shrink: 0; }
+.cart-item-emoji {
+  font-size: 30px; flex-shrink: 0;
+  width: 56px; height: 56px; border-radius: 8px;
+  background: var(--bg); display: flex; align-items: center; justify-content: center;
+  overflow: hidden; border: 1px solid var(--border);
+}
 .cart-item-data { flex: 1; min-width: 0; }
 .cart-item-nome { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
 .cart-item-preco { font-size: 12px; color: var(--text-muted); }

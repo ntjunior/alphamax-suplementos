@@ -23,18 +23,53 @@ async function fetchProdutos() {
     }));
 }
 
-// ===== EMOJIS POR CATEGORIA =====
+// ===== ÍCONES SVG POR CATEGORIA =====
+const SVG_ICONS = {
+  dumbbell: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4v16"/><path d="M18 4v16"/><path d="M6 8H2"/><path d="M6 16H2"/><path d="M18 8h4"/><path d="M18 16h4"/><path d="M6 8h12"/><path d="M6 16h12"/></svg>`,
+  zap:      `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  flame:    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`,
+  pill:     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>`,
+  dna:      `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 15c6.667-6 13.333 0 20-6"/><path d="M9 22c1.798-1.998 2.518-3.995 2.807-5.993"/><path d="M15 2c-1.798 1.998-2.518 3.995-2.807 5.993"/><path d="m17 6-2.5-2.5"/><path d="m14 8-1-1"/><path d="m7 18 2.5 2.5"/><path d="m10 16 1 1"/><path d="M2 9c6.667 6 13.333 0 20 6"/></svg>`,
+  leaf:     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>`,
+  run:      `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="13" cy="4" r="1"/><path d="M7 21l2-8 3 3 2-4"/><path d="M17 13l-3-3-3-1 3-3 4 1"/></svg>`,
+  wheat:    `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 22 16 8"/><path d="M3.47 12.53 5 11l1.53 1.53a3.5 3.5 0 0 1 0 4.94L5 19l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M7.47 8.53 9 7l1.53 1.53a3.5 3.5 0 0 1 0 4.94L9 15l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M11.47 4.53 13 3l1.53 1.53a3.5 3.5 0 0 1 0 4.94L13 11l-1.53-1.53a3.5 3.5 0 0 1 0-4.94z"/><path d="M20 2h2v2a4 4 0 0 1-4 4h-2V6a4 4 0 0 1 4-4z"/><path d="M11.47 17.47 13 19l-1.53 1.53a3.5 3.5 0 0 1-4.94 0L5 19l1.53-1.53a3.5 3.5 0 0 1 4.94 0z"/></svg>`,
+  weight:   `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><path d="M6.5 8a2 2 0 0 0-1.905 1.46L2.1 18.5A2 2 0 0 0 4 21h16a2 2 0 0 0 1.925-2.54L19.4 9.5A2 2 0 0 0 17.48 8Z"/></svg>`,
+  fish:     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 12c.94-3.46 4.94-6 8.5-6 3.56 0 6.06 2.54 7 6-.94 3.47-3.44 6-7 6s-7.56-2.53-8.5-6Z"/><path d="M18 12v.5"/><path d="M16 17.93a9.77 9.77 0 0 1 0-11.86"/><path d="M7 10.67C7 8 5.58 5.97 2.73 5.5c-1 3.5-.5 6.5 1.27 8.5"/><path d="M10.46 7.26C10.2 5.88 9.17 4.24 8 3h5.8a2 2 0 0 1 1.98 1.67l.23 1.4"/></svg>`,
+  star:     `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`,
+  droplets: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16.3c2.2 0 4-1.83 4-4.05 0-1.16-.57-2.26-1.71-3.19S7.29 6.75 7 5.3c-.29 1.45-1.14 2.84-2.29 3.76S3 11.1 3 12.25c0 2.22 1.8 4.05 4 4.05z"/><path d="M12.56 6.6A10.97 10.97 0 0 0 14 3.02c.5 2.5 2 4.9 4 6.5s3 3.5 3 5.5a6.98 6.98 0 0 1-11.91 4.97"/></svg>`,
+  package:  `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" y1="22" x2="12" y2="12"/></svg>`
+};
+
+function iconCategoria(cat) {
+  if (!cat) return SVG_ICONS.package;
+  const c = cat.toLowerCase();
+  if (c.includes('prote') || c.includes('whey')) return SVG_ICONS.dumbbell;
+  if (c.includes('creat'))   return SVG_ICONS.zap;
+  if (c.includes('pré') || c.includes('pre-') || c.includes('pre ')) return SVG_ICONS.flame;
+  if (c.includes('vitamin')) return SVG_ICONS.pill;
+  if (c.includes('amino'))   return SVG_ICONS.dna;
+  if (c.includes('emagre'))  return SVG_ICONS.run;
+  if (c.includes('carbo'))   return SVG_ICONS.wheat;
+  if (c.includes('hiper') || c.includes('mass') || c.includes('gainer')) return SVG_ICONS.weight;
+  if (c.includes('mega') || c.includes('ômega') || c.includes('omega')) return SVG_ICONS.fish;
+  if (c.includes('colag'))   return SVG_ICONS.star;
+  if (c.includes('hidrat'))  return SVG_ICONS.droplets;
+  return SVG_ICONS.package;
+}
+
 function emojiCategoria(cat) {
-  const mapa = {
-    'Proteína': '💪', 'Whey': '💪', 'Creatina': '⚡', 'Pré-treino': '🔥',
-    'Vitaminas': '🌿', 'Aminoácidos': '🧬', 'Emagrecimento': '🏃',
-    'Carboidratos': '🍌', 'Hipercalórico': '🏋️', 'Barras': '🍫',
-    'Colágeno': '✨', 'Ômega': '🐟'
-  };
   if (!cat) return '🥤';
-  for (const [k, v] of Object.entries(mapa)) {
-    if (cat.toLowerCase().includes(k.toLowerCase())) return v;
-  }
+  const c = cat.toLowerCase();
+  if (c.includes('prote') || c.includes('whey')) return '🥛';
+  if (c.includes('creat'))   return '⚡';
+  if (c.includes('pré') || c.includes('pre'))    return '🔥';
+  if (c.includes('vitamin')) return '💊';
+  if (c.includes('amino'))   return '🔬';
+  if (c.includes('emagre'))  return '🏃';
+  if (c.includes('carbo'))   return '🌾';
+  if (c.includes('hiper') || c.includes('mass')) return '💥';
+  if (c.includes('omega') || c.includes('ômega')) return '🐟';
+  if (c.includes('colag'))   return '✨';
   return '🥤';
 }
 
@@ -108,12 +143,12 @@ function renderProdutos(busca = '') {
 
   cats.forEach(cat => {
     const prods = lista.filter(p => p.categoria === cat);
-    const emoji = emojiCategoria(cat);
+    const icon = iconCategoria(cat);
     html += `
       <section class="cat-section">
         <div class="cat-section-header">
           <div class="cat-section-title">
-            <span class="cat-emoji">${emoji}</span> ${cat}
+            <span class="cat-icon">${icon}</span> ${cat}
             <span style="font-size:13px;color:var(--text-muted);font-weight:400;margin-left:6px;">${prods.length} produto${prods.length !== 1 ? 's' : ''}</span>
           </div>
           <button class="btn-ver-todos" onclick="filtrarCatBtn('${cat}')">Ver todos</button>
@@ -144,8 +179,8 @@ function renderCategorias() {
   const cats = [...new Set(produtos.map(p => p.categoria).filter(Boolean))].sort();
   const container = document.getElementById('store-cats');
   container.innerHTML =
-    `<button class="cat-nav-btn active" onclick="filtrarCat('', this)">🛍️ Todos</button>` +
-    cats.map(c => `<button class="cat-nav-btn" onclick="filtrarCat('${c}', this)">${emojiCategoria(c)} ${c}</button>`).join('');
+    `<button class="cat-nav-btn active" onclick="filtrarCat('', this)">Todos</button>` +
+    cats.map(c => `<button class="cat-nav-btn" onclick="filtrarCat('${c}', this)">${iconCategoria(c)} ${c}</button>`).join('');
 }
 
 function filtrarCat(cat, btn) {
@@ -174,7 +209,7 @@ function adicionarCarrinho(id) {
     if (exist.qty >= p.estoque) { showToast('Quantidade máxima atingida!'); return; }
     exist.qty++;
   } else {
-    carrinho.push({ id: p.id, nome: p.nome, marca: p.marca, preco: p.precoVenda, qty: 1, estoque: p.estoque, categoria: p.categoria });
+    carrinho.push({ id: p.id, nome: p.nome, marca: p.marca, preco: p.precoVenda, qty: 1, estoque: p.estoque, categoria: p.categoria, imagemUrl: p.imagemUrl, emoji: p.emoji });
   }
   atualizarCarrinho();
   showToast(`${p.nome.substring(0,28)}... adicionado!`);
@@ -211,9 +246,13 @@ function atualizarCarrinho() {
   }
 
   footer.style.display = 'block';
-  items.innerHTML = carrinho.map(item => `
+  items.innerHTML = carrinho.map(item => {
+    const thumb = item.imagemUrl
+      ? `<img src="${item.imagemUrl}" alt="${item.nome}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;" onerror="this.parentElement.innerHTML='${emojiCategoria(item.categoria)}'">`
+      : emojiCategoria(item.categoria);
+    return `
     <div class="cart-item-store">
-      <div class="cart-item-emoji">${emojiCategoria(item.categoria)}</div>
+      <div class="cart-item-emoji">${thumb}</div>
       <div class="cart-item-data">
         <div class="cart-item-nome">${item.nome}</div>
         <div class="cart-item-preco">R$ ${item.preco.toFixed(2).replace('.', ',')}</div>
@@ -225,7 +264,7 @@ function atualizarCarrinho() {
       </div>
       <div class="cart-item-subtotal">R$ ${(item.preco * item.qty).toFixed(2).replace('.', ',')}</div>
     </div>
-  `).join('');
+  `;}).join('');
 
   document.getElementById('cart-subtotal').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
   document.getElementById('cart-total').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
