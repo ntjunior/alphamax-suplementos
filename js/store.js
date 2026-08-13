@@ -439,7 +439,7 @@ async function registrarCliente({ nome, telefone, endereco, itens, total }) {
         {
           method: 'PATCH',
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-          body: JSON.stringify({ observacoes: obsAtualizada, updated_at: new Date().toISOString() })
+          body: JSON.stringify({ observacoes: obsAtualizada, origem: 'online', updated_at: new Date().toISOString() })
         }
       );
     } else {
