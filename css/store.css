@@ -411,10 +411,17 @@ a { text-decoration: none; color: inherit; }
   transition: all 0.2s; box-shadow: 0 4px 16px rgba(37,211,102,0.35); font-family: inherit;
 }
 .btn-checkout:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(37,211,102,0.45); }
-.btn-limpar-cart {
-  width: 100%; padding: 10px; background: none; border: 1.5px solid var(--border);
+.btn-continuar-comprando {
+  flex: 1; padding: 10px 12px; background: none; border: 1.5px solid var(--border);
   border-radius: 8px; color: var(--text-muted); font-size: 13px; cursor: pointer;
-  margin-top: 8px; transition: all 0.2s; font-family: inherit;
+  transition: all 0.2s; font-family: inherit; font-weight: 600;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.btn-continuar-comprando:hover { border-color: var(--navy); color: var(--navy); }
+.btn-limpar-cart {
+  padding: 10px 14px; background: none; border: 1.5px solid var(--border);
+  border-radius: 8px; color: var(--text-muted); font-size: 13px; cursor: pointer;
+  transition: all 0.2s; font-family: inherit; display: flex; align-items: center;
 }
 .btn-limpar-cart:hover { border-color: var(--red); color: var(--red); }
 
