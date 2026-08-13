@@ -415,11 +415,11 @@ function enviarWhatsApp() {
 // ===== REGISTRAR CLIENTE NO SUPABASE =====
 async function registrarCliente({ nome, telefone, endereco, itens, total }) {
   try {
-    const tel = telefone.replace(/\D/g, '');
+    const tel = telefone.replace(/\D/g, '').replace(/^0/, '').replace(/^55/, '');
 
-    // Verifica se já existe pelo telefone
+    // Verifica se já existe pelo telefone (normalizado, só dígitos)
     const check = await fetch(
-      `${SUPABASE_URL}/rest/v1/clientes?telefone=ilike.*${tel}*&select=id,nome,observacoes`,
+      `${SUPABASE_URL}/rest/v1/clientes?telefone=ilike.*${tel}*&select=id,nome,observacoes,telefone`,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     const existentes = await check.json();
@@ -427,9 +427,12 @@ async function registrarCliente({ nome, telefone, endereco, itens, total }) {
     const dataHora = new Date().toLocaleString('pt-BR');
     const resumoPedido = `[${dataHora}] Pedido via loja online — Total: R$ ${total}\n${itens}${endereco ? '\nEndereço: ' + endereco : ''}`;
 
-    if (existentes && existentes.length > 0) {
+    // Filtra localmente para garantir match exato nos dígitos
+    const match = (existentes || []).find(c => c.telefone && c.telefone.replace(/\D/g, '').replace(/^0/, '').replace(/^55/, '').includes(tel));
+
+    if (match) {
       // Atualiza observações com novo pedido
-      const cli = existentes[0];
+      const cli = match;
       const obsAtualizada = (cli.observacoes ? cli.observacoes + '\n\n' : '') + resumoPedido;
       await fetch(
         `${SUPABASE_URL}/rest/v1/clientes?id=eq.${cli.id}`,
