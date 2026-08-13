@@ -53,10 +53,10 @@ a { text-decoration: none; color: inherit; }
 }
 .store-header-inner {
   max-width: 1320px; margin: 0 auto; padding: 0 28px;
-  height: 78px; display: flex; align-items: center; gap: 20px;
+  height: 96px; display: flex; align-items: center; gap: 20px;
 }
 .store-logo img {
-  height: 76px; object-fit: contain; display: block;
+  height: 90px; object-fit: contain; display: block;
   transition: opacity 0.2s;
 }
 .store-logo:hover img { opacity: 0.9; }
