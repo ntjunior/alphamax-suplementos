@@ -366,6 +366,12 @@ function showToast(msg) {
   renderProdutos();
   atualizarCarrinho();
 
+  const cats = [...new Set(produtos.map(p => p.categoria).filter(Boolean))];
+  const statP = document.getElementById('stat-produtos');
+  const statC = document.getElementById('stat-cats');
+  if (statP) statP.textContent = produtos.length + '+';
+  if (statC) statC.textContent = cats.length;
+
   document.getElementById('store-busca').addEventListener('input', function() {
     if (this.value) {
       catAtiva = '';
