@@ -163,9 +163,40 @@
           <button class="entrega-btn" onclick="setEntrega('entrega', this)">🚚 Entrega</button>
         </div>
       </div>
-      <div class="store-form-group" id="endereco-group" style="display:none;">
-        <label class="store-form-label">Endereço de Entrega *</label>
-        <textarea id="checkout-endereco" class="store-form-control" placeholder="Rua, número, bairro, cidade..." rows="3" style="resize:vertical;"></textarea>
+      <div id="endereco-group" style="display:none;">
+        <div class="store-form-group">
+          <label class="store-form-label">CEP *</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="text" id="checkout-cep" class="store-form-control" placeholder="00000-000" maxlength="9" oninput="mascaraCep(this)" style="flex:1;">
+            <div id="cep-spinner" style="display:none;color:var(--text-muted);font-size:12px;white-space:nowrap;">⏳ Buscando...</div>
+            <div id="cep-ok" style="display:none;color:#16a34a;font-size:18px;">✓</div>
+            <div id="cep-erro" style="display:none;color:var(--red);font-size:12px;white-space:nowrap;">CEP não encontrado</div>
+          </div>
+        </div>
+        <div class="store-form-group">
+          <label class="store-form-label">Rua / Logradouro</label>
+          <input type="text" id="checkout-rua" class="store-form-control" placeholder="Preenchido automaticamente pelo CEP">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="store-form-group">
+            <label class="store-form-label">Número *</label>
+            <input type="text" id="checkout-numero" class="store-form-control" placeholder="Ex: 123">
+          </div>
+          <div class="store-form-group">
+            <label class="store-form-label">Complemento</label>
+            <input type="text" id="checkout-complemento" class="store-form-control" placeholder="Apto, bloco...">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="store-form-group">
+            <label class="store-form-label">Bairro</label>
+            <input type="text" id="checkout-bairro" class="store-form-control" placeholder="Bairro">
+          </div>
+          <div class="store-form-group">
+            <label class="store-form-label">Cidade / UF</label>
+            <input type="text" id="checkout-cidade" class="store-form-control" placeholder="Cidade - UF">
+          </div>
+        </div>
       </div>
     </div>
     <div class="modal-store-footer">

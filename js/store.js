@@ -287,6 +287,38 @@ function fecharCarrinho() {
   document.getElementById('cart-overlay').classList.remove('open');
 }
 
+// ===== CEP =====
+function mascaraCep(input) {
+  let v = input.value.replace(/\D/g, '').slice(0, 8);
+  if (v.length > 5) v = v.slice(0,5) + '-' + v.slice(5);
+  input.value = v;
+  if (v.replace('-','').length === 8) buscarCep(v.replace('-',''));
+  else {
+    document.getElementById('cep-ok').style.display = 'none';
+    document.getElementById('cep-erro').style.display = 'none';
+  }
+}
+
+async function buscarCep(cep) {
+  const spinner = document.getElementById('cep-spinner');
+  const ok = document.getElementById('cep-ok');
+  const erro = document.getElementById('cep-erro');
+  spinner.style.display = 'block'; ok.style.display = 'none'; erro.style.display = 'none';
+  try {
+    const r = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+    const d = await r.json();
+    spinner.style.display = 'none';
+    if (d.erro) { erro.style.display = 'block'; return; }
+    document.getElementById('checkout-rua').value = d.logradouro || '';
+    document.getElementById('checkout-bairro').value = d.bairro || '';
+    document.getElementById('checkout-cidade').value = `${d.localidade} - ${d.uf}`;
+    ok.style.display = 'block';
+    document.getElementById('checkout-numero').focus();
+  } catch {
+    spinner.style.display = 'none'; erro.style.display = 'block';
+  }
+}
+
 // ===== CHECKOUT =====
 function setEntrega(tipo, btn) {
   entregaTipo = tipo;
@@ -302,6 +334,14 @@ function abrirCheckout() {
   document.getElementById('pedido-resumo-itens').innerHTML = resumo;
   document.getElementById('pedido-resumo-total').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
   fecharCarrinho();
+  document.getElementById('checkout-cep').value = '';
+  document.getElementById('checkout-rua').value = '';
+  document.getElementById('checkout-numero').value = '';
+  document.getElementById('checkout-complemento').value = '';
+  document.getElementById('checkout-bairro').value = '';
+  document.getElementById('checkout-cidade').value = '';
+  document.getElementById('cep-ok').style.display = 'none';
+  document.getElementById('cep-erro').style.display = 'none';
   document.getElementById('modal-checkout').classList.add('open');
 }
 
@@ -315,8 +355,17 @@ function enviarWhatsApp() {
   if (!nome) { document.getElementById('checkout-nome').focus(); showToast('Informe seu nome!'); return; }
   if (!tel) { document.getElementById('checkout-tel').focus(); showToast('Informe seu telefone!'); return; }
 
-  const endereco = entregaTipo === 'entrega' ? document.getElementById('checkout-endereco').value.trim() : '';
-  if (entregaTipo === 'entrega' && !endereco) { document.getElementById('checkout-endereco').focus(); showToast('Informe o endereço!'); return; }
+  let endereco = '';
+  if (entregaTipo === 'entrega') {
+    const cep = document.getElementById('checkout-cep').value.trim();
+    const rua = document.getElementById('checkout-rua').value.trim();
+    const numero = document.getElementById('checkout-numero').value.trim();
+    const complemento = document.getElementById('checkout-complemento').value.trim();
+    const bairro = document.getElementById('checkout-bairro').value.trim();
+    const cidade = document.getElementById('checkout-cidade').value.trim();
+    if (!cep || !numero) { showToast('Informe o CEP e o número!'); return; }
+    endereco = `${rua}, ${numero}${complemento ? ', ' + complemento : ''} — ${bairro}, ${cidade} — CEP: ${cep}`;
+  }
 
   const total = totalCarrinho();
   const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
