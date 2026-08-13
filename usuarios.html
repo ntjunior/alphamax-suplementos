@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Usuários — Suplementos Pro</title>
+  <link rel="stylesheet" href="css/style.css">
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="user-cog"></i> Usuários</div>
+      <div class="page-subtitle" id="usuarios-count-label">Carregando...</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+      <button class="btn btn-primary" onclick="abrirModalUsuario()"><i data-lucide="user-plus"></i> Novo Usuário</button>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <div class="card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Nome</th>
+              <th>Login</th>
+              <th>Perfil</th>
+              <th>Status</th>
+              <th>Cadastrado em</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-usuarios"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Usuário -->
+<div class="modal-overlay" id="modal-usuario">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-usuario-titulo"><i data-lucide="user-plus"></i> Novo Usuário</span>
+      <button class="modal-close" onclick="fecharModal('modal-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="usuario-id">
+      <div class="form-group">
+        <label class="form-label">Nome Completo <span class="required">*</span></label>
+        <input type="text" id="usuario-nome" class="form-control" placeholder="Nome do usuário">
+        <div class="form-error" id="err-usuario-nome">Nome é obrigatório</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Login (usuário) <span class="required">*</span></label>
+          <input type="text" id="usuario-login" class="form-control" placeholder="ex: joao.silva" autocomplete="off">
+          <div class="form-error" id="err-usuario-login">Login é obrigatório</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Perfil <span class="required">*</span></label>
+          <select id="usuario-perfil" class="form-control">
+            <option value="vendedor">Vendedor</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" id="label-senha">Senha <span class="required">*</span></label>
+          <div style="position:relative;">
+            <input type="password" id="usuario-senha" class="form-control" placeholder="Mínimo 4 caracteres" autocomplete="new-password" style="padding-right:42px;">
+            <button type="button" onclick="toggleSenhaModal()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;">
+              <i data-lucide="eye" id="icon-senha-modal" style="width:16px;height:16px;"></i>
+            </button>
+          </div>
+          <div class="form-error" id="err-usuario-senha">Senha é obrigatória (mínimo 4 caracteres)</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select id="usuario-ativo" class="form-control">
+            <option value="1">Ativo</option>
+            <option value="0">Inativo</option>
+          </select>
+        </div>
+      </div>
+      <div id="aviso-senha-edicao" class="hidden" style="font-size:12px;color:var(--text-muted);margin-top:-8px;margin-bottom:8px;">Deixe em branco para manter a senha atual.</div>
+      <div class="form-group">
+        <label class="form-label">Comissão sobre vendas (%)</label>
+        <input type="number" id="usuario-comissao" class="form-control" min="0" max="100" step="0.01" placeholder="0,00 — deixe vazio para sem comissão">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-usuario')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarUsuario()"><i data-lucide="save"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Redefinir Senha -->
+<div class="modal-overlay" id="modal-senha">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title"><i data-lucide="key-round"></i> Redefinir Senha</span>
+      <button class="modal-close" onclick="fecharModal('modal-senha')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-muted);font-size:13px;margin-bottom:16px;">Definindo nova senha para: <strong id="senha-usuario-nome"></strong></p>
+      <div class="form-group">
+        <label class="form-label">Nova Senha <span class="required">*</span></label>
+        <input type="password" id="nova-senha" class="form-control" placeholder="Mínimo 4 caracteres">
+        <div class="form-error" id="err-nova-senha">Senha inválida (mínimo 4 caracteres)</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-senha')">Cancelar</button>
+      <button class="btn btn-primary" onclick="confirmarRedefinirSenha()"><i data-lucide="key-round"></i> Redefinir</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Exclusão -->
+<div class="modal-overlay" id="modal-excluir-usuario">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">Confirmar Exclusão</span>
+      <button class="modal-close" onclick="fecharModal('modal-excluir-usuario')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-dim);">Tem certeza que deseja excluir o usuário <strong id="nome-excluir-usuario"></strong>? Esta ação não pode ser desfeita.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-excluir-usuario')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-excluir-usuario"><i data-lucide="trash-2"></i> Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+<script src="js/usuarios.js"></script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Suplementos Pro</title>
+  <link rel="stylesheet" href="css/style.css">
+  <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body class="login-page">
+
+<div class="login-card">
+  <div class="login-logo">
+    <img src="logo.png" alt="Suplementos Pro" style="max-height:180px;max-width:380px;object-fit:contain;">
+  </div>
+
+  <div class="login-title">Bem-vindo!</div>
+  <div class="login-sub">Entre com seu usuário e senha para continuar.</div>
+
+  <form id="form-login" onsubmit="fazerLogin(event)">
+    <div class="form-group">
+      <label class="form-label">Usuário</label>
+      <input type="text" id="input-login" class="form-control" placeholder="Digite seu usuário" autocomplete="username" value="admin" autofocus>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <div style="position:relative;">
+        <input type="password" id="input-senha" class="form-control" placeholder="Digite sua senha" autocomplete="current-password" style="padding-right:42px;">
+        <button type="button" id="btn-ver-senha" onclick="toggleSenha()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;display:flex;align-items:center;">
+          <i data-lucide="eye" id="icon-ver-senha" style="width:16px;height:16px;"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="login-erro" class="hidden" style="background:rgba(229,57,53,0.1);border:1px solid rgba(229,57,53,0.3);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--red);margin-bottom:16px;">
+      Usuário ou senha incorretos.
+    </div>
+
+    <button type="submit" class="btn btn-primary w-full" style="justify-content:center;padding:12px;font-size:15px;margin-top:4px;">
+      <i data-lucide="log-in"></i> Entrar
+    </button>
+  </form>
+
+</div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/db.js"></script>
+<script>
+  lucide.createIcons();
+
+  (async () => {
+    const form = document.getElementById('form-login');
+    const btn = form.querySelector('button[type=submit]');
+    btn.disabled = true;
+    btn.textContent = 'Conectando...';
+    try {
+      await DB.init();
+    } catch(e) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="log-in"></i> Entrar';
+      document.getElementById('login-erro').textContent = 'Erro ao conectar ao banco de dados. Verifique sua internet.';
+      document.getElementById('login-erro').classList.remove('hidden');
+      lucide.createIcons();
+      return;
+    }
+    btn.disabled = false;
+    btn.innerHTML = '<i data-lucide="log-in"></i> Entrar';
+    lucide.createIcons();
+    if (DB.getUsuarioLogado()) window.location.href = 'index.html';
+  })();
+
+  function fazerLogin(e) {
+    e.preventDefault();
+    const login = document.getElementById('input-login').value.trim();
+    const senha = document.getElementById('input-senha').value;
+    const erro = document.getElementById('login-erro');
+    const user = DB.autenticar(login, senha);
+    if (user) {
+      DB.setUsuarioLogado(user);
+      window.location.href = 'index.html';
+    } else {
+      erro.classList.remove('hidden');
+      document.getElementById('input-senha').value = '';
+      document.getElementById('input-senha').focus();
+    }
+  }
+
+  function toggleSenha() {
+    const input = document.getElementById('input-senha');
+    const icon = document.getElementById('icon-ver-senha');
+    if (input.type === 'password') {
+      input.type = 'text';
+      icon.setAttribute('data-lucide', 'eye-off');
+    } else {
+      input.type = 'password';
+      icon.setAttribute('data-lucide', 'eye');
+    }
+    lucide.createIcons();
+  }
+</script>
+</body>
+</html>

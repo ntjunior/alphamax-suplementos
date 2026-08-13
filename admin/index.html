@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Suplementos Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="../logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title">Dashboard</div>
+      <div class="page-subtitle" id="data-hoje"></div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+      <a href="caixa.html" class="btn btn-secondary btn-sm"><i data-lucide="wallet"></i> Caixa</a>
+      <a href="pdv.html" class="btn btn-primary btn-sm" onclick="if(!DB.getCaixaAberto()){event.preventDefault();App.showToast('Abra o caixa antes de iniciar uma venda!','warning');window.location='caixa.html';}"><i data-lucide="shopping-cart"></i> Iniciar Venda</a>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <div class="grid-4 mb-24" id="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-icon"><i data-lucide="banknote"></i></div>
+        <div class="kpi-label">Vendido Hoje</div>
+        <div class="kpi-value" id="kpi-vendido">R$ 0,00</div>
+        <div class="kpi-sub" id="kpi-vendido-sub">0 vendas hoje</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-icon"><i data-lucide="shopping-cart"></i></div>
+        <div class="kpi-label">Vendas Hoje</div>
+        <div class="kpi-value" id="kpi-qtd">0</div>
+        <div class="kpi-sub" id="kpi-qtd-sub">transações</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-icon"><i data-lucide="target"></i></div>
+        <div class="kpi-label">Ticket Médio</div>
+        <div class="kpi-value" id="kpi-ticket">R$ 0,00</div>
+        <div class="kpi-sub">por venda hoje</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-icon"><i data-lucide="alert-triangle"></i></div>
+        <div class="kpi-label">Estoque Baixo</div>
+        <div class="kpi-value" id="kpi-estoque-baixo">0</div>
+        <div class="kpi-sub">produtos com alerta</div>
+      </div>
+    </div>
+
+    <div class="grid-2 mb-24">
+      <div class="chart-wrapper">
+        <div class="chart-title">Faturamento — Últimos 7 Dias</div>
+        <canvas id="grafico-semana" width="500" height="220"></canvas>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="shopping-cart"></i> Últimas Vendas</span>
+          <a href="relatorios.html" class="btn btn-ghost btn-sm">Ver todas →</a>
+        </div>
+        <div class="table-wrapper">
+          <table id="tabela-ultimas-vendas">
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Cliente</th>
+                <th>Pagamento</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-ultimas-vendas">
+              <tr><td colspan="4" class="empty-state"><div class="empty-state-icon"><i data-lucide="shopping-cart"></i></div><div>Sem vendas</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i data-lucide="alert-triangle"></i> Produtos com Estoque Baixo</span>
+        <a href="estoque.html" class="btn btn-warning btn-sm">Gerenciar Estoque</a>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th>Marca</th>
+              <th>Categoria</th>
+              <th class="text-right">Estoque</th>
+              <th>Status</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-estoque-baixo">
+            <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">Todos os produtos com estoque OK</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script>
+  function carregarDashboard() {
+    const vendas = DB.getVendas();
+    const produtos = DB.getProdutos();
+
+    const vendasHoje = vendas.filter(v => App.isToday(v.createdAt));
+    const totalHoje = vendasHoje.reduce((s, v) => s + v.total, 0);
+    const qtdHoje = vendasHoje.length;
+    const ticket = qtdHoje > 0 ? totalHoje / qtdHoje : 0;
+
+    document.getElementById('kpi-vendido').textContent = App.formatCurrency(totalHoje);
+    document.getElementById('kpi-vendido-sub').textContent = `${qtdHoje} venda${qtdHoje !== 1 ? 's' : ''} hoje`;
+    document.getElementById('kpi-qtd').textContent = qtdHoje;
+    document.getElementById('kpi-qtd-sub').textContent = 'transações';
+    document.getElementById('kpi-ticket').textContent = App.formatCurrency(ticket);
+
+    const baixo = produtos.filter(p => p.estoque < (p.estoqueMin || 10));
+    document.getElementById('kpi-estoque-baixo').textContent = baixo.length;
+
+    const tbody = document.getElementById('tbody-ultimas-vendas');
+    const ultimas = [...vendas].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
+    if (ultimas.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Sem vendas registradas</td></tr>';
+    } else {
+      tbody.innerHTML = ultimas.map(v => `
+        <tr>
+          <td>${App.formatDate(v.createdAt)}</td>
+          <td>${v.clienteNome || 'Consumidor Final'}</td>
+          <td>${App.getPagamentoBadge(v.pagamento)}</td>
+          <td class="text-right font-bold text-red">${App.formatCurrency(v.total)}</td>
+        </tr>
+      `).join('');
+    }
+
+    const tbodyBaixo = document.getElementById('tbody-estoque-baixo');
+    if (baixo.length === 0) {
+      tbodyBaixo.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:24px;">Todos os produtos com estoque OK</td></tr>';
+    } else {
+      tbodyBaixo.innerHTML = baixo.map(p => `
+        <tr>
+          <td>${p.nome}</td>
+          <td>${p.marca || '-'}</td>
+          <td>${p.categoria || '-'}</td>
+          <td class="text-right font-bold">${p.estoque}</td>
+          <td>${App.getStockBadge(p.estoque, p.estoqueMin)}</td>
+          <td><a href="estoque.html" class="btn btn-sm btn-warning">+ Entrada</a></td>
+        </tr>
+      `).join('');
+    }
+
+    const dias = [];
+    const labels = [];
+    const valores = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(hoje);
+      d.setDate(d.getDate() - i);
+      labels.push(d.toLocaleDateString('pt-BR', { weekday: 'short' }).replace('.', ''));
+      const totalDia = vendas
+        .filter(v => {
+          const vd = new Date(v.createdAt);
+          return vd.getDate() === d.getDate() && vd.getMonth() === d.getMonth() && vd.getFullYear() === d.getFullYear();
+        })
+        .reduce((s, v) => s + v.total, 0);
+      valores.push(totalDia);
+    }
+
+    App.drawBarChart('grafico-semana', labels, valores);
+  }
+
+  (async () => {
+    await App.initPage('dashboard');
+    const hoje = new Date();
+    document.getElementById('data-hoje').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    carregarDashboard();
+  })();
+</script>
+</body>
+</html>

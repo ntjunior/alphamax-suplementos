@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Produtos — Suplementos Pro</title>
+  <link rel="stylesheet" href="css/style.css">
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="package"></i> Produtos</div>
+      <div class="page-subtitle" id="total-produtos-label">Carregando...</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+      <button class="btn btn-primary" onclick="abrirModalProduto()">+ Novo Produto</button>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <div class="card mb-16">
+      <div class="search-bar" style="margin-bottom:0;">
+        <div class="search-input-wrapper" style="flex:1;">
+          <span class="search-icon"><i data-lucide="search"></i></span>
+          <input type="text" id="busca-produtos" class="form-control" placeholder="Buscar por nome, marca ou código...">
+        </div>
+        <select id="filtro-cat" class="form-control" style="width:180px;">
+          <option value="">Todas as categorias</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Nome</th>
+              <th>Marca</th>
+              <th>Categoria</th>
+              <th>Cód. Barras</th>
+              <th class="text-right">Custo</th>
+              <th class="text-right">Venda</th>
+              <th class="text-right">Margem</th>
+              <th class="text-right">Estoque</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-produtos"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Produto -->
+<div class="modal-overlay" id="modal-produto">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-produto-titulo">Novo Produto</span>
+      <button class="modal-close" onclick="fecharModal('modal-produto')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="produto-id">
+      <div class="form-row">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label class="form-label">Nome <span class="required">*</span></label>
+          <input type="text" id="produto-nome" class="form-control" placeholder="Ex: Whey Protein Gold Standard 2lbs">
+          <div class="form-error" id="err-nome">Nome é obrigatório</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Marca</label>
+          <input type="text" id="produto-marca" class="form-control" placeholder="Ex: Optimum Nutrition">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Categoria</label>
+          <select id="produto-categoria" class="form-control">
+            <option value="">Selecionar...</option>
+            <option>Proteínas</option>
+            <option>Creatina</option>
+            <option>Pré-treino</option>
+            <option>Aminoácidos</option>
+            <option>Vitaminas</option>
+            <option>Termogênicos</option>
+            <option>Carboidratos</option>
+            <option>Ômega</option>
+            <option>Outros</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Código de Barras</label>
+          <input type="text" id="produto-barcode" class="form-control" placeholder="Ex: 7891234567001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emoji / Ícone</label>
+          <select id="produto-emoji" class="form-control">
+            <option value="📦">📦 Genérico</option>
+            <option value="💪">💪 Proteína</option>
+            <option value="🥛">🥛 Whey</option>
+            <option value="⚡">⚡ Creatina</option>
+            <option value="🔥">🔥 Pré-treino</option>
+            <option value="🧬">🧬 Aminoácidos</option>
+            <option value="🌟">🌟 Vitaminas</option>
+            <option value="🌡️">🌡️ Termogênico</option>
+            <option value="🌽">🌽 Carboidratos</option>
+            <option value="🐟">🐟 Ômega 3</option>
+            <option value="💥">💥 Mass Gainer</option>
+            <option value="🌙">🌙 ZMA/Noite</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row-3">
+        <div class="form-group">
+          <label class="form-label">Preço de Custo (R$)</label>
+          <input type="number" id="produto-custo" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularMargem()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preço de Venda (R$) <span class="required">*</span></label>
+          <input type="number" id="produto-venda" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularMargem()">
+          <div class="form-error" id="err-venda">Preço de venda é obrigatório</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Margem</label>
+          <input type="text" id="produto-margem" class="form-control" disabled placeholder="—">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Estoque Atual <span class="required">*</span></label>
+          <input type="number" id="produto-estoque" class="form-control" min="0" step="1" placeholder="0">
+          <div class="form-error" id="err-estoque">Estoque é obrigatório</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Estoque Mínimo</label>
+          <input type="number" id="produto-estoque-min" class="form-control" min="0" step="1" placeholder="10">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-produto')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarProduto()"><i data-lucide="save"></i> Salvar Produto</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Exclusão -->
+<div class="modal-overlay" id="modal-excluir">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">Confirmar Exclusão</span>
+      <button class="modal-close" onclick="fecharModal('modal-excluir')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-dim);">Tem certeza que deseja excluir o produto <strong id="nome-excluir"></strong>? Esta ação não pode ser desfeita.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-excluir')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-excluir"><i data-lucide="trash-2"></i> Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+<script src="js/produtos.js"></script>
+</body>
+</html>

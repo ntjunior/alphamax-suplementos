@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDV — Suplementos Pro</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .pdv-layout { display: grid; grid-template-columns: 60% 40%; gap: 0; height: calc(100vh - 64px); }
+    .pdv-left { padding: 20px; overflow-y: auto; border-right: 1px solid var(--border); }
+    .pdv-right { padding: 20px; overflow-y: auto; background: var(--bg-nav); display: flex; flex-direction: column; gap: 12px; }
+    .cart-empty { text-align: center; padding: 30px; color: var(--text-muted); font-size: 14px; }
+    .cart-list { flex: 1; overflow-y: auto; }
+    .desconto-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .desconto-toggle button { flex: 1; padding: 8px; border: none; background: var(--bg-input); color: var(--text-muted); cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.2s; }
+    .desconto-toggle button.active { background: var(--red); color: #fff; }
+    @media(max-width:768px){ .pdv-layout{ grid-template-columns:1fr; height:auto; } .pdv-right{ border-top:1px solid var(--border); } }
+  </style>
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="shopping-cart"></i> Ponto de Venda</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+    </div>
+  </header>
+
+  <!-- Overlay: caixa fechado -->
+  <div id="overlay-caixa-fechado" class="hidden" style="position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.82);display:flex;align-items:center;justify-content:center;">
+    <div style="background:var(--bg-card);border:1px solid var(--border);border-radius:16px;padding:48px 40px;text-align:center;max-width:400px;width:90%;">
+      <div style="color:var(--red);margin-bottom:16px;"><i data-lucide="wallet" style="width:56px;height:56px;stroke-width:1.5;"></i></div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Caixa Fechado</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:28px;">Para realizar vendas é necessário abrir o caixa primeiro.</div>
+      <a href="caixa.html" class="btn btn-primary" style="width:100%;justify-content:center;gap:8px;font-size:15px;padding:12px 0;">
+        <i data-lucide="wallet"></i> Abrir Caixa
+      </a>
+    </div>
+  </div>
+
+  <div class="pdv-layout">
+    <!-- ESQUERDA: Produtos -->
+    <div class="pdv-left">
+      <div class="search-bar mb-16">
+        <div class="search-input-wrapper" style="flex:1;">
+          <span class="search-icon"><i data-lucide="search"></i></span>
+          <input type="text" id="busca-produto" class="form-control" placeholder="Buscar por nome ou código de barras (Enter para adicionar)..." autofocus>
+        </div>
+      </div>
+
+      <div class="filter-pills" id="filtro-categorias">
+        <button class="pill active" data-cat="">Todos</button>
+      </div>
+
+      <div class="produtos-grid" id="grade-produtos"></div>
+    </div>
+
+    <!-- DIREITA: Carrinho -->
+    <div class="pdv-right">
+      <div style="font-size:14px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px;"><i data-lucide="shopping-cart"></i> Carrinho</div>
+
+      <div class="cart-list" id="cart-list">
+        <div class="cart-empty" id="cart-empty">
+          <div class="empty-state-icon" style="margin-bottom:8px;"><i data-lucide="shopping-cart"></i></div>
+          <div>Carrinho vazio</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Clique em um produto para adicionar</div>
+        </div>
+      </div>
+
+      <!-- Desconto -->
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Desconto</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div class="desconto-toggle">
+            <button id="btn-desc-pct" class="active" onclick="setDescontoTipo('pct')">%</button>
+            <button id="btn-desc-val" onclick="setDescontoTipo('val')">R$</button>
+          </div>
+          <input type="number" id="input-desconto" class="form-control" min="0" step="0.01" placeholder="0" style="flex:1;" oninput="atualizarTotais()">
+        </div>
+      </div>
+
+      <!-- Total -->
+      <div class="total-display">
+        <div class="total-line"><span>Subtotal</span><span id="subtotal-display">R$ 0,00</span></div>
+        <div class="total-line"><span>Desconto</span><span id="desconto-display" style="color:var(--green);">- R$ 0,00</span></div>
+        <div class="total-final">
+          <span class="total-final-label">TOTAL</span>
+          <span class="total-final-value" id="total-display">R$ 0,00</span>
+        </div>
+      </div>
+
+      <!-- Cliente -->
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Cliente</div>
+        <select id="select-cliente" class="form-control">
+          <option value="">Consumidor Final</option>
+        </select>
+      </div>
+
+      <!-- Cupom de Indicação -->
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">Cupom de Indicação</div>
+        <div style="display:flex;gap:6px;">
+          <input type="text" id="input-cupom" class="form-control" placeholder="Código do cupom" style="text-transform:uppercase;flex:1;" oninput="this.value=this.value.toUpperCase()">
+          <button class="btn btn-secondary" onclick="aplicarCupom()" style="white-space:nowrap;padding:8px 12px;"><i data-lucide="tag"></i></button>
+        </div>
+        <div id="cupom-status" class="hidden" style="margin-top:6px;font-size:12px;padding:6px 10px;border-radius:var(--radius);"></div>
+      </div>
+
+      <!-- Pagamento -->
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Forma de Pagamento</div>
+        <div class="payment-btns">
+          <button class="payment-btn" data-pag="dinheiro" onclick="selecionarPagamento('dinheiro')"><i data-lucide="banknote"></i> Dinheiro</button>
+          <button class="payment-btn" data-pag="pix" onclick="selecionarPagamento('pix')"><i data-lucide="qr-code"></i> PIX</button>
+          <button class="payment-btn" data-pag="credito" onclick="selecionarPagamento('credito')"><i data-lucide="credit-card"></i> Crédito</button>
+          <button class="payment-btn" data-pag="debito" onclick="selecionarPagamento('debito')"><i data-lucide="credit-card"></i> Débito</button>
+        </div>
+        <div id="dinheiro-wrapper" class="hidden">
+          <input type="number" id="valor-recebido" class="form-control mt-8" placeholder="Valor recebido (R$)" min="0" step="0.01" oninput="calcularTroco()">
+          <div class="troco-display mt-8" id="troco-display" style="display:none;">
+            <div class="troco-label">Troco</div>
+            <div class="troco-value" id="troco-value">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Botões Ação -->
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-secondary" onclick="limparCarrinho()" style="flex:1;"><i data-lucide="trash-2"></i> Limpar</button>
+        <button class="btn btn-primary btn-lg" id="btn-finalizar" onclick="finalizarVenda()" style="flex:2;" disabled><i data-lucide="check-circle"></i> FINALIZAR VENDA</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Recibo -->
+<div class="modal-overlay" id="modal-recibo">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title"><i data-lucide="check-circle"></i> Venda Finalizada!</span>
+    </div>
+    <div class="modal-body">
+      <div id="recibo-content"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="window.print()"><i data-lucide="printer"></i> Imprimir</button>
+      <button class="btn btn-primary" onclick="novaVenda()">Nova Venda</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+<script src="js/pdv.js"></script>
+</body>
+</html>

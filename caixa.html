@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Caixa — Suplementos Pro</title>
+  <link rel="stylesheet" href="css/style.css">
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="wallet"></i> Caixa</div>
+      <div class="page-subtitle" id="caixa-status-label">Verificando...</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <!-- CAIXA FECHADO -->
+    <div id="caixa-fechado-section">
+      <div style="max-width:480px;margin:60px auto;">
+        <div class="card" style="text-align:center;padding:40px;">
+          <div class="kpi-icon" style="margin-bottom:16px;font-size:60px;"><i data-lucide="lock"></i></div>
+          <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Caixa Fechado</div>
+          <div style="font-size:14px;color:var(--text-muted);margin-bottom:28px;">Informe o saldo inicial para abrir o caixa e iniciar as operações.</div>
+          <div class="form-group" style="text-align:left;">
+            <label class="form-label">Saldo Inicial (R$)</label>
+            <input type="number" id="saldo-inicial" class="form-control" min="0" step="0.01" placeholder="0,00" style="font-size:18px;text-align:center;">
+          </div>
+          <div class="form-group" style="text-align:left;">
+            <label class="form-label">Operador</label>
+            <div id="operador-display" style="font-size:15px;font-weight:600;padding:10px 0;color:var(--text);"></div>
+            <input type="hidden" id="operador-nome">
+          </div>
+          <button class="btn btn-success btn-full btn-lg mt-16" onclick="abrirCaixa()"><i data-lucide="lock-open"></i> Abrir Caixa</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CAIXA ABERTO -->
+    <div id="caixa-aberto-section" class="hidden">
+      <!-- Header info caixa -->
+      <div class="card mb-20 caixa-status-open" style="padding:16px 20px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+            <div>
+              <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Aberto em</div>
+              <div style="font-size:14px;font-weight:600;" id="info-aberto-em"></div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Operador</div>
+              <div style="font-size:14px;font-weight:600;" id="info-operador"></div>
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;">Saldo Inicial</div>
+              <div style="font-size:14px;font-weight:600;" id="info-saldo-inicial"></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-secondary" onclick="abrirModalSangria()"><i data-lucide="plus"></i> Suprimento / Sangria</button>
+            <button class="btn btn-danger" onclick="abrirModalFechar()"><i data-lucide="lock"></i> Fechar Caixa</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPIs do caixa -->
+      <div class="grid-4 mb-20">
+        <div class="kpi-card green">
+          <div class="kpi-icon"><i data-lucide="banknote"></i></div>
+          <div class="kpi-label">Saldo Inicial</div>
+          <div class="kpi-value" id="caixa-kpi-inicial">R$ 0,00</div>
+        </div>
+        <div class="kpi-card blue">
+          <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
+          <div class="kpi-label">Entradas</div>
+          <div class="kpi-value" id="caixa-kpi-entradas">R$ 0,00</div>
+          <div class="kpi-sub" id="caixa-kpi-entradas-sub"></div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-icon"><i data-lucide="trending-down"></i></div>
+          <div class="kpi-label">Saídas</div>
+          <div class="kpi-value text-red" id="caixa-kpi-saidas">R$ 0,00</div>
+        </div>
+        <div class="kpi-card yellow">
+          <div class="kpi-icon"><i data-lucide="wallet"></i></div>
+          <div class="kpi-label">Saldo Esperado</div>
+          <div class="kpi-value" id="caixa-kpi-saldo">R$ 0,00</div>
+        </div>
+      </div>
+
+      <!-- Tabela de movimentações do caixa -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="clipboard-list"></i> Movimentações do Caixa Atual</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Data/Hora</th>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th class="text-right">Valor</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-mov-caixa"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Histórico de caixas anteriores -->
+    <div class="mt-24">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <span style="font-size:14px;font-weight:600;color:var(--text-dim);"><i data-lucide="history"></i> Histórico de Caixas Anteriores</span>
+        <button class="btn btn-ghost btn-sm" onclick="toggleHistorico()">Exibir / Ocultar</button>
+      </div>
+      <div id="historico-caixas-wrapper" class="hidden">
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Abertura</th>
+                  <th>Fechamento</th>
+                  <th>Operador</th>
+                  <th class="text-right">Saldo Inicial</th>
+                  <th class="text-right">Entradas</th>
+                  <th class="text-right">Saídas</th>
+                  <th class="text-right">Saldo Final</th>
+                  <th class="text-right">Diferença</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tbody-historico-caixas"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Sangria/Suprimento -->
+<div class="modal-overlay" id="modal-sangria">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">Sangria / Suprimento</span>
+      <button class="modal-close" onclick="fecharModal('modal-sangria')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div style="display:flex;gap:8px;">
+          <button class="payment-btn active" id="btn-suprimento" onclick="setSangriaType('suprimento', this)"><i data-lucide="arrow-down-circle"></i> Suprimento</button>
+          <button class="payment-btn" id="btn-sangria-btn" onclick="setSangriaType('sangria', this)"><i data-lucide="arrow-up-circle"></i> Sangria</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Valor (R$) <span class="required">*</span></label>
+        <input type="number" id="sangria-valor" class="form-control" min="0.01" step="0.01" placeholder="0,00">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" id="sangria-descricao" class="form-control" placeholder="Ex: Troco para PDV, Pagamento fornecedor...">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-sangria')">Cancelar</button>
+      <button class="btn btn-primary" onclick="registrarSangria()"><i data-lucide="check"></i> Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Fechar Caixa -->
+<div class="modal-overlay" id="modal-fechar-caixa">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title"><i data-lucide="lock"></i> Fechar Caixa</span>
+      <button class="modal-close" onclick="fecharModal('modal-fechar-caixa')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg-input);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;">
+          <span style="color:var(--text-muted);">Saldo Inicial</span><span id="fc-saldo-inicial">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;">
+          <span style="color:var(--text-muted);">Entradas</span><span style="color:var(--green);" id="fc-entradas">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;">
+          <span style="color:var(--text-muted);">Saídas</span><span style="color:var(--red);" id="fc-saidas">—</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;border-top:1px solid var(--border);padding-top:10px;">
+          <span>Saldo Esperado</span><span id="fc-saldo-esperado">—</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Saldo Real em Caixa (R$)</label>
+        <input type="number" id="saldo-final-input" class="form-control" style="font-size:20px;text-align:center;" min="0" step="0.01" placeholder="0,00" oninput="calcularDiferenca()">
+      </div>
+      <div id="diferenca-wrapper" class="hidden" style="text-align:center;padding:12px;border-radius:var(--radius);margin-top:8px;">
+        <div style="font-size:12px;color:var(--text-muted);">DIFERENÇA</div>
+        <div style="font-size:22px;font-weight:700;" id="diferenca-value"></div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-top:12px;"><i data-lucide="alert-triangle"></i> Após fechar o caixa, não será possível adicionar movimentações a ele.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-fechar-caixa')">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmarFecharCaixa()"><i data-lucide="lock"></i> Fechar Caixa</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Resumo Diário -->
+<div class="modal-overlay" id="modal-resumo-diario">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <span class="modal-title"><i data-lucide="printer"></i> Resumo de Fechamento</span>
+      <button class="modal-close" onclick="fecharModal('modal-resumo-diario')">✕</button>
+    </div>
+    <div class="modal-body" id="resumo-diario-body" style="max-height:70vh;overflow-y:auto;"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-resumo-diario')">Fechar</button>
+      <button class="btn btn-primary" onclick="imprimirResumoDiario()"><i data-lucide="printer"></i> Imprimir</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="js/db.js"></script>
+<script src="js/app.js"></script>
+<script src="js/caixa.js"></script>
+</body>
+</html>

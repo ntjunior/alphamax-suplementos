@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatórios — Suplementos Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="../logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="trending-up"></i> Relatórios</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+      <button class="btn btn-secondary" onclick="exportar()"><i data-lucide="upload"></i> Exportar</button>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <!-- Filtros de período -->
+    <div class="card mb-24">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:13px;font-weight:600;color:var(--text-muted);">Período:</span>
+        <div class="filter-pills" style="margin:0;gap:6px;">
+          <button class="pill active" onclick="setPeriodo('hoje', this)">Hoje</button>
+          <button class="pill" onclick="setPeriodo('semana', this)">Semana</button>
+          <button class="pill" onclick="setPeriodo('mes', this)">Mês</button>
+          <button class="pill" onclick="setPeriodo('personalizado', this)">Personalizado</button>
+        </div>
+        <div id="periodo-personalizado" class="hidden" style="display:flex;gap:8px;align-items:center;">
+          <input type="date" id="data-inicio" class="form-control" style="width:160px;">
+          <span style="color:var(--text-muted);">até</span>
+          <input type="date" id="data-fim" class="form-control" style="width:160px;">
+          <button class="btn btn-primary btn-sm" onclick="aplicarFiltro()">Aplicar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs do período -->
+    <div class="grid-4 mb-24">
+      <div class="kpi-card">
+        <div class="kpi-icon"><i data-lucide="banknote"></i></div>
+        <div class="kpi-label">Faturamento</div>
+        <div class="kpi-value" id="rel-faturamento">R$ 0,00</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-icon"><i data-lucide="wallet"></i></div>
+        <div class="kpi-label">Lucro Estimado</div>
+        <div class="kpi-value" id="rel-lucro">R$ 0,00</div>
+        <div class="kpi-sub" id="rel-margem-label">margem: 0%</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-icon"><i data-lucide="target"></i></div>
+        <div class="kpi-label">Ticket Médio</div>
+        <div class="kpi-value" id="rel-ticket">R$ 0,00</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-icon"><i data-lucide="shopping-cart"></i></div>
+        <div class="kpi-label">Qtd. Vendas</div>
+        <div class="kpi-value" id="rel-qtd">0</div>
+      </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="chart-wrapper mb-24">
+      <div class="chart-title">Faturamento por Dia</div>
+      <canvas id="grafico-relatorio" width="900" height="200"></canvas>
+    </div>
+
+    <div class="grid-2 mb-24">
+      <!-- Produtos mais vendidos -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="trophy"></i> Produtos Mais Vendidos</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Produto</th>
+                <th class="text-right">Qtd</th>
+                <th class="text-right">Faturamento</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-mais-vendidos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Formas de pagamento -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="credit-card"></i> Formas de Pagamento</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Método</th>
+                <th class="text-right">Qtd</th>
+                <th class="text-right">Total</th>
+                <th class="text-right">%</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-pagamentos"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela de vendas -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i data-lucide="clipboard-list"></i> Vendas do Período</span>
+        <span id="vendas-periodo-count" style="font-size:13px;color:var(--text-muted);"></span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Cliente</th>
+              <th>Itens</th>
+              <th>Pagamento</th>
+              <th class="text-right">Subtotal</th>
+              <th class="text-right">Desconto</th>
+              <th class="text-right">Total</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-vendas-relatorio"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/relatorios.js"></script>
+</body>
+</html>

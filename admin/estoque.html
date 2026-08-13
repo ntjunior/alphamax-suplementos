@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estoque — Suplementos Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="../logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="bar-chart-3"></i> Controle de Estoque</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <!-- KPIs -->
+    <div class="grid-4 mb-24" id="estoque-kpis">
+      <div class="kpi-card">
+        <div class="kpi-icon"><i data-lucide="package"></i></div>
+        <div class="kpi-label">Total Produtos</div>
+        <div class="kpi-value" id="kpi-total">0</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-icon"><i data-lucide="check-circle"></i></div>
+        <div class="kpi-label">Estoque OK</div>
+        <div class="kpi-value" id="kpi-ok">0</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-icon"><i data-lucide="alert-triangle"></i></div>
+        <div class="kpi-label">Estoque Baixo</div>
+        <div class="kpi-value" id="kpi-baixo">0</div>
+      </div>
+      <div class="kpi-card" style="">
+        <div class="kpi-icon"><i data-lucide="x-circle"></i></div>
+        <div class="kpi-label">Sem Estoque</div>
+        <div class="kpi-value text-red" id="kpi-zero">0</div>
+      </div>
+    </div>
+
+    <div class="grid-2 mb-24">
+      <!-- Entrada de estoque -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="arrow-down-circle"></i> Registrar Entrada</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Produto <span class="required">*</span></label>
+          <select id="entrada-produto" class="form-control"></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Quantidade <span class="required">*</span></label>
+            <input type="number" id="entrada-qtd" class="form-control" min="1" step="1" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Motivo</label>
+            <select id="entrada-motivo" class="form-control">
+              <option value="Compra de fornecedor">Compra de fornecedor</option>
+              <option value="Devolução de cliente">Devolução de cliente</option>
+              <option value="Ajuste manual">Ajuste manual</option>
+              <option value="Transferência">Transferência</option>
+              <option value="Outros">Outros</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Observação</label>
+          <input type="text" id="entrada-obs" class="form-control" placeholder="Opcional...">
+        </div>
+        <button class="btn btn-success btn-full" onclick="registrarEntrada()"><i data-lucide="arrow-down-circle"></i> Registrar Entrada</button>
+      </div>
+
+      <!-- Ajuste de estoque -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="settings-2"></i> Ajuste de Estoque</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Produto <span class="required">*</span></label>
+          <select id="ajuste-produto" class="form-control"></select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Quantidade <span class="required">*</span></label>
+            <input type="number" id="ajuste-qtd" class="form-control" min="1" step="1" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            <select id="ajuste-tipo" class="form-control">
+              <option value="entrada">+ Entrada</option>
+              <option value="saida">− Saída</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Motivo <span class="required">*</span></label>
+          <input type="text" id="ajuste-motivo" class="form-control" placeholder="Descreva o motivo do ajuste">
+        </div>
+        <button class="btn btn-warning btn-full" onclick="registrarAjuste()"><i data-lucide="settings-2"></i> Aplicar Ajuste</button>
+      </div>
+    </div>
+
+    <!-- Tabela de posição atual -->
+    <div class="card mb-24">
+      <div class="card-header">
+        <span class="card-title"><i data-lucide="clipboard-list"></i> Posição Atual de Estoque</span>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="busca-estoque" class="form-control" style="width:220px;" placeholder="Buscar produto...">
+          <select id="filtro-status-estoque" class="form-control" style="width:150px;">
+            <option value="">Todos</option>
+            <option value="ok">OK</option>
+            <option value="baixo">Baixo</option>
+            <option value="zero">Zerado</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th></th>
+              <th>Produto</th>
+              <th>Categoria</th>
+              <th class="text-right">Estoque Atual</th>
+              <th class="text-right">Estoque Mínimo</th>
+              <th>Status</th>
+              <th class="text-right">Valor em Estoque</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-estoque-pos"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Histórico de movimentações -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i data-lucide="scroll-text"></i> Histórico de Movimentações</span>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <select id="filtro-tipo-mov" class="form-control" style="width:140px;">
+            <option value="">Todos os tipos</option>
+            <option value="entrada">Entrada</option>
+            <option value="saida">Saída</option>
+            <option value="venda">Venda</option>
+          </select>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Produto</th>
+              <th>Tipo</th>
+              <th class="text-right">Quantidade</th>
+              <th class="text-right">Saldo Anterior</th>
+              <th class="text-right">Saldo Atual</th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-movimentacoes"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/estoque.js"></script>
+</body>
+</html>
