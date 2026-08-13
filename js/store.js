@@ -387,10 +387,71 @@ function enviarWhatsApp() {
 
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
+
+  // Registra cliente automaticamente
+  registrarCliente({
+    nome,
+    telefone: tel,
+    endereco: entregaTipo === 'entrega' ? endereco : '',
+    itens: carrinho.map(i => `  • ${i.qty}x ${i.nome}`).join('\n'),
+    total: total.toFixed(2).replace('.', ',')
+  });
+
   fecharCheckout();
   carrinho = [];
   atualizarCarrinho();
   showToast('Pedido enviado via WhatsApp! ✅');
+}
+
+// ===== REGISTRAR CLIENTE NO SUPABASE =====
+async function registrarCliente({ nome, telefone, endereco, itens, total }) {
+  try {
+    const tel = telefone.replace(/\D/g, '');
+
+    // Verifica se já existe pelo telefone
+    const check = await fetch(
+      `${SUPABASE_URL}/rest/v1/clientes?telefone=ilike.*${tel}*&select=id,nome,observacoes`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+    );
+    const existentes = await check.json();
+
+    const dataHora = new Date().toLocaleString('pt-BR');
+    const resumoPedido = `[${dataHora}] Pedido via loja online — Total: R$ ${total}\n${itens}${endereco ? '\nEndereço: ' + endereco : ''}`;
+
+    if (existentes && existentes.length > 0) {
+      // Atualiza observações com novo pedido
+      const cli = existentes[0];
+      const obsAtualizada = (cli.observacoes ? cli.observacoes + '\n\n' : '') + resumoPedido;
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/clientes?id=eq.${cli.id}`,
+        {
+          method: 'PATCH',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ observacoes: obsAtualizada, updated_at: new Date().toISOString() })
+        }
+      );
+    } else {
+      // Cria novo cliente
+      const novoId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36);
+      await fetch(
+        `${SUPABASE_URL}/rest/v1/clientes`,
+        {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({
+            id: novoId,
+            nome,
+            telefone,
+            email: '',
+            observacoes: resumoPedido,
+            created_at: new Date().toISOString()
+          })
+        }
+      );
+    }
+  } catch(e) {
+    console.warn('Erro ao registrar cliente:', e);
+  }
 }
 
 // ===== TOAST =====
