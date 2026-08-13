@@ -291,21 +291,31 @@ a { text-decoration: none; color: inherit; }
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .btn-favorito:hover { color: var(--red); border-color: var(--red); transform: scale(1.1); }
-.produto-info { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.produto-info { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .produto-marca-store {
   font-size: 10px; color: var(--red); text-transform: uppercase;
-  letter-spacing: 1px; font-weight: 800;
+  letter-spacing: 1.4px; font-weight: 800; margin-bottom: 2px;
 }
-.produto-nome-store { font-size: 14px; font-weight: 700; line-height: 1.35; color: var(--text); }
-.produto-sabor-inline { font-size: 12px; color: var(--text-muted); font-weight: 500; }
-.produto-stars { display: flex; align-items: center; gap: 4px; }
-.stars { color: #f59e0b; font-size: 13px; letter-spacing: 1px; }
+.produto-nome-store {
+  font-size: 15px; font-weight: 700; line-height: 1.3;
+  color: #0f172a; letter-spacing: -0.2px;
+}
+.produto-sabor-inline {
+  display: block; font-size: 12px; color: var(--text-muted);
+  font-weight: 500; margin-top: 1px;
+}
+.produto-stars { display: flex; align-items: center; gap: 3px; margin: 4px 0 2px; }
+.stars { color: #f59e0b; font-size: 14px; letter-spacing: 2px; }
 .produto-preco-store {
-  font-size: 26px; color: var(--red); margin-top: 6px; line-height: 1;
-  font-weight: 900; letter-spacing: -0.5px;
+  font-size: 28px; color: var(--red); margin-top: 4px; line-height: 1;
+  font-weight: 900; letter-spacing: -1px;
 }
-.produto-parcelas { font-size: 11.5px; color: var(--text-muted); }
-.produto-parcelas strong { color: var(--text); font-weight: 700; }
+.produto-preco-store strong { font-weight: 900; }
+.produto-parcelas {
+  font-size: 12px; color: #94a3b8; margin-top: 2px;
+  font-weight: 500;
+}
+.produto-parcelas strong { color: #475569; font-weight: 700; }
 .btn-adicionar {
   width: 100%; margin-top: 12px; padding: 13px;
   background: linear-gradient(135deg, #16a34a, #15803d);
