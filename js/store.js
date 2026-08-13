@@ -77,26 +77,34 @@ function emojiCategoria(cat) {
 function cardHTML(p) {
   const semEstoque = p.estoque <= 0;
   const emoji = p.emoji || emojiCategoria(p.categoria);
+  const preco = p.precoVenda || 0;
+  const parcela = (preco / 5).toFixed(2).replace('.', ',');
   const imgContent = p.imagemUrl
-    ? `<img src="${p.imagemUrl}" alt="${p.nome}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<span>${emoji}</span>'">`
-    : `<span>${emoji}</span>`;
+    ? `<img src="${p.imagemUrl}" alt="${p.nome}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+       <span class="card-emoji-fallback" style="display:none;">${emoji}</span>`
+    : `<span class="card-emoji-fallback">${emoji}</span>`;
+
   return `
-    <div class="produto-card-store ${semEstoque ? 'produto-sem-estoque' : ''}" onclick="${semEstoque ? '' : `adicionarCarrinho('${p.id}')`}">
+    <div class="produto-card-store ${semEstoque ? 'produto-sem-estoque' : ''}">
       <div class="produto-img">
         ${imgContent}
-        ${p.categoria ? `<span class="produto-img-badge">${p.categoria}</span>` : ''}
+        ${semEstoque ? '<div class="sem-estoque-overlay">SEM ESTOQUE</div>' : ''}
+        <button class="btn-favorito" onclick="event.stopPropagation()" title="Favoritar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        </button>
       </div>
       <div class="produto-info">
         ${p.marca ? `<div class="produto-marca-store">${p.marca}</div>` : ''}
-        <div class="produto-nome-store">${p.nome}</div>
-        ${p.sabor ? `<div class="produto-sabor">${p.sabor}</div>` : ''}
-        <div class="produto-preco-store">
-          <small>R$</small> ${(p.precoVenda || 0).toFixed(2).replace('.', ',')}
+        <div class="produto-nome-store">${p.nome}${p.sabor ? ` <span class="produto-sabor-inline">${p.sabor}</span>` : ''}</div>
+        <div class="produto-stars">
+          <span class="stars">★★★★★</span>
         </div>
-        <button class="btn-adicionar" onclick="event.stopPropagation();adicionarCarrinho('${p.id}')" ${semEstoque ? 'disabled' : ''}>
-          ${semEstoque
-            ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Sem Estoque'
-            : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg> Adicionar'}
+        <div class="produto-preco-store">
+          R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong>
+        </div>
+        <div class="produto-parcelas">R$ ${parcela} até <strong>5x</strong> sem juros</div>
+        <button class="btn-adicionar ${semEstoque ? 'btn-sem-estoque' : ''}" onclick="event.stopPropagation();${semEstoque ? '' : `adicionarCarrinho('${p.id}')`}" ${semEstoque ? 'disabled' : ''}>
+          ${semEstoque ? 'Sem Estoque' : 'COMPRAR'}
         </button>
       </div>
     </div>
