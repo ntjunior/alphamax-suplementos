@@ -370,19 +370,28 @@ function enviarWhatsApp() {
   const total = totalCarrinho();
   const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
 
+  const ic = {
+    pedido:  '\uD83D\uDED2', // 🛒
+    nome:    '\uD83D\uDC64', // 👤
+    tel:     '\uD83D\uDCDE', // 📞
+    entrega: '\uD83D\uDCE6', // 📦
+    total:   '\uD83D\uDCB0', // 💰
+    ok:      '\u2705'        // ✅
+  };
+
   const msg = [
-    `🛒 *NOVO PEDIDO - Alpha Max Suplementos*`,
+    `${ic.pedido} *NOVO PEDIDO - Alpha Max Suplementos*`,
     ``,
-    `👤 *Nome:* ${nome}`,
-    `📞 *Telefone:* ${tel}`,
-    `📦 *Entrega:* ${entregaTipo === 'retirada' ? 'Retirar na loja' : `Entrega — ${endereco}`}`,
+    `${ic.nome} *Nome:* ${nome}`,
+    `${ic.tel} *Telefone:* ${tel}`,
+    `${ic.entrega} *Entrega:* ${entregaTipo === 'retirada' ? 'Retirar na loja' : `Entrega — ${endereco}`}`,
     ``,
     `*Itens:*`,
     itens,
     ``,
-    `💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*`,
+    `${ic.total} *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*`,
     ``,
-    `Aguardo confirmação e dados para pagamento via PIX! ✅`
+    `Aguardo confirmacao e dados para pagamento via PIX! ${ic.ok}`
   ].join('\n');
 
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
