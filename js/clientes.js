@@ -32,6 +32,10 @@ function renderClientes() {
         <td class="text-right">${stats.qtd}</td>
         <td class="text-right font-bold text-red">${App.formatCurrency(stats.totalGasto)}</td>
         <td style="font-size:12px;">${stats.ultima ? App.formatDateShort(stats.ultima.createdAt) : '—'}</td>
+        <td>${c.origem === 'online'
+          ? '<span class="badge" style="background:rgba(99,102,241,0.12);color:#6366f1;font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;"><i data-lucide="globe" style="width:10px;height:10px;"></i> Online</span>'
+          : '<span class="badge" style="background:rgba(34,197,94,0.12);color:#16a34a;font-size:10px;padding:3px 8px;border-radius:20px;font-weight:700;"><i data-lucide="store" style="width:10px;height:10px;"></i> Físico</span>'
+        }</td>
         <td onclick="event.stopPropagation()">
           <div class="td-actions">
             <button class="btn btn-sm btn-secondary" onclick="editarCliente('${c.id}')"><i data-lucide="pencil"></i></button>

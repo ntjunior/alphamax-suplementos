@@ -452,6 +452,7 @@ async function registrarCliente({ nome, telefone, endereco, itens, total }) {
             nome,
             telefone,
             email: '',
+            origem: 'online',
             observacoes: resumoPedido,
             created_at: new Date().toISOString()
           })
