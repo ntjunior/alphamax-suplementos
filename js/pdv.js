@@ -19,7 +19,9 @@ function carregarProdutos(busca = '', cat = '') {
   }
   const htmlProd = produtos.map(p => `
     <div class="produto-card ${p.estoque === 0 ? 'sem-estoque' : ''}" onclick="adicionarAoCarrinho('${p.id}')">
-      <div class="produto-card-img"><i data-lucide="package"></i></div>
+      <div class="produto-card-img" style="overflow:hidden;display:flex;align-items:center;justify-content:center;">
+        ${p.imagemUrl ? `<img src="${p.imagemUrl}" alt="${p.nome}" style="width:100%;height:100%;object-fit:contain;padding:4px;" onerror="this.style.display='none';this.insertAdjacentHTML('afterend','<i data-lucide=\\'package\\'></i>')">` : `<i data-lucide="package"></i>`}
+      </div>
       <div class="produto-card-nome">${p.nome}</div>
       <div class="produto-card-marca">${p.marca || ''}</div>
       <div class="produto-card-preco">${App.formatCurrency(p.precoVenda)}</div>
