@@ -56,11 +56,10 @@ a { text-decoration: none; color: inherit; }
   height: 78px; display: flex; align-items: center; gap: 20px;
 }
 .store-logo img {
-  height: 66px; object-fit: contain; display: block;
-  filter: drop-shadow(0 0 14px rgba(229,57,53,0.5));
-  transition: filter 0.3s;
+  height: 76px; object-fit: contain; display: block;
+  transition: opacity 0.2s;
 }
-.store-logo:hover img { filter: drop-shadow(0 0 22px rgba(229,57,53,0.75)); }
+.store-logo:hover img { opacity: 0.9; }
 .store-search { flex: 1; position: relative; max-width: 580px; }
 .store-search input {
   width: 100%; padding: 12px 48px 12px 20px;
