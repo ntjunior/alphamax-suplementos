@@ -1,3 +1,6 @@
+const SB_URL_CLI = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
+const SB_KEY_CLI = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
+
 let clienteParaExcluir = null;
 
 function getEstatisticasCliente(clienteId) {
@@ -49,7 +52,7 @@ function renderClientes() {
   if (window.lucide) lucide.createIcons();
 }
 
-function verHistorico(clienteId) {
+async function verHistorico(clienteId) {
   const cliente = DB.getClienteById(clienteId);
   if (!cliente) return;
 
@@ -62,23 +65,63 @@ function verHistorico(clienteId) {
   document.getElementById('hist-nome').textContent = cliente.nome;
   document.getElementById('hist-tel').textContent = cliente.telefone || 'Sem telefone';
   document.getElementById('hist-email').textContent = cliente.email || 'Sem email';
-  document.getElementById('hist-qtd-compras').textContent = stats.qtd;
-  document.getElementById('hist-total-gasto').textContent = App.formatCurrency(stats.totalGasto);
+  document.getElementById('hist-lista').innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:16px;">Carregando...</div>';
+
+  // Busca pedidos online enviados pelo telefone do cliente
+  let pedidosOnline = [];
+  if (cliente.telefone) {
+    try {
+      const tel = cliente.telefone.replace(/\D/g, '').replace(/^0/, '').replace(/^55/, '');
+      const res = await fetch(
+        `${SB_URL_CLI}/rest/v1/pedidos_online?status=eq.enviado&telefone=ilike.*${tel}*&select=*&order=created_at.desc`,
+        { headers: { 'apikey': SB_KEY_CLI, 'Authorization': `Bearer ${SB_KEY_CLI}` } }
+      );
+      const data = await res.json();
+      if (Array.isArray(data)) pedidosOnline = data;
+    } catch(e) { /* silencioso */ }
+  }
+
+  // Monta lista unificada: vendas PDV + pedidos online enviados
+  const vendasPdv = stats.vendas.map(v => ({
+    tipo: 'pdv',
+    data: v.createdAt,
+    total: v.total,
+    resumo: v.itens.map(i => `${i.quantidade}x ${i.nome.substring(0, 22)}`).join(', '),
+    pagamento: v.pagamento
+  }));
+
+  const vendasOnline = pedidosOnline.map(p => ({
+    tipo: 'online',
+    data: p.created_at,
+    total: Number(p.total || 0),
+    resumo: (p.itens_texto || '').split('\n').filter(Boolean).map(l => l.replace(/^•\s*/, '')).join(', ')
+  }));
+
+  const tudo = [...vendasPdv, ...vendasOnline].sort((a, b) => new Date(b.data) - new Date(a.data));
+
+  const totalGeral = tudo.reduce((s, v) => s + v.total, 0);
+  document.getElementById('hist-qtd-compras').textContent = tudo.length;
+  document.getElementById('hist-total-gasto').textContent = App.formatCurrency(totalGeral);
 
   const lista = document.getElementById('hist-lista');
-  if (stats.vendas.length === 0) {
+  if (tudo.length === 0) {
     lista.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:13px;padding:16px;">Sem compras registradas</div>';
     return;
   }
 
-  lista.innerHTML = stats.vendas.map(v => `
+  lista.innerHTML = tudo.map(v => `
     <div style="background:var(--bg-input);border-radius:var(--radius);padding:12px;border:1px solid var(--border);">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
-        <span style="font-size:12px;color:var(--text-muted);">${App.formatDate(v.createdAt)}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:var(--text-muted);">${App.formatDate(v.data)}</span>
+          ${v.tipo === 'online'
+            ? '<span style="background:rgba(99,102,241,0.12);color:#6366f1;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;">Online</span>'
+            : '<span style="background:rgba(34,197,94,0.12);color:#16a34a;font-size:10px;padding:2px 6px;border-radius:10px;font-weight:700;">PDV</span>'}
+        </div>
         <span style="font-size:14px;font-weight:700;color:var(--red);">${App.formatCurrency(v.total)}</span>
       </div>
-      <div style="font-size:12px;color:var(--text-dim);">${v.itens.map(i => `${i.quantidade}x ${i.nome.substring(0, 22)}`).join(', ')}</div>
-      <div style="margin-top:4px;">${App.getPagamentoBadge(v.pagamento)}</div>
+      <div style="font-size:12px;color:var(--text-dim);">${v.resumo}</div>
+      ${v.pagamento ? `<div style="margin-top:4px;">${App.getPagamentoBadge(v.pagamento)}</div>` : ''}
     </div>
   `).join('');
 }
