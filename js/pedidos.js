@@ -205,7 +205,10 @@ async function enviarWhatsAppStatus(pedido, status) {
 
   const enviado = await enviarViaWebhook(pedido, msg, status);
   if (!enviado) {
-    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+    const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
+    await registrarFollowUp(pedido.id, status, false, url);
+    atualizarFollowUpUI(pedido.id, status);
+    App.showToast('Chip offline — use o botão WhatsApp no painel', 'warning');
   }
 }
 
@@ -228,11 +231,13 @@ async function enviarViaWebhook(pedido, mensagem, tipo) {
   return false;
 }
 
-async function registrarFollowUp(pedidoId, tipo, ok) {
+async function registrarFollowUp(pedidoId, tipo, ok, waUrl) {
   try {
     const followUps = JSON.parse(localStorage.getItem('followups_pedidos') || '{}');
     if (!followUps[pedidoId]) followUps[pedidoId] = [];
-    followUps[pedidoId].push({ tipo, ok, ts: new Date().toISOString() });
+    const entry = { tipo, ok, ts: new Date().toISOString() };
+    if (waUrl) entry.waUrl = waUrl;
+    followUps[pedidoId].push(entry);
     localStorage.setItem('followups_pedidos', JSON.stringify(followUps));
   } catch(e) {}
 }
@@ -262,7 +267,10 @@ function renderFollowUp(pedidoId) {
   el.innerHTML = logs.map(f => {
     const ts = new Date(f.ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
     const icon = f.ok ? '\u2705' : '\u274C';
-    return `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);">${icon} <b>${tipoLabel[f.tipo] || f.tipo}</b> — ${ts}</div>`;
+    const waBtn = (!f.ok && f.waUrl)
+      ? `<a href="${f.waUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-top:4px;padding:3px 10px;background:var(--red);color:#fff;border-radius:20px;font-size:11px;font-weight:700;text-decoration:none;">Abrir WhatsApp →</a>`
+      : '';
+    return `<div style="font-size:12px;padding:6px 0;border-bottom:1px solid var(--border);">${icon} <b>${tipoLabel[f.tipo] || f.tipo}</b> — ${ts}${waBtn ? '<br>' + waBtn : ''}</div>`;
   }).join('');
 }
 
@@ -275,9 +283,17 @@ async function reenviarMensagem() {
     return;
   }
   const nome = p.nome || 'Cliente';
-  const enviado = await enviarViaWebhook(p, getMsgTemplate(status, nome), 'reenvio');
-  if (enviado) App.showToast('Mensagem reenviada via WhatsApp!', 'success');
-  else App.showToast('Chip offline — abrindo WhatsApp Web...', 'error');
+  const tel = (p.telefone || '').replace(/\D/g,'').replace(/^0/,'').replace(/^55/,'');
+  const msg = getMsgTemplate(status, nome);
+  const enviado = await enviarViaWebhook(p, msg, 'reenvio');
+  if (enviado) {
+    App.showToast('Mensagem reenviada via WhatsApp!', 'success');
+  } else {
+    const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
+    await registrarFollowUp(p.id, 'reenvio', false, url);
+    atualizarFollowUpUI(p.id, 'reenvio');
+    App.showToast('Chip offline — use o botão WhatsApp no painel', 'warning');
+  }
 }
 
 function imprimirPedido() {
