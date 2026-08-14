@@ -208,7 +208,6 @@ async function enviarWhatsAppStatus(pedido, status) {
     const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
     await registrarFollowUp(pedido.id, status, false, url);
     atualizarFollowUpUI(pedido.id, status);
-    App.showToast('Chip offline — use o botão WhatsApp no painel', 'warning');
   }
 }
 
@@ -299,7 +298,6 @@ async function reenviarMensagem() {
     const url = `https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`;
     await registrarFollowUp(p.id, 'reenvio', false, url);
     atualizarFollowUpUI(p.id, 'reenvio');
-    App.showToast('Chip offline — use o botão WhatsApp no painel', 'warning');
   }
 }
 
