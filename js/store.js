@@ -230,7 +230,7 @@ function abrirProduto(id) {
 
   const imgWrap = document.getElementById('mp-img-wrap');
   imgWrap.innerHTML = p.imagemUrl
-    ? `<img src="${p.imagemUrl}" alt="${p.nome}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;" onerror="this.style='';this.parentElement.style.display='flex';this.parentElement.style.alignItems='center';this.parentElement.style.justifyContent='center';this.outerHTML='<span style=font-size:60px>${emoji}</span>'">`
+    ? `<img src="${p.imagemUrl}" alt="${p.nome}" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:16px;" onerror="this.style='';this.parentElement.style.display='flex';this.parentElement.style.alignItems='center';this.parentElement.style.justifyContent='center';this.outerHTML='<span style=font-size:60px>${emoji}</span>'">`
     : `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"><span>${emoji}</span></div>`;
 
   document.getElementById('mp-marca').textContent = p.marca || '';
