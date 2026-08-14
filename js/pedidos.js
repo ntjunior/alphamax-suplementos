@@ -184,16 +184,23 @@ async function baixarEstoquePedido(itensTxt) {
   }
 }
 
+const MSG_DEFAULTS_P = {
+  confirmado: '✅ *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *confirmado*!\n\nEm breve será separado. Entraremos em contato com os dados para pagamento via PIX.',
+  enviado:    '🚀 *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *enviado*! 📦\n\nEm breve chegará até você. Obrigado pela preferência! 💪',
+  cancelado:  '❌ *Alpha Max Suplementos*\n\nOlá [Nome]. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informações.'
+};
+
+function getMsgTemplate(status, nome) {
+  const salvas = JSON.parse(localStorage.getItem('msg_templates_alphamax') || '{}');
+  const template = salvas[status] || MSG_DEFAULTS_P[status] || '';
+  return template.replace(/\[Nome\]/g, nome || 'Cliente');
+}
+
 async function enviarWhatsAppStatus(pedido, status) {
   if (!pedido.telefone) return;
   const tel = pedido.telefone.replace(/\D/g,'').replace(/^0/,'').replace(/^55/,'');
   const nome = pedido.nome || 'Cliente';
-  const msgs = {
-    confirmado: '\u2705 *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '! Seu pedido foi *confirmado*!\n\nEm breve ser\u00e1 separado. Entraremos em contato com os dados para pagamento via PIX.',
-    enviado:    '\uD83D\uDE80 *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '! Seu pedido foi *enviado*! \uD83D\uDCE6\n\nEm breve chegar\u00e1 at\u00e9 voc\u00ea. Obrigado pela prefer\u00eancia! \uD83D\uDCAA',
-    cancelado:  '\u274C *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informa\u00e7\u00f5es.'
-  };
-  const msg = msgs[status];
+  const msg = getMsgTemplate(status, nome);
   if (!msg) return;
 
   const enviado = await enviarViaWebhook(pedido, msg, status);
@@ -268,12 +275,7 @@ async function reenviarMensagem() {
     return;
   }
   const nome = p.nome || 'Cliente';
-  const msgs = {
-    confirmado: '\u2705 *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '! Seu pedido foi *confirmado*!\n\nEm breve ser\u00e1 separado. Entraremos em contato com os dados para pagamento via PIX.',
-    enviado:    '\uD83D\uDE80 *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '! Seu pedido foi *enviado*! \uD83D\uDCE6\n\nEm breve chegar\u00e1 at\u00e9 voc\u00ea. Obrigado pela prefer\u00eancia! \uD83D\uDCAA',
-    cancelado:  '\u274C *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informa\u00e7\u00f5es.'
-  };
-  const enviado = await enviarViaWebhook(p, msgs[status], 'reenvio');
+  const enviado = await enviarViaWebhook(p, getMsgTemplate(status, nome), 'reenvio');
   if (enviado) App.showToast('Mensagem reenviada via WhatsApp!', 'success');
   else App.showToast('Chip offline — abrindo WhatsApp Web...', 'error');
 }

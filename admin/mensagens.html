@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mensagens WhatsApp — Suplementos Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .msg-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+    .msg-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .msg-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .msg-icon.confirmado { background: rgba(59,130,246,0.15); }
+    .msg-icon.enviado    { background: rgba(34,197,94,0.15); }
+    .msg-icon.cancelado  { background: rgba(239,68,68,0.15); }
+    .msg-title { font-size: 14px; font-weight: 700; }
+    .msg-sub   { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .msg-textarea { width: 100%; min-height: 120px; resize: vertical; padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-input); color: var(--text); font-size: 13px; font-family: inherit; line-height: 1.6; transition: border-color 0.2s; }
+    .msg-textarea:focus { outline: none; border-color: var(--red); }
+    .msg-actions { display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end; }
+    .vars-hint { font-size: 11px; color: var(--text-muted); margin-top: 8px; }
+    .vars-hint code { background: var(--bg-input); padding: 1px 6px; border-radius: 4px; font-family: monospace; color: var(--text-dim); }
+    .preview-box { background: #dcfce7; border-radius: 12px 12px 12px 0; padding: 12px 14px; font-size: 13px; color: #111; line-height: 1.6; margin-top: 10px; white-space: pre-wrap; border: 1px solid #bbf7d0; display: none; }
+    [data-theme="dark"] .preview-box { background: rgba(34,197,94,0.1); color: var(--text); border-color: rgba(34,197,94,0.2); }
+  </style>
+  <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="../logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="pedidos.html" class="nav-item" data-page="pedidos"><span class="nav-icon"><i data-lucide="clipboard-list"></i></span><span class="nav-label">Pedidos</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+    <a href="mensagens.html" class="nav-item active" data-page="mensagens"><span class="nav-icon"><i data-lucide="message-square"></i></span><span class="nav-label">Mensagens</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="message-square"></i> Mensagens WhatsApp</div>
+      <div class="page-subtitle">Textos enviados automaticamente ao cliente quando o status do pedido muda</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+      <button class="btn btn-primary" onclick="salvarTodas()"><i data-lucide="save"></i> Salvar Todas</button>
+    </div>
+  </header>
+
+  <div class="page-body" style="max-width:760px;">
+
+    <!-- CONFIRMADO -->
+    <div class="msg-card">
+      <div class="msg-header">
+        <div class="msg-icon confirmado">✅</div>
+        <div>
+          <div class="msg-title">Pedido Confirmado</div>
+          <div class="msg-sub">Enviado quando o status muda para <b>Confirmado</b></div>
+        </div>
+      </div>
+      <textarea class="msg-textarea" id="msg-confirmado" oninput="atualizarPreview('confirmado')"></textarea>
+      <div class="vars-hint">Variáveis disponíveis: <code>[Nome]</code> — nome do cliente</div>
+      <div class="preview-box" id="preview-confirmado"></div>
+      <div class="msg-actions">
+        <button class="btn btn-secondary" onclick="restaurarPadrao('confirmado')"><i data-lucide="rotate-ccw"></i> Restaurar padrão</button>
+        <button class="btn btn-secondary" onclick="togglePreview('confirmado')"><i data-lucide="eye"></i> Pré-visualizar</button>
+      </div>
+    </div>
+
+    <!-- ENVIADO -->
+    <div class="msg-card">
+      <div class="msg-header">
+        <div class="msg-icon enviado">🚀</div>
+        <div>
+          <div class="msg-title">Pedido Enviado</div>
+          <div class="msg-sub">Enviado quando o status muda para <b>Enviado</b></div>
+        </div>
+      </div>
+      <textarea class="msg-textarea" id="msg-enviado" oninput="atualizarPreview('enviado')"></textarea>
+      <div class="vars-hint">Variáveis disponíveis: <code>[Nome]</code> — nome do cliente</div>
+      <div class="preview-box" id="preview-enviado"></div>
+      <div class="msg-actions">
+        <button class="btn btn-secondary" onclick="restaurarPadrao('enviado')"><i data-lucide="rotate-ccw"></i> Restaurar padrão</button>
+        <button class="btn btn-secondary" onclick="togglePreview('enviado')"><i data-lucide="eye"></i> Pré-visualizar</button>
+      </div>
+    </div>
+
+    <!-- CANCELADO -->
+    <div class="msg-card">
+      <div class="msg-header">
+        <div class="msg-icon cancelado">❌</div>
+        <div>
+          <div class="msg-title">Pedido Cancelado</div>
+          <div class="msg-sub">Enviado quando o status muda para <b>Cancelado</b></div>
+        </div>
+      </div>
+      <textarea class="msg-textarea" id="msg-cancelado" oninput="atualizarPreview('cancelado')"></textarea>
+      <div class="vars-hint">Variáveis disponíveis: <code>[Nome]</code> — nome do cliente</div>
+      <div class="preview-box" id="preview-cancelado"></div>
+      <div class="msg-actions">
+        <button class="btn btn-secondary" onclick="restaurarPadrao('cancelado')"><i data-lucide="rotate-ccw"></i> Restaurar padrão</button>
+        <button class="btn btn-secondary" onclick="togglePreview('cancelado')"><i data-lucide="eye"></i> Pré-visualizar</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script>
+const MSG_DEFAULTS = {
+  confirmado: '✅ *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *confirmado*!\n\nEm breve será separado. Entraremos em contato com os dados para pagamento via PIX.',
+  enviado:    '🚀 *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *enviado*! 📦\n\nEm breve chegará até você. Obrigado pela preferência! 💪',
+  cancelado:  '❌ *Alpha Max Suplementos*\n\nOlá [Nome]. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informações.'
+};
+
+function carregarMensagens() {
+  const salvas = JSON.parse(localStorage.getItem('msg_templates_alphamax') || '{}');
+  ['confirmado', 'enviado', 'cancelado'].forEach(s => {
+    document.getElementById('msg-' + s).value = salvas[s] || MSG_DEFAULTS[s];
+  });
+}
+
+function salvarTodas() {
+  const templates = {
+    confirmado: document.getElementById('msg-confirmado').value,
+    enviado:    document.getElementById('msg-enviado').value,
+    cancelado:  document.getElementById('msg-cancelado').value
+  };
+  localStorage.setItem('msg_templates_alphamax', JSON.stringify(templates));
+  App.showToast('Mensagens salvas com sucesso!', 'success');
+}
+
+function restaurarPadrao(status) {
+  document.getElementById('msg-' + status).value = MSG_DEFAULTS[status];
+  atualizarPreview(status);
+  App.showToast('Texto restaurado para o padrão', 'success');
+}
+
+function togglePreview(status) {
+  const el = document.getElementById('preview-' + status);
+  if (el.style.display === 'block') {
+    el.style.display = 'none';
+  } else {
+    atualizarPreview(status);
+    el.style.display = 'block';
+  }
+}
+
+function atualizarPreview(status) {
+  const el = document.getElementById('preview-' + status);
+  if (el.style.display !== 'block') return;
+  const txt = document.getElementById('msg-' + status).value;
+  el.textContent = txt.replace(/\[Nome\]/g, 'João Silva');
+}
+
+carregarMensagens();
+</script>
+</body>
+</html>
