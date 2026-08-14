@@ -71,6 +71,7 @@ const App = {
     this._hideLoading();
     setTimeout(() => this.refreshIcons(), 0);
     this._iniciarPollingPedidos();
+    this._verificarLembrete25();
   },
 
   _prevPedidosCount: -1,
@@ -333,5 +334,50 @@ const App = {
       debito: '<span class="badge badge-card">Débito</span>'
     };
     return map[pag] || `<span class="badge">${pag}</span>`;
+  },
+
+  async _verificarLembrete25() {
+    const STORAGE_KEY = 'lembrete25_enviados';
+    const LAST_CHECK  = 'lembrete25_lastcheck';
+    const ultimaVerif = parseInt(localStorage.getItem(LAST_CHECK) || '0');
+    if (Date.now() - ultimaVerif < 60 * 60 * 1000) return;
+    localStorage.setItem(LAST_CHECK, Date.now().toString());
+
+    const jaEnviados = new Set(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+    const agora = new Date();
+    const de  = new Date(agora - 26 * 24 * 60 * 60 * 1000).toISOString();
+    const ate = new Date(agora - 24 * 24 * 60 * 60 * 1000).toISOString();
+
+    try {
+      const res = await fetch(
+        `${DB.URL}/rest/v1/pedidos_online?created_at=gte.${de}&created_at=lte.${ate}&status=in.(confirmado,enviado)&select=id,nome,telefone`,
+        { headers: { 'apikey': DB.KEY, 'Authorization': `Bearer ${DB.KEY}` } }
+      );
+      const pedidos = await res.json();
+      if (!Array.isArray(pedidos) || pedidos.length === 0) return;
+
+      const MULTIZAP_URL    = 'https://multizape.com.br';
+      const MULTIZAP_EMP    = 'alphamax';
+      const MULTIZAP_SECRET = '6p5ipc07fkc4dbhc';
+      const templatePadrao  = '⏰ *Alpha Max Suplementos*\n\nOlá [Nome]! Tudo bem? 😊\n\nJá faz 25 dias desde o seu último pedido — seus suplementos devem estar acabando! 💪\n\nAproveite e faça seu novo pedido com a gente. Qualquer dúvida é só chamar!';
+      const salvas   = JSON.parse(localStorage.getItem('msg_templates_alphamax') || '{}');
+      const template = salvas.lembrete25 || templatePadrao;
+
+      for (const p of pedidos) {
+        if (jaEnviados.has(p.id) || !p.telefone) continue;
+        const tel = p.telefone.replace(/\D/g, '').replace(/^0/, '').replace(/^55/, '');
+        if (!tel) continue;
+        const mensagem = template.replace(/\[Nome\]/g, p.nome || 'Cliente');
+        try {
+          await fetch(`${MULTIZAP_URL}/webhook/loja/${MULTIZAP_EMP}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ secret: MULTIZAP_SECRET, numero: tel, mensagem, nome: p.nome })
+          });
+          jaEnviados.add(p.id);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify([...jaEnviados]));
+        } catch(e) {}
+      }
+    } catch(e) {}
   }
 };
