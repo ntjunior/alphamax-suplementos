@@ -245,7 +245,14 @@ async function registrarFollowUp(pedidoId, tipo, ok, waUrl) {
 function getFollowUps(pedidoId) {
   try {
     const followUps = JSON.parse(localStorage.getItem('followups_pedidos') || '{}');
-    return followUps[pedidoId] || [];
+    const limite = Date.now() - 12 * 60 * 60 * 1000; // 12 horas
+    const todos = followUps[pedidoId] || [];
+    const recentes = todos.filter(f => new Date(f.ts).getTime() > limite);
+    if (recentes.length !== todos.length) {
+      followUps[pedidoId] = recentes;
+      localStorage.setItem('followups_pedidos', JSON.stringify(followUps));
+    }
+    return recentes;
   } catch { return []; }
 }
 
