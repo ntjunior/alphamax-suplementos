@@ -112,6 +112,27 @@
       </div>
     </div>
 
+    <!-- LEMBRETE 25 DIAS -->
+    <div class="msg-card" style="border-color: rgba(234,179,8,0.4);">
+      <div class="msg-header">
+        <div class="msg-icon" style="background:rgba(234,179,8,0.15);">⏰</div>
+        <div>
+          <div class="msg-title">Lembrete 25 Dias</div>
+          <div class="msg-sub">Enviado <b>automaticamente</b> 25 dias após o pedido confirmado — lembrete de recompra</div>
+        </div>
+      </div>
+      <textarea class="msg-textarea" id="msg-lembrete25" oninput="atualizarPreview('lembrete25')"></textarea>
+      <div class="vars-hint">Variáveis disponíveis: <code>[Nome]</code> — nome do cliente</div>
+      <div class="preview-box" id="preview-lembrete25"></div>
+      <div class="msg-actions" style="justify-content:space-between;align-items:center;">
+        <span style="font-size:11px;color:var(--text-muted);">⚡ Disparado automaticamente ao abrir o painel de pedidos</span>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-secondary" onclick="restaurarPadrao('lembrete25')"><i data-lucide="rotate-ccw"></i> Restaurar padrão</button>
+          <button class="btn btn-secondary" onclick="togglePreview('lembrete25')"><i data-lucide="eye"></i> Pré-visualizar</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -122,23 +143,25 @@
 <script src="../js/app.js"></script>
 <script>
 const MSG_DEFAULTS = {
-  confirmado: '✅ *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *confirmado*!\n\nEm breve será separado. Entraremos em contato com os dados para pagamento via PIX.',
-  enviado:    '🚀 *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *enviado*! 📦\n\nEm breve chegará até você. Obrigado pela preferência! 💪',
-  cancelado:  '❌ *Alpha Max Suplementos*\n\nOlá [Nome]. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informações.'
+  confirmado:  '✅ *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *confirmado*!\n\nEm breve será separado. Entraremos em contato com os dados para pagamento via PIX.',
+  enviado:     '🚀 *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *enviado*! 📦\n\nEm breve chegará até você. Obrigado pela preferência! 💪',
+  cancelado:   '❌ *Alpha Max Suplementos*\n\nOlá [Nome]. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informações.',
+  lembrete25:  '⏰ *Alpha Max Suplementos*\n\nOlá [Nome]! Tudo bem? 😊\n\nJá faz 25 dias desde o seu último pedido — seus suplementos devem estar acabando! 💪\n\nAproveite e faça seu novo pedido com a gente. Qualquer dúvida é só chamar!'
 };
 
 function carregarMensagens() {
   const salvas = JSON.parse(localStorage.getItem('msg_templates_alphamax') || '{}');
-  ['confirmado', 'enviado', 'cancelado'].forEach(s => {
+  ['confirmado', 'enviado', 'cancelado', 'lembrete25'].forEach(s => {
     document.getElementById('msg-' + s).value = salvas[s] || MSG_DEFAULTS[s];
   });
 }
 
 function salvarTodas() {
   const templates = {
-    confirmado: document.getElementById('msg-confirmado').value,
-    enviado:    document.getElementById('msg-enviado').value,
-    cancelado:  document.getElementById('msg-cancelado').value
+    confirmado:  document.getElementById('msg-confirmado').value,
+    enviado:     document.getElementById('msg-enviado').value,
+    cancelado:   document.getElementById('msg-cancelado').value,
+    lembrete25:  document.getElementById('msg-lembrete25').value
   };
   localStorage.setItem('msg_templates_alphamax', JSON.stringify(templates));
   App.showToast('Mensagens salvas com sucesso!', 'success');
