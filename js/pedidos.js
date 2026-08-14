@@ -151,11 +151,54 @@ async function atualizarStatus(id, novoStatus) {
     if (novoStatus === 'enviado' && statusAnterior !== 'enviado' && pedido) {
       await baixarEstoquePedido(pedido.itens_texto);
     }
+    if (novoStatus === 'confirmado' && statusAnterior !== 'confirmado' && pedido) {
+      registrarVendaOnline(pedido);
+    }
     if (pedido && novoStatus !== statusAnterior) {
       enviarWhatsAppStatus(pedido, novoStatus);
     }
   } catch(e) {
     App.showToast('Erro ao atualizar status', 'error');
+  }
+}
+
+async function registrarVendaOnline(pedido) {
+  try {
+    const total = parseFloat(pedido.total) || 0;
+    const itens = (pedido.itens_texto || '').split('\n').filter(Boolean).map(linha => {
+      const m = linha.match(/[•\-]?\s*(\d+)x\s+(.+?)\s+—\s+R\$\s*([\d,.]+)/);
+      if (!m) return null;
+      const preco = parseFloat(m[3].replace('.','').replace(',','.'));
+      return { nome: m[2].trim(), qty: parseInt(m[1]), preco, total: preco };
+    }).filter(Boolean);
+
+    const venda = {
+      id: 'online_' + pedido.id,
+      created_at: pedido.created_at || new Date().toISOString(),
+      itens,
+      subtotal: total,
+      desconto: 0,
+      total,
+      pagamento: 'online',
+      pagamento_nome: 'Pedido Online',
+      cliente_nome: pedido.nome || '',
+      status: 'pago',
+      caixa_id: null,
+      origem: 'loja_online'
+    };
+
+    await fetch(`${SUPABASE_URL_P}/rest/v1/vendas`, {
+      method: 'POST',
+      headers: {
+        'apikey': SUPABASE_KEY_P,
+        'Authorization': `Bearer ${SUPABASE_KEY_P}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=ignore-duplicates,return=minimal'
+      },
+      body: JSON.stringify(venda)
+    });
+  } catch(e) {
+    console.warn('Erro ao registrar venda online:', e);
   }
 }
 
