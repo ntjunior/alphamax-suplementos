@@ -122,7 +122,16 @@
           <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">Alterar Status</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="det-btns-status"></div>
 
-          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);">
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px;">
+              <i data-lucide="message-circle" style="width:14px;height:14px;"></i> WhatsApp Follow-up
+            </div>
+            <div id="det-followup" style="margin-bottom:10px;min-height:24px;">
+              <span style="color:var(--text-muted);font-size:12px;">Nenhuma mensagem enviada</span>
+            </div>
+            <button class="btn btn-secondary" style="width:100%;margin-bottom:8px;" onclick="reenviarMensagem()">
+              <i data-lucide="send"></i> Reenviar via WhatsApp
+            </button>
             <button class="btn btn-secondary" style="width:100%;" onclick="imprimirPedido()"><i data-lucide="printer"></i> Imprimir Pedido</button>
           </div>
         </div>

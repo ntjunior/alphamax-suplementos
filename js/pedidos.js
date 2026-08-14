@@ -1,6 +1,10 @@
 const SUPABASE_URL_P = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
 const SUPABASE_KEY_P = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
 
+const MULTIZAP_URL    = 'http://187.127.12.21:3000';
+const MULTIZAP_EMP    = 'alphamax';
+const MULTIZAP_SECRET = 'alphamax2026';
+
 let todosPedidos = [];
 let pedidoSelecionado = null;
 let filtroStatus = '';
@@ -115,6 +119,8 @@ function verDetalhe(id) {
   btnsEl.innerHTML = Object.keys(STATUS_LABELS).map(s => `
     <button class="btn-status ${s === statusAtual ? 'active-s' : ''}" onclick="atualizarStatus('${p.id}','${s}')">${STATUS_LABELS[s]}</button>
   `).join('');
+
+  renderFollowUp(p.id);
 }
 
 async function atualizarStatus(id, novoStatus) {
@@ -178,7 +184,7 @@ async function baixarEstoquePedido(itensTxt) {
   }
 }
 
-function enviarWhatsAppStatus(pedido, status) {
+async function enviarWhatsAppStatus(pedido, status) {
   if (!pedido.telefone) return;
   const tel = pedido.telefone.replace(/\D/g,'').replace(/^0/,'').replace(/^55/,'');
   const nome = pedido.nome || 'Cliente';
@@ -189,7 +195,87 @@ function enviarWhatsAppStatus(pedido, status) {
   };
   const msg = msgs[status];
   if (!msg) return;
-  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+
+  const enviado = await enviarViaWebhook(pedido, msg, status);
+  if (!enviado) {
+    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+  }
+}
+
+async function enviarViaWebhook(pedido, mensagem, tipo) {
+  try {
+    const tel = (pedido.telefone || '').replace(/\D/g,'').replace(/^0/,'').replace(/^55/,'');
+    if (!tel) return false;
+    const r = await fetch(`${MULTIZAP_URL}/webhook/loja/${MULTIZAP_EMP}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: MULTIZAP_SECRET, numero: tel, mensagem, pedidoId: pedido.id, tipo })
+    });
+    const d = await r.json();
+    if (d.ok) {
+      await registrarFollowUp(pedido.id, tipo, true);
+      atualizarFollowUpUI(pedido.id, tipo);
+      return true;
+    }
+  } catch(e) { console.warn('Webhook Multi Zap:', e.message); }
+  return false;
+}
+
+async function registrarFollowUp(pedidoId, tipo, ok) {
+  try {
+    const followUps = JSON.parse(localStorage.getItem('followups_pedidos') || '{}');
+    if (!followUps[pedidoId]) followUps[pedidoId] = [];
+    followUps[pedidoId].push({ tipo, ok, ts: new Date().toISOString() });
+    localStorage.setItem('followups_pedidos', JSON.stringify(followUps));
+  } catch(e) {}
+}
+
+function getFollowUps(pedidoId) {
+  try {
+    const followUps = JSON.parse(localStorage.getItem('followups_pedidos') || '{}');
+    return followUps[pedidoId] || [];
+  } catch { return []; }
+}
+
+function atualizarFollowUpUI(pedidoId, tipo) {
+  const el = document.getElementById('det-followup');
+  if (!el || !pedidoSelecionado || pedidoSelecionado.id !== pedidoId) return;
+  renderFollowUp(pedidoId);
+}
+
+function renderFollowUp(pedidoId) {
+  const el = document.getElementById('det-followup');
+  if (!el) return;
+  const logs = getFollowUps(pedidoId);
+  if (logs.length === 0) {
+    el.innerHTML = '<span style="color:var(--text-muted);font-size:12px;">Nenhuma mensagem enviada</span>';
+    return;
+  }
+  const tipoLabel = { confirmado: 'Confirmado', enviado: 'Enviado', cancelado: 'Cancelado', novo_pedido: 'Novo pedido', reenvio: 'Reenvio' };
+  el.innerHTML = logs.map(f => {
+    const ts = new Date(f.ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+    const icon = f.ok ? '\u2705' : '\u274C';
+    return `<div style="font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);">${icon} <b>${tipoLabel[f.tipo] || f.tipo}</b> — ${ts}</div>`;
+  }).join('');
+}
+
+async function reenviarMensagem() {
+  if (!pedidoSelecionado) return;
+  const p = pedidoSelecionado;
+  const status = p.status || 'aguardando';
+  if (!['confirmado','enviado','cancelado'].includes(status)) {
+    App.showToast('Reenvio disponível para: Confirmado, Enviado ou Cancelado', 'error');
+    return;
+  }
+  const nome = p.nome || 'Cliente';
+  const msgs = {
+    confirmado: '\u2705 *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '! Seu pedido foi *confirmado*!\n\nEm breve ser\u00e1 separado. Entraremos em contato com os dados para pagamento via PIX.',
+    enviado:    '\uD83D\uDE80 *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '! Seu pedido foi *enviado*! \uD83D\uDCE6\n\nEm breve chegar\u00e1 at\u00e9 voc\u00ea. Obrigado pela prefer\u00eancia! \uD83D\uDCAA',
+    cancelado:  '\u274C *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informa\u00e7\u00f5es.'
+  };
+  const enviado = await enviarViaWebhook(p, msgs[status], 'reenvio');
+  if (enviado) App.showToast('Mensagem reenviada via WhatsApp!', 'success');
+  else App.showToast('Chip offline — abrindo WhatsApp Web...', 'error');
 }
 
 function imprimirPedido() {
