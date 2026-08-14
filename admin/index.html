@@ -196,9 +196,10 @@
     App.drawBarChart('grafico-semana', labels, valores);
   }
 
+  const hoje = new Date();
+
   (async () => {
     await App.initPage('dashboard');
-    const hoje = new Date();
     document.getElementById('data-hoje').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     carregarDashboard();
   })();
