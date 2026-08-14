@@ -144,6 +144,48 @@ async function atualizarStatus(id, novoStatus) {
   }
 }
 
+function imprimirPedido() {
+  if (!pedidoSelecionado) return;
+  const p = pedidoSelecionado;
+  const data = p.created_at ? new Date(p.created_at).toLocaleString('pt-BR') : '—';
+  const status = STATUS_LABELS[p.status || 'aguardando'] || p.status;
+  const itensHtml = (p.itens_texto || '').split('\n').filter(Boolean)
+    .map(l => `<tr><td style="padding:6px 0;border-bottom:1px solid #eee;">${l.replace(/^•\s*/, '')}</td></tr>`).join('');
+
+  const html = `
+    <!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Pedido — ${p.nome}</title>
+    <style>
+      body { font-family: Arial, sans-serif; font-size: 13px; color: #111; max-width: 400px; margin: 0 auto; padding: 20px; }
+      h2 { font-size: 16px; margin: 0 0 4px; }
+      .sub { color: #666; font-size: 12px; margin-bottom: 16px; }
+      .section-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #999; margin: 14px 0 4px; letter-spacing: 0.5px; }
+      table { width: 100%; border-collapse: collapse; }
+      .total-row { display: flex; justify-content: space-between; margin-top: 14px; padding-top: 10px; border-top: 2px solid #111; font-weight: 700; font-size: 15px; }
+      .badge { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 700; background: #fef9c3; color: #854d0e; }
+      @media print { body { padding: 0; } }
+    </style></head><body>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <h2>${p.nome}</h2>
+        <div class="sub">${p.telefone || ''} &nbsp;|&nbsp; ${data}</div>
+      </div>
+      <span class="badge">${status}</span>
+    </div>
+    <hr style="border:none;border-top:1px solid #ddd;">
+    <div class="section-label">Entrega</div>
+    <div>${p.endereco || 'Retirada na loja'}</div>
+    <div class="section-label">Itens</div>
+    <table>${itensHtml}</table>
+    <div class="total-row"><span>TOTAL</span><span>R$ ${Number(p.total || 0).toFixed(2).replace('.', ',')}</span></div>
+    <script>window.onload=()=>{window.print();}<\/script>
+    </body></html>`;
+
+  const win = window.open('', '_blank', 'width=480,height=600');
+  win.document.write(html);
+  win.document.close();
+}
+
 // Filtros
 document.getElementById('filtros-status').addEventListener('click', e => {
   const btn = e.target.closest('.btn-filtro');
