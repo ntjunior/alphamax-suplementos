@@ -244,7 +244,7 @@ async function registrarFollowUp(pedidoId, tipo, ok, waUrl) {
 function getFollowUps(pedidoId) {
   try {
     const followUps = JSON.parse(localStorage.getItem('followups_pedidos') || '{}');
-    const limite = Date.now() - 12 * 60 * 60 * 1000; // 12 horas
+    const limite = Date.now() - 2 * 60 * 60 * 1000; // 2 horas
     const todos = followUps[pedidoId] || [];
     const recentes = todos.filter(f => new Date(f.ts).getTime() > limite);
     if (recentes.length !== todos.length) {
@@ -261,6 +261,15 @@ function atualizarFollowUpUI(pedidoId, tipo) {
   renderFollowUp(pedidoId);
 }
 
+function limparFollowUp(pedidoId) {
+  try {
+    const followUps = JSON.parse(localStorage.getItem('followups_pedidos') || '{}');
+    delete followUps[pedidoId];
+    localStorage.setItem('followups_pedidos', JSON.stringify(followUps));
+  } catch(e) {}
+  renderFollowUp(pedidoId);
+}
+
 function renderFollowUp(pedidoId) {
   const el = document.getElementById('det-followup');
   if (!el) return;
@@ -270,7 +279,7 @@ function renderFollowUp(pedidoId) {
     return;
   }
   const tipoLabel = { confirmado: 'Confirmado', enviado: 'Enviado', cancelado: 'Cancelado', novo_pedido: 'Novo pedido', reenvio: 'Reenvio' };
-  el.innerHTML = logs.map(f => {
+  el.innerHTML = `<div style="text-align:right;margin-bottom:4px;"><button onclick="limparFollowUp('${pedidoId}')" style="font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;text-decoration:underline;">Limpar histórico</button></div>` + logs.map(f => {
     const ts = new Date(f.ts).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
     const icon = f.ok ? '\u2705' : '\u274C';
     const waBtn = (!f.ok && f.waUrl)
