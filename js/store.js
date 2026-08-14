@@ -273,7 +273,7 @@ async function aplicarCupom() {
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/cupons?codigo=ilike.${codigo}&ativo=eq.true&select=*&limit=1`,
+      `${SUPABASE_URL}/rest/v1/cupons?codigo=eq.${encodeURIComponent(codigo)}&ativo=eq.true&select=*&limit=1`,
       { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
     );
     const lista = await res.json();
@@ -283,16 +283,21 @@ async function aplicarCupom() {
       return;
     }
     const cupom = lista[0];
+    const pct = parseFloat(cupom.desconto_pct || cupom.descontoPct || 0);
+    if (pct <= 0) {
+      msgEl.style.color = '#e53935';
+      msgEl.textContent = 'Este cupom não possui desconto para compras online.';
+      return;
+    }
     cupomAplicado = cupom;
     const total = totalCarrinho();
-    descontoCupom = cupom.tipo === 'percentual' ? total * (cupom.valor / 100) : parseFloat(cupom.valor);
-    descontoCupom = Math.min(descontoCupom, total);
+    descontoCupom = Math.min(total * (pct / 100), total);
 
     document.getElementById('cupom-desconto-line').style.display = 'flex';
     document.getElementById('cupom-desconto-valor').textContent = `-R$ ${descontoCupom.toFixed(2).replace('.', ',')}`;
     document.getElementById('pedido-resumo-total').textContent = `R$ ${(total - descontoCupom).toFixed(2).replace('.', ',')}`;
     msgEl.style.color = '#16a34a';
-    msgEl.textContent = `Cupom "${cupom.codigo}" aplicado! ${cupom.tipo === 'percentual' ? cupom.valor + '%' : 'R$ ' + Number(cupom.valor).toFixed(2).replace('.',',')} de desconto.`;
+    msgEl.textContent = `Cupom "${cupom.codigo}" aplicado! ${pct}% de desconto.`;
   } catch(e) {
     msgEl.style.color = '#e53935';
     msgEl.textContent = 'Erro ao verificar cupom.';

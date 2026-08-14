@@ -73,7 +73,7 @@ function renderCupons() {
         <div>${c.nome}</div>
         ${c.whatsapp ? `<div style="font-size:11px;color:var(--text-muted);">${c.whatsapp}</div>` : ''}
       </td>
-      <td>${c.comissaoPct}%</td>
+      <td>${c.comissaoPct}%${c.descontoPct ? ` <span style="font-size:11px;color:var(--text-muted);">(cliente -${c.descontoPct}%)</span>` : ''}</td>
       <td><span class="badge ${c.ativo ? 'badge-ok' : 'badge-zero'}">${c.ativo ? 'Ativo' : 'Inativo'}</span></td>
       <td>
         <div style="display:flex;gap:4px;">
@@ -226,6 +226,7 @@ function abrirModalCupom() {
   document.getElementById('cupom-codigo').value = '';
   document.getElementById('cupom-nome').value = '';
   document.getElementById('cupom-comissao').value = '5';
+  document.getElementById('cupom-desconto').value = '';
   document.getElementById('cupom-ativo').value = '1';
   document.getElementById('cupom-whatsapp').value = '';
   document.getElementById('cupom-codigo').removeAttribute('readonly');
@@ -245,6 +246,7 @@ function editarCupom(id) {
   document.getElementById('cupom-nome').value = c.nome;
   document.getElementById('cupom-whatsapp').value = c.whatsapp || '';
   document.getElementById('cupom-comissao').value = c.comissaoPct;
+  document.getElementById('cupom-desconto').value = c.descontoPct || '';
   document.getElementById('cupom-ativo').value = c.ativo ? '1' : '0';
   document.getElementById('modal-cupom-titulo').innerHTML = '<i data-lucide="pencil"></i> Editar Cupom';
   document.querySelectorAll('#modal-cupom .form-error').forEach(e => e.classList.remove('show'));
@@ -258,6 +260,7 @@ function salvarCupom() {
   const nome = document.getElementById('cupom-nome').value.trim();
   const whatsapp = document.getElementById('cupom-whatsapp').value.trim();
   const comissaoPct = parseFloat(document.getElementById('cupom-comissao').value);
+  const descontoPct = parseFloat(document.getElementById('cupom-desconto').value) || 0;
   const ativo = document.getElementById('cupom-ativo').value === '1';
 
   let ok = true;
@@ -268,10 +271,10 @@ function salvarCupom() {
   if (!ok) return;
 
   if (id) {
-    DB.updateCupom(id, { nome, whatsapp, comissaoPct, ativo });
+    DB.updateCupom(id, { nome, whatsapp, comissaoPct, descontoPct, ativo });
     App.showToast('Cupom atualizado!', 'success');
   } else {
-    if (!DB.addCupom({ codigo, nome, whatsapp, comissaoPct, ativo })) { App.showToast('Código já existe!', 'error'); return; }
+    if (!DB.addCupom({ codigo, nome, whatsapp, comissaoPct, descontoPct, ativo })) { App.showToast('Código já existe!', 'error'); return; }
     App.showToast('Cupom criado!', 'success');
   }
   fecharModal('modal-cupom');
