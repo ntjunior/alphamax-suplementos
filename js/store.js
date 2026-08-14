@@ -532,6 +532,7 @@ function enviarWhatsApp() {
 
 // ===== REGISTRAR PEDIDO ONLINE =====
 async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, total }) {
+  const totalFinal = parseFloat(total) > 0 ? parseFloat(total) : carrinho.reduce((s, i) => s + i.preco * i.qty, 0);
   try {
     await fetch(
       `${SUPABASE_URL}/rest/v1/pedidos_online`,
@@ -543,7 +544,7 @@ async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, to
           telefone,
           endereco,
           itens_texto,
-          total: parseFloat(total),
+          total: totalFinal,
           status: 'aguardando',
           created_at: new Date().toISOString()
         })
