@@ -397,19 +397,55 @@ function enviarWhatsApp() {
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');
 
+  const enderecoFinal = entregaTipo === 'entrega' ? endereco : '';
+  const itensTxt = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
+
   // Registra cliente automaticamente
   registrarCliente({
     nome,
     telefone: tel,
-    endereco: entregaTipo === 'entrega' ? endereco : '',
-    itens: carrinho.map(i => `  • ${i.qty}x ${i.nome}`).join('\n'),
+    endereco: enderecoFinal,
+    itens: itensTxt,
     total: total.toFixed(2).replace('.', ',')
+  });
+
+  // Registra pedido na tabela pedidos_online
+  registrarPedidoOnline({
+    nome,
+    telefone: tel,
+    endereco: enderecoFinal,
+    itens_texto: itensTxt,
+    total
   });
 
   fecharCheckout();
   carrinho = [];
   atualizarCarrinho();
   showToast('Pedido enviado via WhatsApp! ✅');
+}
+
+// ===== REGISTRAR PEDIDO ONLINE =====
+async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, total }) {
+  try {
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/pedidos_online`,
+      {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({
+          nome,
+          telefone,
+          endereco,
+          itens_texto,
+          total: parseFloat(total),
+          status: 'aguardando',
+          created_at: new Date().toISOString()
+        })
+      }
+    );
+  } catch(e) {
+    console.warn('Erro ao registrar pedido:', e);
+  }
 }
 
 // ===== REGISTRAR CLIENTE NO SUPABASE =====

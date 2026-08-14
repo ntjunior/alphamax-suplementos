@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pedidos Online — Suplementos Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .pedidos-layout { display: grid; grid-template-columns: 1fr 360px; gap: 20px; }
+    .pedido-detalhe-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .filtros-bar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-filtro { padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
+    .btn-filtro.active { background: var(--red); color: #fff; border-color: var(--red); }
+    .status-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .s-aguardando { background: rgba(234,179,8,0.15); color: #ca8a04; }
+    .s-confirmado { background: rgba(59,130,246,0.15); color: #2563eb; }
+    .s-enviado    { background: rgba(34,197,94,0.15);  color: #16a34a; }
+    .s-cancelado  { background: rgba(239,68,68,0.15);  color: #dc2626; }
+    .pedido-row { cursor: pointer; transition: background 0.1s; }
+    .pedido-row:hover { background: var(--bg-input); }
+    .pedido-row.selected { background: rgba(229,57,53,0.06); }
+    .btn-status { padding: 6px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: transparent; color: var(--text-dim); cursor: pointer; font-size: 12px; font-weight: 600; transition: all 0.15s; }
+    .btn-status:hover { border-color: var(--red); color: var(--red); }
+    .btn-status.active-s { background: var(--red); color: #fff; border-color: var(--red); }
+    @media(max-width:900px){ .pedidos-layout{ grid-template-columns:1fr; } }
+  </style>
+  <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="../logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="pedidos.html" class="nav-item active" data-page="pedidos"><span class="nav-icon"><i data-lucide="clipboard-list"></i></span><span class="nav-label">Pedidos</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="clipboard-list"></i> Pedidos Online</div>
+      <div class="page-subtitle" id="pedidos-count-label">Carregando...</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+      <button class="btn btn-secondary" onclick="carregarPedidos()"><i data-lucide="refresh-cw"></i> Atualizar</button>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <div class="card mb-16" style="padding:14px 20px;">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div class="filtros-bar" id="filtros-status">
+          <button class="btn-filtro active" data-status="">Todos</button>
+          <button class="btn-filtro" data-status="aguardando">Aguardando</button>
+          <button class="btn-filtro" data-status="confirmado">Confirmado</button>
+          <button class="btn-filtro" data-status="enviado">Enviado</button>
+          <button class="btn-filtro" data-status="cancelado">Cancelado</button>
+        </div>
+        <div style="margin-left:auto;">
+          <input type="date" id="filtro-data" class="form-control" style="width:160px;padding:5px 10px;font-size:13px;">
+        </div>
+      </div>
+    </div>
+
+    <div class="pedidos-layout">
+      <div class="card">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Data / Hora</th>
+                <th>Cliente</th>
+                <th>Telefone</th>
+                <th>Itens</th>
+                <th class="text-right">Total</th>
+                <th>Entrega</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-pedidos"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="pedido-detalhe-panel" id="detalhe-panel">
+        <div class="empty-state" id="detalhe-empty">
+          <div class="empty-state-icon"><i data-lucide="mouse-pointer-click"></i></div>
+          <div class="empty-state-text">Clique em um pedido para ver os detalhes</div>
+        </div>
+        <div id="detalhe-content" class="hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+            <div>
+              <div style="font-size:15px;font-weight:700;" id="det-nome"></div>
+              <div style="font-size:12px;color:var(--text-muted);" id="det-tel"></div>
+              <div style="font-size:11px;color:var(--text-muted);" id="det-data"></div>
+            </div>
+            <div id="det-status-badge"></div>
+          </div>
+
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">Entrega</div>
+          <div style="font-size:13px;color:var(--text-dim);margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);" id="det-endereco"></div>
+
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px;">Itens</div>
+          <div id="det-itens" style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);"></div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <span style="font-size:13px;font-weight:600;color:var(--text-muted);">TOTAL</span>
+            <span style="font-size:18px;font-weight:700;color:var(--red);" id="det-total"></span>
+          </div>
+
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:10px;">Alterar Status</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="det-btns-status"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/pedidos.js"></script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+const SUPABASE_URL_P = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
+const SUPABASE_KEY_P = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
+
+let todosPedidos = [];
+let pedidoSelecionado = null;
+let filtroStatus = '';
+
+const STATUS_LABELS = {
+  aguardando: 'Aguardando',
+  confirmado:  'Confirmado',
+  enviado:     'Enviado',
+  cancelado:   'Cancelado'
+};
+
+const STATUS_CLASSES = {
+  aguardando: 's-aguardando',
+  confirmado:  's-confirmado',
+  enviado:     's-enviado',
+  cancelado:   's-cancelado'
+};
+
+function statusBadge(status) {
+  const s = status || 'aguardando';
+  return `<span class="status-badge ${STATUS_CLASSES[s]}">${STATUS_LABELS[s] || s}</span>`;
+}
+
+async function carregarPedidos() {
+  document.getElementById('pedidos-count-label').textContent = 'Carregando...';
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL_P}/rest/v1/pedidos_online?select=*&order=created_at.desc`,
+      { headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}` } }
+    );
+    todosPedidos = await res.json();
+    if (!Array.isArray(todosPedidos)) todosPedidos = [];
+    renderPedidos();
+  } catch(e) {
+    console.error('Erro ao carregar pedidos:', e);
+    document.getElementById('pedidos-count-label').textContent = 'Erro ao carregar';
+  }
+}
+
+function renderPedidos() {
+  const filtroData = document.getElementById('filtro-data').value;
+
+  let lista = todosPedidos;
+  if (filtroStatus) lista = lista.filter(p => (p.status || 'aguardando') === filtroStatus);
+  if (filtroData)   lista = lista.filter(p => p.created_at && p.created_at.startsWith(filtroData));
+
+  document.getElementById('pedidos-count-label').textContent =
+    `${lista.length} pedido${lista.length !== 1 ? 's' : ''}${filtroStatus ? ' — ' + STATUS_LABELS[filtroStatus] : ''}`;
+
+  const tbody = document.getElementById('tbody-pedidos');
+  if (lista.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon"><i data-lucide="clipboard-list"></i></div><div class="empty-state-text">Nenhum pedido encontrado</div></div></td></tr>`;
+    if (window.lucide) lucide.createIcons();
+    return;
+  }
+
+  tbody.innerHTML = lista.map(p => {
+    const data = p.created_at ? new Date(p.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
+    const itensResumo = (p.itens_texto || '').split('\n').slice(0,2).join(', ').replace(/•\s*/g,'').trim() || '—';
+    const entrega = p.endereco ? 'Entrega' : 'Retirada';
+    const selected = pedidoSelecionado && pedidoSelecionado.id === p.id ? 'selected' : '';
+    return `
+      <tr class="pedido-row ${selected}" onclick="verDetalhe('${p.id}')">
+        <td style="font-size:12px;white-space:nowrap;">${data}</td>
+        <td style="font-weight:600;">${p.nome || '—'}</td>
+        <td style="font-size:12px;">${p.telefone || '—'}</td>
+        <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${itensResumo}</td>
+        <td class="text-right font-bold text-red" style="white-space:nowrap;">R$ ${Number(p.total || 0).toFixed(2).replace('.', ',')}</td>
+        <td style="font-size:12px;">${entrega}</td>
+        <td>${statusBadge(p.status)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+}
+
+function verDetalhe(id) {
+  const p = todosPedidos.find(x => x.id === id);
+  if (!p) return;
+  pedidoSelecionado = p;
+
+  document.querySelectorAll('.pedido-row').forEach(r => r.classList.remove('selected'));
+  const rows = document.querySelectorAll('.pedido-row');
+  rows.forEach(r => { if (r.onclick && r.getAttribute('onclick') && r.getAttribute('onclick').includes(id)) r.classList.add('selected'); });
+
+  document.getElementById('detalhe-empty').classList.add('hidden');
+  document.getElementById('detalhe-content').classList.remove('hidden');
+
+  const data = p.created_at ? new Date(p.created_at).toLocaleString('pt-BR') : '—';
+  document.getElementById('det-nome').textContent = p.nome || '—';
+  document.getElementById('det-tel').textContent = p.telefone || 'Sem telefone';
+  document.getElementById('det-data').textContent = data;
+  document.getElementById('det-status-badge').innerHTML = statusBadge(p.status);
+  document.getElementById('det-endereco').textContent = p.endereco || 'Retirada na loja';
+  document.getElementById('det-total').textContent = `R$ ${Number(p.total || 0).toFixed(2).replace('.', ',')}`;
+
+  const itensEl = document.getElementById('det-itens');
+  const linhas = (p.itens_texto || '').split('\n').filter(Boolean);
+  if (linhas.length > 0) {
+    itensEl.innerHTML = linhas.map(l => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <span style="font-size:13px;color:var(--text-dim);">${l.replace(/^•\s*/, '')}</span>
+      </div>
+    `).join('');
+  } else {
+    itensEl.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">—</span>';
+  }
+
+  const statusAtual = p.status || 'aguardando';
+  const btnsEl = document.getElementById('det-btns-status');
+  btnsEl.innerHTML = Object.keys(STATUS_LABELS).map(s => `
+    <button class="btn-status ${s === statusAtual ? 'active-s' : ''}" onclick="atualizarStatus('${p.id}','${s}')">${STATUS_LABELS[s]}</button>
+  `).join('');
+}
+
+async function atualizarStatus(id, novoStatus) {
+  try {
+    await fetch(
+      `${SUPABASE_URL_P}/rest/v1/pedidos_online?id=eq.${id}`,
+      {
+        method: 'PATCH',
+        headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ status: novoStatus, updated_at: new Date().toISOString() })
+      }
+    );
+    const idx = todosPedidos.findIndex(p => p.id === id);
+    if (idx !== -1) todosPedidos[idx].status = novoStatus;
+    if (pedidoSelecionado && pedidoSelecionado.id === id) {
+      pedidoSelecionado.status = novoStatus;
+      document.getElementById('det-status-badge').innerHTML = statusBadge(novoStatus);
+      const btnsEl = document.getElementById('det-btns-status');
+      btnsEl.querySelectorAll('.btn-status').forEach(b => {
+        b.classList.toggle('active-s', b.getAttribute('onclick').includes(`'${novoStatus}'`));
+      });
+    }
+    renderPedidos();
+    App.showToast('Status atualizado!', 'success');
+  } catch(e) {
+    App.showToast('Erro ao atualizar status', 'error');
+  }
+}
+
+// Filtros
+document.getElementById('filtros-status').addEventListener('click', e => {
+  const btn = e.target.closest('.btn-filtro');
+  if (!btn) return;
+  document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filtroStatus = btn.dataset.status;
+  renderPedidos();
+});
+
+document.getElementById('filtro-data').addEventListener('change', renderPedidos);
+
+(async () => {
+  await App.initPage('pedidos');
+  await carregarPedidos();
+})();
