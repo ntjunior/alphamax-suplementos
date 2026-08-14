@@ -6,6 +6,9 @@ let produtos = [];
 let carrinho = [];
 let catAtiva = '';
 let entregaTipo = 'retirada';
+let cupomAplicado = null;
+let descontoCupom = 0;
+let produtoModalId = null;
 
 // ===== SUPABASE =====
 async function fetchProdutos() {
@@ -85,7 +88,7 @@ function cardHTML(p) {
     : `<span class="card-emoji-fallback">${emoji}</span>`;
 
   return `
-    <div class="produto-card-store ${semEstoque ? 'produto-sem-estoque' : ''}">
+    <div class="produto-card-store ${semEstoque ? 'produto-sem-estoque' : ''}" onclick="abrirProduto('${p.id}')" style="cursor:pointer;">
       <div class="produto-img">
         ${imgContent}
         ${semEstoque ? '<div class="sem-estoque-overlay">SEM ESTOQUE</div>' : ''}
@@ -122,7 +125,9 @@ function renderProdutos(busca = '') {
     lista = lista.filter(p =>
       p.nome.toLowerCase().includes(b) ||
       (p.marca || '').toLowerCase().includes(b) ||
-      (p.categoria || '').toLowerCase().includes(b)
+      (p.categoria || '').toLowerCase().includes(b) ||
+      (p.sabor || '').toLowerCase().includes(b) ||
+      (p.descricao || '').toLowerCase().includes(b)
     );
   }
 
@@ -206,6 +211,92 @@ function filtrarCatBtn(cat) {
   });
   renderProdutos('');
   document.getElementById('store-main').scrollIntoView({ behavior: 'smooth' });
+}
+
+// ===== MODAL PRODUTO =====
+function abrirProduto(id) {
+  const p = produtos.find(x => x.id === id);
+  if (!p) return;
+  produtoModalId = id;
+  const semEstoque = p.estoque <= 0;
+  const preco = p.precoVenda || 0;
+  const parcela = (preco / 5).toFixed(2).replace('.', ',');
+  const emoji = p.emoji || emojiCategoria(p.categoria);
+
+  const imgWrap = document.getElementById('mp-img-wrap');
+  imgWrap.innerHTML = p.imagemUrl
+    ? `<img src="${p.imagemUrl}" alt="${p.nome}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.innerHTML='<span style=font-size:60px>${emoji}</span>'">`
+    : `<span style="font-size:60px;">${emoji}</span>`;
+
+  document.getElementById('mp-marca').textContent = p.marca || '';
+  document.getElementById('mp-nome').textContent = p.nome;
+  document.getElementById('mp-sabor').textContent = p.sabor ? `Sabor: ${p.sabor}` : '';
+  document.getElementById('mp-desc').textContent = p.descricao || 'Sem descrição disponível.';
+  document.getElementById('mp-preco').textContent = `R$ ${preco.toFixed(2).replace('.', ',')}`;
+  document.getElementById('mp-parcelas').textContent = `ou R$ ${parcela} em até 5x sem juros`;
+  document.getElementById('mp-estoque-info').innerHTML = semEstoque
+    ? '<span style="color:#e53935;font-weight:700;">Sem estoque</span>'
+    : `<span style="color:#16a34a;font-weight:700;">${p.estoque} em estoque</span>`;
+
+  const btn = document.getElementById('mp-btn');
+  btn.textContent = semEstoque ? 'SEM ESTOQUE' : 'COMPRAR';
+  btn.disabled = semEstoque;
+  btn.style.opacity = semEstoque ? '0.5' : '1';
+  btn.style.cursor = semEstoque ? 'not-allowed' : 'pointer';
+
+  document.getElementById('modal-produto-store').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function fecharProduto() {
+  document.getElementById('modal-produto-store').style.display = 'none';
+  document.body.style.overflow = '';
+  produtoModalId = null;
+}
+
+function adicionarDoProduto() {
+  if (produtoModalId) {
+    adicionarCarrinho(produtoModalId);
+    fecharProduto();
+  }
+}
+
+// ===== CUPOM =====
+async function aplicarCupom() {
+  const codigo = document.getElementById('checkout-cupom').value.trim().toUpperCase();
+  const msgEl = document.getElementById('cupom-msg');
+  if (!codigo) return;
+
+  msgEl.style.display = 'block';
+  msgEl.style.color = '#888';
+  msgEl.textContent = 'Verificando...';
+
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/cupons?codigo=ilike.${codigo}&ativo=eq.true&select=*&limit=1`,
+      { headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` } }
+    );
+    const lista = await res.json();
+    if (!Array.isArray(lista) || lista.length === 0) {
+      msgEl.style.color = '#e53935';
+      msgEl.textContent = 'Cupom inválido ou expirado.';
+      return;
+    }
+    const cupom = lista[0];
+    cupomAplicado = cupom;
+    const total = totalCarrinho();
+    descontoCupom = cupom.tipo === 'percentual' ? total * (cupom.valor / 100) : parseFloat(cupom.valor);
+    descontoCupom = Math.min(descontoCupom, total);
+
+    document.getElementById('cupom-desconto-line').style.display = 'flex';
+    document.getElementById('cupom-desconto-valor').textContent = `-R$ ${descontoCupom.toFixed(2).replace('.', ',')}`;
+    document.getElementById('pedido-resumo-total').textContent = `R$ ${(total - descontoCupom).toFixed(2).replace('.', ',')}`;
+    msgEl.style.color = '#16a34a';
+    msgEl.textContent = `Cupom "${cupom.codigo}" aplicado! ${cupom.tipo === 'percentual' ? cupom.valor + '%' : 'R$ ' + Number(cupom.valor).toFixed(2).replace('.',',')} de desconto.`;
+  } catch(e) {
+    msgEl.style.color = '#e53935';
+    msgEl.textContent = 'Erro ao verificar cupom.';
+  }
 }
 
 // ===== CARRINHO =====
@@ -334,6 +425,10 @@ function abrirCheckout() {
   document.getElementById('pedido-resumo-itens').innerHTML = resumo;
   document.getElementById('pedido-resumo-total').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
   fecharCarrinho();
+  cupomAplicado = null; descontoCupom = 0;
+  document.getElementById('checkout-cupom').value = '';
+  document.getElementById('cupom-msg').style.display = 'none';
+  document.getElementById('cupom-desconto-line').style.display = 'none';
   document.getElementById('checkout-cep').value = '';
   document.getElementById('checkout-rua').value = '';
   document.getElementById('checkout-numero').value = '';
@@ -367,7 +462,8 @@ function enviarWhatsApp() {
     endereco = `${rua}, ${numero}${complemento ? ', ' + complemento : ''} — ${bairro}, ${cidade} — CEP: ${cep}`;
   }
 
-  const total = totalCarrinho();
+  const totalBruto = totalCarrinho();
+  const total = Math.max(0, totalBruto - descontoCupom);
   const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
 
   const ic = {
@@ -379,20 +475,25 @@ function enviarWhatsApp() {
     ok:      '\u2705'        // ✅
   };
 
-  const msg = [
+  const linhas = [
     `${ic.pedido} *NOVO PEDIDO - Alpha Max Suplementos*`,
     ``,
     `${ic.nome} *Nome:* ${nome}`,
     `${ic.tel} *Telefone:* ${tel}`,
-    `${ic.entrega} *Entrega:* ${entregaTipo === 'retirada' ? 'Retirar na loja' : `Entrega — ${endereco}`}`,
+    `${ic.entrega} *Entrega:* ${entregaTipo === 'retirada' ? 'Retirar na loja' : `Entrega \u2014 ${endereco}`}`,
     ``,
     `*Itens:*`,
     itens,
-    ``,
-    `${ic.total} *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*`,
-    ``,
-    `Aguardo confirmacao e dados para pagamento via PIX! ${ic.ok}`
-  ].join('\n');
+    ``
+  ];
+  if (cupomAplicado) {
+    linhas.push(`\uD83C\uDFF7 *Cupom:* ${cupomAplicado.codigo} (-R$ ${descontoCupom.toFixed(2).replace('.',',')})`);
+    linhas.push(``);
+  }
+  linhas.push(`${ic.total} *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*`);
+  linhas.push(``);
+  linhas.push(`Aguardo confirmacao e dados para pagamento via PIX! ${ic.ok}`);
+  const msg = linhas.join('\n');
 
   const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
   window.open(url, '_blank');

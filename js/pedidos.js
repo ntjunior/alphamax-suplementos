@@ -118,6 +118,8 @@ function verDetalhe(id) {
 }
 
 async function atualizarStatus(id, novoStatus) {
+  const pedido = todosPedidos.find(p => p.id === id);
+  const statusAnterior = pedido ? (pedido.status || 'aguardando') : '';
   try {
     await fetch(
       `${SUPABASE_URL_P}/rest/v1/pedidos_online?id=eq.${id}`,
@@ -139,9 +141,55 @@ async function atualizarStatus(id, novoStatus) {
     }
     renderPedidos();
     App.showToast('Status atualizado!', 'success');
+
+    if (novoStatus === 'enviado' && statusAnterior !== 'enviado' && pedido) {
+      await baixarEstoquePedido(pedido.itens_texto);
+    }
+    if (pedido && novoStatus !== statusAnterior) {
+      enviarWhatsAppStatus(pedido, novoStatus);
+    }
   } catch(e) {
     App.showToast('Erro ao atualizar status', 'error');
   }
+}
+
+async function baixarEstoquePedido(itensTxt) {
+  const linhas = (itensTxt || '').split('\n').filter(Boolean);
+  for (const linha of linhas) {
+    const m = linha.match(/(\d+)x\s+(.+?)\s+—/);
+    if (!m) continue;
+    const qty = parseInt(m[1]);
+    const nomeBusca = m[2].trim().substring(0, 20);
+    try {
+      const res = await fetch(
+        `${SUPABASE_URL_P}/rest/v1/produtos?nome=ilike.*${encodeURIComponent(nomeBusca)}*&select=id,estoque&limit=1`,
+        { headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}` } }
+      );
+      const prods = await res.json();
+      if (prods && prods[0]) {
+        const novoEstoque = Math.max(0, (prods[0].estoque || 0) - qty);
+        await fetch(`${SUPABASE_URL_P}/rest/v1/produtos?id=eq.${prods[0].id}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ estoque: novoEstoque })
+        });
+      }
+    } catch(e) { console.warn('Erro ao baixar estoque:', e); }
+  }
+}
+
+function enviarWhatsAppStatus(pedido, status) {
+  if (!pedido.telefone) return;
+  const tel = pedido.telefone.replace(/\D/g,'').replace(/^0/,'').replace(/^55/,'');
+  const nome = pedido.nome || 'Cliente';
+  const msgs = {
+    confirmado: '\u2705 *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '! Seu pedido foi *confirmado*!\n\nEm breve ser\u00e1 separado. Entraremos em contato com os dados para pagamento via PIX.',
+    enviado:    '\uD83D\uDE80 *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '! Seu pedido foi *enviado*! \uD83D\uDCE6\n\nEm breve chegar\u00e1 at\u00e9 voc\u00ea. Obrigado pela prefer\u00eancia! \uD83D\uDCAA',
+    cancelado:  '\u274C *Alpha Max Suplementos*\n\nOl\u00e1 ' + nome + '. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informa\u00e7\u00f5es.'
+  };
+  const msg = msgs[status];
+  if (!msg) return;
+  window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
 }
 
 function imprimirPedido() {

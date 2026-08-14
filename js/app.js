@@ -70,6 +70,60 @@ const App = {
     this._initUserInfo();
     this._hideLoading();
     setTimeout(() => this.refreshIcons(), 0);
+    this._iniciarPollingPedidos();
+  },
+
+  _prevPedidosCount: -1,
+
+  _iniciarPollingPedidos() {
+    const atualizar = async () => {
+      try {
+        const res = await fetch(`${DB.URL}/rest/v1/pedidos_online?status=eq.aguardando&select=id`, {
+          headers: { 'apikey': DB.KEY, 'Authorization': `Bearer ${DB.KEY}` }
+        });
+        const data = await res.json();
+        const qtd = Array.isArray(data) ? data.length : 0;
+        const navLink = document.querySelector('.nav-item[data-page="pedidos"]');
+        if (navLink) {
+          let badge = navLink.querySelector('.pedidos-nav-badge');
+          if (qtd > 0) {
+            if (!badge) {
+              badge = document.createElement('span');
+              badge.className = 'pedidos-nav-badge';
+              badge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;background:#e53935;color:#fff;border-radius:50%;min-width:17px;height:17px;font-size:10px;font-weight:700;padding:0 3px;position:absolute;top:5px;right:5px;';
+              navLink.style.position = 'relative';
+              navLink.appendChild(badge);
+            }
+            badge.textContent = qtd;
+          } else if (badge) {
+            badge.remove();
+          }
+        }
+        if (this._prevPedidosCount >= 0 && qtd > this._prevPedidosCount) {
+          this._tocarSomPedido();
+          this.showToast(`${qtd - this._prevPedidosCount} novo(s) pedido(s) online!`, 'info');
+        }
+        this._prevPedidosCount = qtd;
+      } catch(e) {}
+    };
+    atualizar();
+    setInterval(atualizar, 30000);
+  },
+
+  _tocarSomPedido() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.25, 0.5].forEach(t => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.connect(g); g.connect(ctx.destination);
+        osc.frequency.value = 880;
+        g.gain.setValueAtTime(0.25, ctx.currentTime + t);
+        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + 0.18);
+        osc.start(ctx.currentTime + t);
+        osc.stop(ctx.currentTime + t + 0.18);
+      });
+    } catch(e) {}
   },
 
   _showLoading() {
