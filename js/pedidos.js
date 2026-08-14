@@ -1,9 +1,9 @@
 const SUPABASE_URL_P = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
 const SUPABASE_KEY_P = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
 
-const MULTIZAP_URL    = 'http://187.127.12.21:3000';
+const MULTIZAP_URL    = 'https://multizape.com.br';
 const MULTIZAP_EMP    = 'alphamax';
-const MULTIZAP_SECRET = 'alphamax2026';
+const MULTIZAP_SECRET = '6p5ipc07fkc4dbhc';
 
 let todosPedidos = [];
 let pedidoSelecionado = null;
