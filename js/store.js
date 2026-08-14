@@ -477,12 +477,12 @@ function enviarWhatsApp() {
   const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
 
   const ic = {
-    pedido:  '\uD83D\uDED2', // 🛒
-    nome:    '\uD83D\uDC64', // 👤
-    tel:     '\uD83D\uDCDE', // 📞
-    entrega: '\uD83D\uDCE6', // 📦
-    total:   '\uD83D\uDCB0', // 💰
-    ok:      '\u2705'        // ✅
+    pedido:  '🛒',
+    nome:    '👤',
+    tel:     '📞',
+    entrega: '📦',
+    total:   '💰',
+    ok:      '✅'
   };
 
   const linhas = [
