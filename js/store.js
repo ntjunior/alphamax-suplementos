@@ -2,6 +2,11 @@ const SUPABASE_URL = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
 const WHATSAPP_NUMBER = '5511931437950';
 
+const MULTIZAP_URL    = 'https://multizape.com.br';
+const MULTIZAP_EMP    = 'alphamax';
+const MULTIZAP_SECRET = '6p5ipc07fkc4dbhc';
+const MSG_CONFIRMADO  = '✅ *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *confirmado*!\n\nEm breve será separado. Entraremos em contato com os dados para pagamento via PIX.';
+
 let produtos = [];
 let carrinho = [];
 let catAtiva = '';
@@ -550,8 +555,24 @@ async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, to
         })
       }
     );
+    enviarConfirmacaoWhatsApp(nome, telefone);
   } catch(e) {
     console.warn('Erro ao registrar pedido:', e);
+  }
+}
+
+async function enviarConfirmacaoWhatsApp(nome, telefone) {
+  try {
+    const tel = (telefone || '').replace(/\D/g, '').replace(/^0/, '').replace(/^55/, '');
+    if (!tel) return;
+    const mensagem = MSG_CONFIRMADO.replace(/\[Nome\]/g, nome || 'Cliente');
+    await fetch(`${MULTIZAP_URL}/webhook/loja/${MULTIZAP_EMP}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: MULTIZAP_SECRET, numero: tel, mensagem, nome })
+    });
+  } catch(e) {
+    console.warn('WhatsApp confirmação automática:', e);
   }
 }
 
