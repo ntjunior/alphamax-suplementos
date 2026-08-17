@@ -493,7 +493,7 @@ async function enviarWhatsApp() {
     mpItens.push({ id: 'desconto', title: `Desconto cupom ${cupomAplicado?.codigo || ''}`, quantity: 1, unit_price: -descontoCupom, currency_id: 'BRL' });
   }
 
-  const btnFinalizar = document.querySelector('.btn-finalizar') || document.querySelector('[onclick*="enviarWhatsApp"]');
+  const btnFinalizar = document.getElementById('btn-finalizar-pedido');
   if (btnFinalizar) { btnFinalizar.disabled = true; btnFinalizar.textContent = 'Aguarde...'; }
 
   try {
