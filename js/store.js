@@ -477,9 +477,17 @@ async function enviarWhatsApp() {
   const enderecoFinal = entregaTipo === 'entrega' ? endereco : '';
   const itensTxt = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
 
-  // Registra cliente e pedido
   registrarCliente({ nome, telefone: tel, endereco: enderecoFinal, itens: itensTxt, total: total.toFixed(2).replace('.', ',') });
-  const pedidoId = await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total });
+
+  // Retirada na loja: registrar imediatamente (cliente paga na retirada)
+  // Entrega: salvar no localStorage e só registrar após pagamento MP confirmado
+  let pedidoId = null;
+  if (entregaTipo === 'retirada') {
+    pedidoId = await registrarPedidoOnline({ nome, telefone: tel, endereco: '', itens_texto: itensTxt, total });
+  } else {
+    localStorage.setItem('mp_pedido_pendente', JSON.stringify({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total, ts: Date.now() }));
+    pedidoId = 'mp_' + Date.now();
+  }
 
   // Monta itens no formato Mercado Pago
   const mpItens = carrinho.map(i => {
@@ -519,6 +527,11 @@ async function enviarWhatsApp() {
   }
 
   // Fallback: abre WhatsApp se MP falhar
+  if (entregaTipo !== 'retirada') {
+    // Entrega mas MP falhou: registrar pedido agora via WhatsApp
+    await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total });
+    localStorage.removeItem('mp_pedido_pendente');
+  }
   if (btnFinalizar) { btnFinalizar.disabled = false; btnFinalizar.textContent = 'Finalizar Pedido'; }
   const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
   const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* ${entregaTipo === 'retirada' ? 'Retirar na loja' : `Entrega — ${endereco}`}\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\nAguardo confirmacao e dados para pagamento via PIX! ✅`;
@@ -530,7 +543,7 @@ async function enviarWhatsApp() {
 }
 
 // ===== REGISTRAR PEDIDO ONLINE =====
-async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, total }) {
+async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, total, status = 'aguardando' }) {
   const totalFinal = parseFloat(total) > 0 ? parseFloat(total) : carrinho.reduce((s, i) => s + i.preco * i.qty, 0);
   try {
     const res = await fetch(
@@ -544,7 +557,7 @@ async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, to
           endereco,
           itens_texto,
           total: totalFinal,
-          status: 'aguardando',
+          status,
           created_at: new Date().toISOString()
         })
       }
@@ -556,6 +569,19 @@ async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, to
     return null;
   }
 }
+
+// Ao retornar do MP com pagamento aprovado, registrar o pedido
+(async function checkMpRetorno() {
+  const params = new URLSearchParams(location.search);
+  if (params.get('pag') !== 'sucesso') return;
+  const pending = localStorage.getItem('mp_pedido_pendente');
+  if (!pending) return;
+  try {
+    const d = JSON.parse(pending);
+    await registrarPedidoOnline({ nome: d.nome, telefone: d.telefone, endereco: d.endereco, itens_texto: d.itens_texto, total: d.total, status: 'confirmado' });
+    localStorage.removeItem('mp_pedido_pendente');
+  } catch(e) { console.warn('Erro ao registrar pedido MP retorno:', e); }
+})();
 
 async function enviarConfirmacaoWhatsApp(nome, telefone) {
   try {
