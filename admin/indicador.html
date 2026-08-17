@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal do Indicador — Alpha Max</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f1117; --bg-card: #1a1d27; --border: #2a2d3e;
+      --text: #e8eaf0; --text-muted: #7c7f9a; --red: #e53935;
+      --green: #43a047; --yellow: #f9a825; --blue: #1e88e5;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+
+    /* LOGIN */
+    #tela-login { display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px; }
+    .login-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 40px 36px; width: 100%; max-width: 380px; }
+    .login-logo { text-align: center; margin-bottom: 28px; }
+    .login-logo img { height: 52px; object-fit: contain; }
+    .login-title { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+    .login-sub { font-size: 13px; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+    .form-control { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius); background: rgba(255,255,255,0.04); color: var(--text); font-size: 14px; font-family: inherit; transition: border-color .2s; }
+    .form-control:focus { outline: none; border-color: var(--red); }
+    .btn-login { width: 100%; padding: 13px; background: var(--red); color: #fff; border: none; border-radius: var(--radius); font-size: 15px; font-weight: 700; cursor: pointer; margin-top: 8px; transition: opacity .2s; }
+    .btn-login:hover { opacity: .88; }
+    .login-erro { color: #ef5350; font-size: 13px; text-align: center; margin-top: 12px; display: none; }
+
+    /* PORTAL */
+    #tela-portal { display: none; }
+    .portal-header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
+    .portal-header-logo { display: flex; align-items: center; gap: 12px; }
+    .portal-header-logo img { height: 36px; object-fit: contain; }
+    .portal-header-info { font-size: 13px; color: var(--text-muted); }
+    .portal-header-info strong { color: var(--text); font-size: 15px; display: block; }
+    .btn-logout { background: rgba(229,57,53,0.12); color: var(--red); border: 1px solid rgba(229,57,53,0.3); border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .portal-body { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .kpi-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+    .kpi-value { font-size: 26px; font-weight: 800; }
+    .kpi-value.green { color: var(--green); }
+    .kpi-value.yellow { color: var(--yellow); }
+    .kpi-value.blue { color: #64b5f6; }
+    .filtros { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .filtros span { font-size: 12px; color: var(--text-muted); font-weight: 600; }
+    .pill { background: transparent; border: 1px solid var(--border); color: var(--text-muted); border-radius: 20px; padding: 5px 14px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .2s; }
+    .pill.active { background: var(--red); border-color: var(--red); color: #fff; }
+    .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+    .card-header { padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 700; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: rgba(255,255,255,.03); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; white-space: nowrap; border-bottom: 1px solid var(--border); }
+    td { padding: 11px 14px; border-bottom: 1px solid rgba(255,255,255,.04); }
+    tr:last-child td { border-bottom: none; }
+    .text-right { text-align: right; }
+    .text-green { color: var(--green); font-weight: 700; }
+    .text-yellow { color: var(--yellow); font-weight: 700; }
+    .empty { padding: 40px; text-align: center; color: var(--text-muted); font-size: 13px; }
+    .badge-codigo { background: rgba(229,57,53,.12); color: var(--red); border: 1px solid rgba(229,57,53,.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
+    .tag-pag { background: rgba(255,255,255,.06); border-radius: 5px; padding: 2px 8px; font-size: 11px; }
+  </style>
+</head>
+<body>
+
+<!-- TELA DE LOGIN -->
+<div id="tela-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="../logo.png" alt="Alpha Max" onerror="this.style.display='none'">
+    </div>
+    <div class="login-title">Portal do Indicador</div>
+    <div class="login-sub">Alpha Max Suplementos</div>
+    <div class="form-group">
+      <label class="form-label">Código do Cupom</label>
+      <input type="text" id="login-codigo" class="form-control" placeholder="Ex: JOAO10" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Senha</label>
+      <input type="password" id="login-senha" class="form-control" placeholder="Sua senha" onkeydown="if(event.key==='Enter')entrar()">
+    </div>
+    <button class="btn-login" onclick="entrar()">Entrar</button>
+    <div class="login-erro" id="login-erro">Código ou senha incorretos.</div>
+  </div>
+</div>
+
+<!-- TELA DO PORTAL -->
+<div id="tela-portal">
+  <div class="portal-header">
+    <div class="portal-header-logo">
+      <img src="../logo.png" alt="Alpha Max" onerror="this.style.display='none'">
+      <div class="portal-header-info">
+        <strong id="portal-nome">—</strong>
+        Portal do Indicador
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span class="badge-codigo" id="portal-codigo">—</span>
+      <button class="btn-logout" onclick="sair()">Sair</button>
+    </div>
+  </div>
+
+  <div class="portal-body">
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="kpi-label">Vendas Indicadas</div>
+        <div class="kpi-value blue" id="kpi-qtd">0</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Total em Vendas</div>
+        <div class="kpi-value green" id="kpi-total">R$ 0,00</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">Comissão Gerada</div>
+        <div class="kpi-value yellow" id="kpi-comissao">R$ 0,00</div>
+      </div>
+      <div class="kpi">
+        <div class="kpi-label">% de Comissão</div>
+        <div class="kpi-value" id="kpi-pct">0%</div>
+      </div>
+    </div>
+
+    <div class="filtros">
+      <span>Período:</span>
+      <button class="pill active" onclick="setPeriodo('mes', this)">Este Mês</button>
+      <button class="pill" onclick="setPeriodo('7d', this)">7 Dias</button>
+      <button class="pill" onclick="setPeriodo('30d', this)">30 Dias</button>
+      <button class="pill" onclick="setPeriodo('todos', this)">Todos</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Vendas com seu cupom</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Cliente</th>
+              <th>Pagamento</th>
+              <th class="text-right">Total Venda</th>
+              <th class="text-right">Sua Comissão</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-vendas"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
+
+let cupomAtual = null;
+let todasVendas = [];
+let periodoAtual = 'mes';
+
+const fmt = v => 'R$ ' + parseFloat(v || 0).toFixed(2).replace('.', ',');
+const fmtDate = s => { const d = new Date(s); return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); };
+const nomesPag = { dinheiro: 'Dinheiro', pix: 'PIX', credito: 'Crédito', debito: 'Débito', online: 'Online' };
+
+async function entrar() {
+  const codigo = document.getElementById('login-codigo').value.trim().toUpperCase();
+  const senha = document.getElementById('login-senha').value;
+  const erroEl = document.getElementById('login-erro');
+  erroEl.style.display = 'none';
+
+  if (!codigo || !senha) { erroEl.textContent = 'Preencha o código e a senha.'; erroEl.style.display = 'block'; return; }
+
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/cupons?codigo=eq.${encodeURIComponent(codigo)}&ativo=eq.true&select=*`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+    });
+    const rows = await res.json();
+    if (!rows || rows.length === 0) { erroEl.textContent = 'Cupom não encontrado ou inativo.'; erroEl.style.display = 'block'; return; }
+
+    const cupom = rows[0];
+    if (!cupom.senha || cupom.senha !== btoa(senha)) {
+      erroEl.textContent = 'Código ou senha incorretos.'; erroEl.style.display = 'block'; return;
+    }
+
+    cupomAtual = { codigo: cupom.codigo, nome: cupom.nome, comissaoPct: cupom.comissao_pct };
+    await carregarDados();
+    document.getElementById('tela-login').style.display = 'none';
+    document.getElementById('tela-portal').style.display = 'block';
+    document.getElementById('portal-nome').textContent = cupom.nome;
+    document.getElementById('portal-codigo').textContent = cupom.codigo;
+    document.getElementById('kpi-pct').textContent = (cupom.comissao_pct || 0) + '%';
+  } catch(e) {
+    erroEl.textContent = 'Erro de conexão. Tente novamente.'; erroEl.style.display = 'block';
+  }
+}
+
+async function carregarDados() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/vendas?cupom_codigo=eq.${encodeURIComponent(cupomAtual.codigo)}&order=created_at.desc`, {
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+  });
+  todasVendas = await res.json();
+  renderTabela();
+}
+
+function filtrarPeriodo(vendas) {
+  const agora = new Date();
+  if (periodoAtual === 'mes') return vendas.filter(v => { const d = new Date(v.created_at); return d.getFullYear() === agora.getFullYear() && d.getMonth() === agora.getMonth(); });
+  if (periodoAtual === '7d')  return vendas.filter(v => new Date(v.created_at) >= new Date(agora - 7 * 86400000));
+  if (periodoAtual === '30d') return vendas.filter(v => new Date(v.created_at) >= new Date(agora - 30 * 86400000));
+  return vendas;
+}
+
+function renderTabela() {
+  const vendas = filtrarPeriodo(todasVendas);
+  const pct = cupomAtual.comissaoPct || 0;
+
+  const totalVal = vendas.reduce((s, v) => s + (v.total || 0), 0);
+  const comissaoVal = totalVal * pct / 100;
+
+  document.getElementById('kpi-qtd').textContent = vendas.length;
+  document.getElementById('kpi-total').textContent = fmt(totalVal);
+  document.getElementById('kpi-comissao').textContent = fmt(comissaoVal);
+
+  const tbody = document.getElementById('tbody-vendas');
+  if (!vendas.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="empty">Nenhuma venda neste período</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = vendas.map(v => {
+    const com = (v.total || 0) * pct / 100;
+    return `<tr>
+      <td style="white-space:nowrap;font-size:12px;">${fmtDate(v.created_at)}</td>
+      <td>${v.cliente_nome || '—'}</td>
+      <td><span class="tag-pag">${nomesPag[v.pagamento] || v.pagamento || '—'}</span></td>
+      <td class="text-right text-green">${fmt(v.total)}</td>
+      <td class="text-right text-yellow">${fmt(com)}</td>
+    </tr>`;
+  }).join('');
+}
+
+function setPeriodo(p, btn) {
+  periodoAtual = p;
+  document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTabela();
+}
+
+function sair() {
+  cupomAtual = null;
+  todasVendas = [];
+  document.getElementById('login-codigo').value = '';
+  document.getElementById('login-senha').value = '';
+  document.getElementById('login-erro').style.display = 'none';
+  document.getElementById('tela-portal').style.display = 'none';
+  document.getElementById('tela-login').style.display = 'flex';
+}
+</script>
+</body>
+</html>
