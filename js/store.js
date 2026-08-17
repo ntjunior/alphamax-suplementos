@@ -482,13 +482,17 @@ async function enviarWhatsApp() {
   const pedidoId = await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total });
 
   // Monta itens no formato Mercado Pago
-  const mpItens = carrinho.map(i => ({
-    id: i.id || i.nome,
-    title: i.nome + (i.sabor ? ` — ${i.sabor}` : ''),
-    quantity: i.qty,
-    unit_price: Math.round(parseFloat(String(i.preco).replace(',', '.')) * 100) / 100,
-    currency_id: 'BRL'
-  }));
+  const mpItens = carrinho.map(i => {
+    const preco = Math.round(parseFloat(String(i.preco ?? 0).replace(',', '.')) * 100) / 100;
+    console.log('[MP] item:', i.nome, '| preco raw:', i.preco, '| parsed:', preco);
+    return {
+      id: String(i.id || i.nome),
+      title: i.nome + (i.sabor ? ` — ${i.sabor}` : ''),
+      quantity: Number(i.qty),
+      unit_price: preco > 0 ? preco : 0.01,
+      currency_id: 'BRL'
+    };
+  });
   if (descontoCupom > 0) {
     mpItens.push({ id: 'desconto', title: `Desconto cupom ${cupomAplicado?.codigo || ''}`, quantity: 1, unit_price: -descontoCupom, currency_id: 'BRL' });
   }
