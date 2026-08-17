@@ -436,7 +436,8 @@ function abrirCheckout() {
   document.getElementById('pedido-resumo-total').textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
   fecharCarrinho();
   cupomAplicado = null; descontoCupom = 0;
-  document.getElementById('checkout-cupom').value = '';
+  const cupomPendente = window._cupomParamPendente || '';
+  document.getElementById('checkout-cupom').value = cupomPendente;
   document.getElementById('cupom-msg').style.display = 'none';
   document.getElementById('cupom-desconto-line').style.display = 'none';
   document.getElementById('checkout-cep').value = '';
@@ -448,6 +449,7 @@ function abrirCheckout() {
   document.getElementById('cep-ok').style.display = 'none';
   document.getElementById('cep-erro').style.display = 'none';
   document.getElementById('modal-checkout').classList.add('open');
+  if (window._cupomParamPendente) setTimeout(() => aplicarCupom(), 100);
 }
 
 function fecharCheckout() {
@@ -710,4 +712,14 @@ function showToast(msg) {
     }
     renderProdutos(this.value);
   });
+
+  // Pré-aplicar cupom vindo da URL (?cupom=CODIGO)
+  const cupomParam = new URLSearchParams(location.search).get('cupom');
+  if (cupomParam) {
+    const elCupom = document.getElementById('checkout-cupom');
+    if (elCupom) elCupom.value = cupomParam.toUpperCase();
+    // Aplicar automaticamente quando o checkout abrir
+    const _origAbrirCheckout = window.abrirCheckout;
+    window._cupomParamPendente = cupomParam.toUpperCase();
+  }
 })();

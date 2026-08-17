@@ -99,6 +99,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:12px;">
       <span class="badge-codigo" id="portal-codigo">—</span>
+      <button onclick="fazerPedido()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;">+ Fazer Pedido</button>
       <button class="btn-logout" onclick="sair()">Sair</button>
     </div>
   </div>
@@ -247,6 +248,11 @@ function setPeriodo(p, btn) {
   document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   renderTabela();
+}
+
+function fazerPedido() {
+  const base = window.location.origin + '/';
+  window.open(`${base}?cupom=${encodeURIComponent(cupomAtual.codigo)}`, '_blank');
 }
 
 function sair() {
