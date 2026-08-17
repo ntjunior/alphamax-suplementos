@@ -486,7 +486,7 @@ async function enviarWhatsApp() {
     id: i.id || i.nome,
     title: i.nome + (i.sabor ? ` — ${i.sabor}` : ''),
     quantity: i.qty,
-    unit_price: parseFloat(i.preco),
+    unit_price: Math.round(parseFloat(String(i.preco).replace(',', '.')) * 100) / 100,
     currency_id: 'BRL'
   }));
   if (descontoCupom > 0) {
