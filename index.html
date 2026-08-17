@@ -246,5 +246,18 @@
 <div id="store-toast" style="position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#1a2340;color:#fff;padding:12px 24px;border-radius:50px;font-size:14px;font-weight:600;z-index:999;opacity:0;transition:all 0.3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center;"></div>
 
 <script src="js/store.js"></script>
+<script>
+  // Retorno do Mercado Pago
+  (function() {
+    const p = new URLSearchParams(location.search).get('pag');
+    if (!p) return;
+    history.replaceState({}, '', location.pathname);
+    setTimeout(() => {
+      if (p === 'sucesso') showToast('✅ Pagamento aprovado! Pedido confirmado.', 6000);
+      else if (p === 'pendente') showToast('⏳ Pagamento pendente. Confirmaremos em breve!', 6000);
+      else if (p === 'falha') showToast('❌ Pagamento não aprovado. Tente novamente.', 6000);
+    }, 800);
+  })();
+</script>
 </body>
 </html>

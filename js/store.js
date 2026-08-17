@@ -454,7 +454,7 @@ function fecharCheckout() {
   document.getElementById('modal-checkout').classList.remove('open');
 }
 
-function enviarWhatsApp() {
+async function enviarWhatsApp() {
   const nome = document.getElementById('checkout-nome').value.trim();
   const tel = document.getElementById('checkout-tel').value.trim();
   if (!nome) { document.getElementById('checkout-nome').focus(); showToast('Informe seu nome!'); return; }
@@ -474,61 +474,51 @@ function enviarWhatsApp() {
 
   const totalBruto = totalCarrinho();
   const total = Math.max(0, totalBruto - descontoCupom);
-  const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
-
-  const ic = {
-    pedido:  '🛒',
-    nome:    '👤',
-    tel:     '📞',
-    entrega: '📦',
-    total:   '💰',
-    ok:      '✅'
-  };
-
-  const linhas = [
-    `${ic.pedido} *NOVO PEDIDO - Alpha Max Suplementos*`,
-    ``,
-    `${ic.nome} *Nome:* ${nome}`,
-    `${ic.tel} *Telefone:* ${tel}`,
-    `${ic.entrega} *Entrega:* ${entregaTipo === 'retirada' ? 'Retirar na loja' : `Entrega \u2014 ${endereco}`}`,
-    ``,
-    `*Itens:*`,
-    itens,
-    ``
-  ];
-  if (cupomAplicado) {
-    linhas.push(`\uD83C\uDFF7 *Cupom:* ${cupomAplicado.codigo} (-R$ ${descontoCupom.toFixed(2).replace('.',',')})`);
-    linhas.push(``);
-  }
-  linhas.push(`${ic.total} *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*`);
-  linhas.push(``);
-  linhas.push(`Aguardo confirmacao e dados para pagamento via PIX! ${ic.ok}`);
-  const msg = linhas.join('\n');
-
-  const url = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
-  window.open(url, '_blank');
-
   const enderecoFinal = entregaTipo === 'entrega' ? endereco : '';
   const itensTxt = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
 
-  // Registra cliente automaticamente
-  registrarCliente({
-    nome,
-    telefone: tel,
-    endereco: enderecoFinal,
-    itens: itensTxt,
-    total: total.toFixed(2).replace('.', ',')
-  });
+  // Registra cliente e pedido
+  registrarCliente({ nome, telefone: tel, endereco: enderecoFinal, itens: itensTxt, total: total.toFixed(2).replace('.', ',') });
+  const pedidoId = await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total });
 
-  // Registra pedido na tabela pedidos_online
-  registrarPedidoOnline({
-    nome,
-    telefone: tel,
-    endereco: enderecoFinal,
-    itens_texto: itensTxt,
-    total
-  });
+  // Monta itens no formato Mercado Pago
+  const mpItens = carrinho.map(i => ({
+    id: i.id || i.nome,
+    title: i.nome + (i.sabor ? ` — ${i.sabor}` : ''),
+    quantity: i.qty,
+    unit_price: parseFloat(i.preco),
+    currency_id: 'BRL'
+  }));
+  if (descontoCupom > 0) {
+    mpItens.push({ id: 'desconto', title: `Desconto cupom ${cupomAplicado?.codigo || ''}`, quantity: 1, unit_price: -descontoCupom, currency_id: 'BRL' });
+  }
 
+  const btnFinalizar = document.querySelector('.btn-finalizar') || document.querySelector('[onclick*="enviarWhatsApp"]');
+  if (btnFinalizar) { btnFinalizar.disabled = true; btnFinalizar.textContent = 'Aguarde...'; }
+
+  try {
+    const res = await fetch(`${MULTIZAP_URL}/loja/${MULTIZAP_EMP}/mp-preference`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: MULTIZAP_SECRET, itens: mpItens, nome, telefone: tel, pedidoId })
+    });
+    const data = await res.json();
+    if (data.ok && data.checkoutUrl) {
+      fecharCheckout();
+      carrinho = [];
+      atualizarCarrinho();
+      window.location.href = data.checkoutUrl;
+      return;
+    }
+  } catch(e) {
+    console.warn('MP checkout erro:', e);
+  }
+
+  // Fallback: abre WhatsApp se MP falhar
+  if (btnFinalizar) { btnFinalizar.disabled = false; btnFinalizar.textContent = 'Finalizar Pedido'; }
+  const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
+  const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* ${entregaTipo === 'retirada' ? 'Retirar na loja' : `Entrega — ${endereco}`}\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\nAguardo confirmacao e dados para pagamento via PIX! ✅`;
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
   fecharCheckout();
   carrinho = [];
   atualizarCarrinho();
@@ -539,11 +529,11 @@ function enviarWhatsApp() {
 async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, total }) {
   const totalFinal = parseFloat(total) > 0 ? parseFloat(total) : carrinho.reduce((s, i) => s + i.preco * i.qty, 0);
   try {
-    await fetch(
+    const res = await fetch(
       `${SUPABASE_URL}/rest/v1/pedidos_online`,
       {
         method: 'POST',
-        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' },
         body: JSON.stringify({
           nome,
           telefone,
@@ -555,9 +545,11 @@ async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, to
         })
       }
     );
-    enviarConfirmacaoWhatsApp(nome, telefone);
+    const rows = await res.json();
+    return rows && rows[0] ? rows[0].id : null;
   } catch(e) {
     console.warn('Erro ao registrar pedido:', e);
+    return null;
   }
 }
 
