@@ -58,6 +58,25 @@
 
   <div class="page-body" style="max-width:760px;">
 
+    <!-- NOTIFICAÇÃO DO LOJISTA -->
+    <div class="msg-card" style="border-color: rgba(59,130,246,0.4);">
+      <div class="msg-header">
+        <div class="msg-icon" style="background:rgba(59,130,246,0.15);">🔔</div>
+        <div>
+          <div class="msg-title">Notificação ao Lojista</div>
+          <div class="msg-sub">Aviso automático quando chegar um novo pedido</div>
+        </div>
+      </div>
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;">NÚMERO DO LOJISTA (com DDD, sem +55)</label>
+      <input type="tel" id="notif-numero" placeholder="11999998888" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-input);color:var(--text);font-size:13px;margin-bottom:12px;">
+      <label style="font-size:12px;font-weight:600;color:var(--text-muted);display:block;margin-bottom:6px;">MENSAGEM</label>
+      <textarea class="msg-textarea" id="msg-notif-lojista" style="min-height:80px;"></textarea>
+      <div class="vars-hint">Variáveis: <code>[Nome]</code> cliente · <code>[Total]</code> valor · <code>[Itens]</code> produtos · <code>[Entrega]</code> tipo</div>
+      <div class="msg-actions">
+        <button class="btn btn-secondary" onclick="restaurarPadrao('notif-lojista')"><i data-lucide="rotate-ccw"></i> Restaurar padrão</button>
+      </div>
+    </div>
+
     <!-- CONFIRMADO -->
     <div class="msg-card">
       <div class="msg-header">
@@ -146,24 +165,29 @@ const MSG_DEFAULTS = {
   confirmado:  '✅ *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *confirmado*!\n\nEm breve será separado. Entraremos em contato com os dados para pagamento via PIX.',
   enviado:     '🚀 *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *enviado*! 📦\n\nEm breve chegará até você. Obrigado pela preferência! 💪',
   cancelado:   '❌ *Alpha Max Suplementos*\n\nOlá [Nome]. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informações.',
-  lembrete25:  '⏰ *Alpha Max Suplementos*\n\nOlá [Nome]! Tudo bem? 😊\n\nJá faz 25 dias desde o seu último pedido — seus suplementos devem estar acabando! 💪\n\nAproveite e faça seu novo pedido com a gente. Qualquer dúvida é só chamar!'
+  lembrete25:  '⏰ *Alpha Max Suplementos*\n\nOlá [Nome]! Tudo bem? 😊\n\nJá faz 25 dias desde o seu último pedido — seus suplementos devem estar acabando! 💪\n\nAproveite e faça seu novo pedido com a gente. Qualquer dúvida é só chamar!',
+  'notif-lojista': '🛒 *Novo Pedido - Alpha Max*\n\n👤 Cliente: [Nome]\n💰 Total: R$ [Total]\n📦 Entrega: [Entrega]\n\n[Itens]\n\nAcesse o painel para confirmar.'
 };
 
 function carregarMensagens() {
   const salvas = JSON.parse(localStorage.getItem('msg_templates_alphamax') || '{}');
-  ['confirmado', 'enviado', 'cancelado', 'lembrete25'].forEach(s => {
+  ['confirmado', 'enviado', 'cancelado', 'lembrete25', 'notif-lojista'].forEach(s => {
     document.getElementById('msg-' + s).value = salvas[s] || MSG_DEFAULTS[s];
   });
+  document.getElementById('notif-numero').value = localStorage.getItem('notif_lojista_numero') || '';
 }
 
 function salvarTodas() {
   const templates = {
-    confirmado:  document.getElementById('msg-confirmado').value,
-    enviado:     document.getElementById('msg-enviado').value,
-    cancelado:   document.getElementById('msg-cancelado').value,
-    lembrete25:  document.getElementById('msg-lembrete25').value
+    confirmado:      document.getElementById('msg-confirmado').value,
+    enviado:         document.getElementById('msg-enviado').value,
+    cancelado:       document.getElementById('msg-cancelado').value,
+    lembrete25:      document.getElementById('msg-lembrete25').value,
+    'notif-lojista': document.getElementById('msg-notif-lojista').value
   };
   localStorage.setItem('msg_templates_alphamax', JSON.stringify(templates));
+  const num = document.getElementById('notif-numero').value.trim().replace(/\D/g,'');
+  if (num) localStorage.setItem('notif_lojista_numero', num);
   App.showToast('Mensagens salvas com sucesso!', 'success');
 }
 

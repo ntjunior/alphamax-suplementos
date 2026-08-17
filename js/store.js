@@ -484,6 +484,7 @@ async function enviarWhatsApp() {
   let pedidoId = null;
   if (entregaTipo === 'retirada') {
     pedidoId = await registrarPedidoOnline({ nome, telefone: tel, endereco: '', itens_texto: itensTxt, total });
+    notificarLojista({ nome, telefone: tel, itens_texto: itensTxt, total, entregaTipo });
   } else {
     localStorage.setItem('mp_pedido_pendente', JSON.stringify({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total, ts: Date.now() }));
     pedidoId = 'mp_' + Date.now();
@@ -570,6 +571,25 @@ async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, to
   }
 }
 
+async function notificarLojista({ nome, telefone, itens_texto, total, entregaTipo }) {
+  const numero = localStorage.getItem('notif_lojista_numero');
+  if (!numero) return;
+  const templates = JSON.parse(localStorage.getItem('msg_templates_alphamax') || '{}');
+  const tpl = templates['notif-lojista'] || '🛒 *Novo Pedido - Alpha Max*\n\n👤 Cliente: [Nome]\n💰 Total: R$ [Total]\n📦 Entrega: [Entrega]\n\n[Itens]\n\nAcesse o painel para confirmar.';
+  const msg = tpl
+    .replace(/\[Nome\]/g, nome || 'Cliente')
+    .replace(/\[Total\]/g, parseFloat(total || 0).toFixed(2).replace('.', ','))
+    .replace(/\[Entrega\]/g, entregaTipo === 'retirada' ? 'Retirada na loja' : 'Entrega')
+    .replace(/\[Itens\]/g, itens_texto || '');
+  try {
+    await fetch(`${MULTIZAP_URL}/webhook/loja/${MULTIZAP_EMP}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: MULTIZAP_SECRET, numero: numero.replace(/\D/g,''), mensagem: msg })
+    });
+  } catch(e) { console.warn('Erro ao notificar lojista:', e); }
+}
+
 // Ao retornar do MP com pagamento aprovado, registrar o pedido
 (async function checkMpRetorno() {
   const params = new URLSearchParams(location.search);
@@ -579,6 +599,7 @@ async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, to
   try {
     const d = JSON.parse(pending);
     await registrarPedidoOnline({ nome: d.nome, telefone: d.telefone, endereco: d.endereco, itens_texto: d.itens_texto, total: d.total, status: 'confirmado' });
+    notificarLojista({ nome: d.nome, telefone: d.telefone, itens_texto: d.itens_texto, total: d.total, entregaTipo: 'entrega' });
     localStorage.removeItem('mp_pedido_pendente');
   } catch(e) { console.warn('Erro ao registrar pedido MP retorno:', e); }
 })();
