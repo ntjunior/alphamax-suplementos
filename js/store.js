@@ -512,7 +512,7 @@ async function enviarWhatsApp() {
     const res = await fetch(`${MULTIZAP_URL}/loja/${MULTIZAP_EMP}/mp-preference`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret: MULTIZAP_SECRET, itens: mpItens, nome, telefone: tel, pedidoId })
+      body: JSON.stringify({ secret: MULTIZAP_SECRET, itens: mpItens, nome, telefone: tel, pedidoId, endereco: enderecoFinal, itens_texto: itensTxt, total })
     });
     const data = await res.json();
     if (data.ok && data.checkoutUrl) {
