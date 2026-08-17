@@ -148,10 +148,8 @@ async function atualizarStatus(id, novoStatus) {
     renderPedidos();
     App.showToast('Status atualizado!', 'success');
 
-    if (novoStatus === 'enviado' && statusAnterior !== 'enviado' && pedido) {
-      await baixarEstoquePedido(pedido.itens_texto);
-    }
     if (novoStatus === 'confirmado' && statusAnterior !== 'confirmado' && pedido) {
+      await baixarEstoquePedido(pedido.itens_texto);
       registrarVendaOnline(pedido);
     }
     if (pedido && novoStatus !== statusAnterior) {
