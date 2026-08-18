@@ -199,26 +199,25 @@ const App = {
     const logoEl = document.querySelector('.sidebar-logo');
     if (!logoEl || logoEl.dataset.uploadReady) return;
     logoEl.dataset.uploadReady = '1';
-    const overlay = document.createElement('div');
-    overlay.className = 'logo-upload-overlay';
-    overlay.innerHTML = '<i data-lucide="camera"></i><span>Trocar Logo</span>';
-    logoEl.appendChild(overlay);
+    const btn = document.createElement('button');
+    btn.className = 'logo-upload-btn';
+    btn.title = 'Trocar logo';
+    btn.innerHTML = '<i data-lucide="camera"></i>';
+    logoEl.appendChild(btn);
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.style.display = 'none';
     document.body.appendChild(input);
-    logoEl.style.cursor = 'pointer';
-    logoEl.title = 'Clique para trocar o logo';
-    logoEl.addEventListener('click', () => input.click());
+    btn.addEventListener('click', (ev) => { ev.stopPropagation(); input.click(); });
     input.addEventListener('change', async () => {
       const file = input.files[0];
       if (!file) return;
-      if (file.size > 500 * 1024) { App.showToast('Imagem muito grande (máx 500KB)', 'warning'); return; }
+      if (file.size > 3 * 1024 * 1024) { App.showToast('Imagem muito grande (máx 3MB)', 'warning'); return; }
       const reader = new FileReader();
       reader.onload = async (e) => {
         const base64 = e.target.result;
-        await fetch(`${DB.URL}/rest/v1/configuracoes`, {
+        const res = await fetch(`${DB.URL}/rest/v1/configuracoes`, {
           method: 'POST',
           headers: {
             'apikey': DB.KEY, 'Authorization': `Bearer ${DB.KEY}`,
@@ -226,8 +225,12 @@ const App = {
           },
           body: JSON.stringify({ chave: 'logo', valor: base64 })
         });
-        document.querySelectorAll('.sidebar-logo img').forEach(img => img.src = base64);
-        App.showToast('Logo atualizado!', 'success');
+        if (res.ok || res.status === 201) {
+          document.querySelectorAll('.sidebar-logo img').forEach(img => img.src = base64);
+          App.showToast('Logo atualizado!', 'success');
+        } else {
+          App.showToast('Erro ao salvar logo', 'error');
+        }
         lucide.createIcons();
       };
       reader.readAsDataURL(file);

@@ -127,24 +127,25 @@ body {
   flex-shrink: 0;
   position: relative;
 }
-.logo-upload-overlay {
+.logo-upload-btn {
   position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
+  bottom: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--red);
+  border: none;
+  cursor: pointer;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-  cursor: pointer;
-  color: #fff;
-  font-size: 11px;
-  font-weight: 600;
+  opacity: 0.85;
+  transition: opacity 0.2s, transform 0.15s;
+  z-index: 10;
 }
-.sidebar-logo:hover .logo-upload-overlay { opacity: 1; }
-.logo-upload-overlay svg { width: 22px; height: 22px; stroke: #fff; }
+.logo-upload-btn:hover { opacity: 1; transform: scale(1.1); }
+.logo-upload-btn svg { width: 14px; height: 14px; stroke: #fff; }
 
 .sidebar-logo .logo-icon { font-size: 28px; flex-shrink: 0; }
 .sidebar-logo .logo-text {
