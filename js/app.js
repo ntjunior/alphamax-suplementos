@@ -71,6 +71,8 @@ const App = {
     this._hideLoading();
     setTimeout(() => this.refreshIcons(), 0);
     this._iniciarPollingPedidos();
+    this._carregarLogo();
+    this._initLogoUpload();
     this._verificarLembrete25();
   },
 
@@ -177,6 +179,61 @@ const App = {
   logout() {
     DB.logout();
     window.location.href = 'login.html';
+  },
+
+  async _carregarLogo() {
+    try {
+      const r = await fetch(`${DB.URL}/rest/v1/configuracoes?chave=eq.logo&select=valor`, {
+        headers: { 'apikey': DB.KEY, 'Authorization': `Bearer ${DB.KEY}` }
+      });
+      const data = await r.json();
+      if (data && data[0] && data[0].valor) {
+        document.querySelectorAll('.sidebar-logo img').forEach(img => img.src = data[0].valor);
+      }
+    } catch(e) {}
+  },
+
+  _initLogoUpload() {
+    const user = DB.getUsuarioLogado();
+    if (!user || user.perfil !== 'admin') return;
+    const logoEl = document.querySelector('.sidebar-logo');
+    if (!logoEl || logoEl.dataset.uploadReady) return;
+    logoEl.dataset.uploadReady = '1';
+    const overlay = document.createElement('div');
+    overlay.className = 'logo-upload-overlay';
+    overlay.innerHTML = '<i data-lucide="camera"></i><span>Trocar Logo</span>';
+    logoEl.appendChild(overlay);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.style.display = 'none';
+    document.body.appendChild(input);
+    logoEl.style.cursor = 'pointer';
+    logoEl.title = 'Clique para trocar o logo';
+    logoEl.addEventListener('click', () => input.click());
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      if (!file) return;
+      if (file.size > 500 * 1024) { App.showToast('Imagem muito grande (máx 500KB)', 'warning'); return; }
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const base64 = e.target.result;
+        await fetch(`${DB.URL}/rest/v1/configuracoes`, {
+          method: 'POST',
+          headers: {
+            'apikey': DB.KEY, 'Authorization': `Bearer ${DB.KEY}`,
+            'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({ chave: 'logo', valor: base64 })
+        });
+        document.querySelectorAll('.sidebar-logo img').forEach(img => img.src = base64);
+        App.showToast('Logo atualizado!', 'success');
+        lucide.createIcons();
+      };
+      reader.readAsDataURL(file);
+      input.value = '';
+    });
+    lucide.createIcons();
   },
 
   _initTheme() {
