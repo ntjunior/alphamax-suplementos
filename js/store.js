@@ -426,6 +426,15 @@ function setEntrega(tipo, btn) {
   document.querySelectorAll('.entrega-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('endereco-group').style.display = tipo === 'entrega' ? 'block' : 'none';
+  const txtEl = document.getElementById('btn-finalizar-texto');
+  const iconEl = document.getElementById('btn-finalizar-icon');
+  if (tipo === 'retirada') {
+    if (txtEl) txtEl.textContent = 'Enviar Pedido';
+    if (iconEl) iconEl.innerHTML = '<path d="M22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>';
+  } else {
+    if (txtEl) txtEl.textContent = 'Pagar com Mercado Pago';
+    if (iconEl) iconEl.innerHTML = '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>';
+  }
 }
 
 function abrirCheckout() {
@@ -449,6 +458,9 @@ function abrirCheckout() {
   document.getElementById('cep-ok').style.display = 'none';
   document.getElementById('cep-erro').style.display = 'none';
   document.getElementById('modal-checkout').classList.add('open');
+  // Ajustar texto do botão conforme entrega padrão (retirada)
+  const txtEl = document.getElementById('btn-finalizar-texto');
+  if (txtEl) txtEl.textContent = entregaTipo === 'entrega' ? 'Pagar com Mercado Pago' : 'Enviar Pedido';
   if (window._cupomParamPendente) setTimeout(() => aplicarCupom(), 100);
 }
 
@@ -510,6 +522,19 @@ async function enviarWhatsApp() {
 
   const btnFinalizar = document.getElementById('btn-finalizar-pedido');
   if (btnFinalizar) { btnFinalizar.disabled = true; btnFinalizar.textContent = 'Aguarde...'; }
+
+  // Retirada: vai direto ao WhatsApp, sem MP
+  if (entregaTipo === 'retirada') {
+    const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
+    const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* Retirar na loja\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\nVou retirar na loja! ✅`;
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    fecharCheckout();
+    carrinho = [];
+    atualizarCarrinho();
+    showToast('Pedido enviado! ✅');
+    if (btnFinalizar) { btnFinalizar.disabled = false; }
+    return;
+  }
 
   try {
     const res = await fetch(`${MULTIZAP_URL}/loja/${MULTIZAP_EMP}/mp-preference`, {
