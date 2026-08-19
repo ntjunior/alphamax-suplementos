@@ -464,6 +464,20 @@ a { text-decoration: none; color: inherit; }
   font-family: inherit;
 }
 .entrega-btn.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+.pagamento-btn {
+  flex: 1; padding: 16px 12px; border: 2px solid var(--border); border-radius: 12px;
+  background: var(--bg); cursor: pointer; font-size: 15px; font-weight: 800;
+  transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+  font-family: inherit; color: var(--text);
+}
+.pagamento-btn:first-child { border-color: #22c55e; color: #16a34a; }
+.pagamento-btn:first-child svg { stroke: #16a34a; }
+.pagamento-btn:first-child.active { background: #16a34a; border-color: #16a34a; color: #fff; }
+.pagamento-btn:first-child.active svg { stroke: #fff; }
+.pagamento-btn:last-child { border-color: #3b82f6; color: #1d4ed8; }
+.pagamento-btn:last-child svg { stroke: #1d4ed8; }
+.pagamento-btn:last-child.active { background: #1d4ed8; border-color: #1d4ed8; color: #fff; }
+.pagamento-btn:last-child.active svg { stroke: #fff; }
 .pedido-resumo { background: var(--bg); border-radius: 10px; padding: 14px; margin-bottom: 16px; }
 .pedido-resumo-item { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
 .pedido-resumo-total {
