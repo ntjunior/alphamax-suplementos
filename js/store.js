@@ -11,6 +11,7 @@ let produtos = [];
 let carrinho = [];
 let catAtiva = '';
 let entregaTipo = 'retirada';
+let pagamentoTipo = 'pix';
 let cupomAplicado = null;
 let descontoCupom = 0;
 let produtoModalId = null;
@@ -426,15 +427,38 @@ function setEntrega(tipo, btn) {
   document.querySelectorAll('.entrega-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('endereco-group').style.display = tipo === 'entrega' ? 'block' : 'none';
+  document.getElementById('pagamento-group').style.display = tipo === 'entrega' ? 'block' : 'none';
+  _atualizarBtnFinalizar();
+}
+
+function setPagamento(tipo, btn) {
+  pagamentoTipo = tipo;
+  document.querySelectorAll('.pagamento-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('pix-info-panel').style.display = tipo === 'pix' ? 'block' : 'none';
+  _atualizarBtnFinalizar();
+}
+
+function _atualizarBtnFinalizar() {
   const txtEl = document.getElementById('btn-finalizar-texto');
   const iconEl = document.getElementById('btn-finalizar-icon');
-  if (tipo === 'retirada') {
+  if (entregaTipo === 'retirada') {
     if (txtEl) txtEl.textContent = 'Enviar Pedido';
     if (iconEl) iconEl.innerHTML = '<path d="M22 2 11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>';
+  } else if (pagamentoTipo === 'pix') {
+    if (txtEl) txtEl.textContent = 'Confirmar Pedido PIX';
+    if (iconEl) iconEl.innerHTML = '<path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/>';
   } else {
     if (txtEl) txtEl.textContent = 'Pagar com Mercado Pago';
     if (iconEl) iconEl.innerHTML = '<rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/>';
   }
+}
+
+function copiarPix() {
+  navigator.clipboard.writeText('68565010000108').then(() => {
+    const btn = document.getElementById('btn-copiar-pix');
+    if (btn) { btn.textContent = 'Copiado!'; setTimeout(() => btn.textContent = 'Copiar', 2000); }
+  });
 }
 
 function abrirCheckout() {
@@ -458,9 +482,11 @@ function abrirCheckout() {
   document.getElementById('cep-ok').style.display = 'none';
   document.getElementById('cep-erro').style.display = 'none';
   document.getElementById('modal-checkout').classList.add('open');
-  // Ajustar texto do botão conforme entrega padrão (retirada)
-  const txtEl = document.getElementById('btn-finalizar-texto');
-  if (txtEl) txtEl.textContent = entregaTipo === 'entrega' ? 'Pagar com Mercado Pago' : 'Enviar Pedido';
+  pagamentoTipo = 'pix';
+  document.querySelectorAll('.pagamento-btn').forEach((b, i) => b.classList.toggle('active', i === 0));
+  document.getElementById('pix-info-panel').style.display = 'block';
+  document.getElementById('pagamento-group').style.display = entregaTipo === 'entrega' ? 'block' : 'none';
+  _atualizarBtnFinalizar();
   if (window._cupomParamPendente) setTimeout(() => aplicarCupom(), 100);
 }
 
@@ -493,21 +519,38 @@ async function enviarWhatsApp() {
 
   registrarCliente({ nome, telefone: tel, endereco: enderecoFinal, itens: itensTxt, total: total.toFixed(2).replace('.', ',') });
 
-  // Retirada na loja: registrar imediatamente (cliente paga na retirada)
-  // Entrega: salvar no localStorage e só registrar após pagamento MP confirmado
-  let pedidoId = null;
+  const btnFinalizar = document.getElementById('btn-finalizar-pedido');
+  if (btnFinalizar) { btnFinalizar.disabled = true; btnFinalizar.textContent = 'Aguarde...'; }
+
+  // Retirada: WhatsApp direto
   if (entregaTipo === 'retirada') {
-    pedidoId = await registrarPedidoOnline({ nome, telefone: tel, endereco: '', itens_texto: itensTxt, total });
+    await registrarPedidoOnline({ nome, telefone: tel, endereco: '', itens_texto: itensTxt, total });
     notificarLojista({ nome, telefone: tel, itens_texto: itensTxt, total, entregaTipo });
-  } else {
-    localStorage.setItem('mp_pedido_pendente', JSON.stringify({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total, ts: Date.now() }));
-    pedidoId = 'mp_' + Date.now();
+    const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
+    const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* Retirar na loja\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\nVou retirar na loja! ✅`;
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    fecharCheckout(); carrinho = []; atualizarCarrinho();
+    showToast('Pedido enviado! ✅');
+    if (btnFinalizar) { btnFinalizar.disabled = false; }
+    return;
   }
 
-  // Monta itens no formato Mercado Pago
+  // Entrega via PIX: registra pedido e manda WhatsApp com instrução
+  if (pagamentoTipo === 'pix') {
+    await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total, status: 'aguardando' });
+    notificarLojista({ nome, telefone: tel, itens_texto: itensTxt, total, entregaTipo });
+    const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
+    const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* Entrega\n📍 *Endereço:* ${enderecoFinal}\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\n💠 *Pagamento via PIX*\nChave: 68.565.010/0001-08\n\nVou enviar o comprovante! ✅`;
+    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
+    fecharCheckout(); carrinho = []; atualizarCarrinho();
+    showToast('Pedido enviado! Pague via PIX e envie o comprovante ✅');
+    if (btnFinalizar) { btnFinalizar.disabled = false; }
+    return;
+  }
+
+  // Entrega via Cartão: Mercado Pago
   const mpItens = carrinho.map(i => {
     const preco = Math.round(parseFloat(String(i.preco ?? 0).replace(',', '.')) * 100) / 100;
-    console.log('[MP] item:', i.nome, '| preco raw:', i.preco, '| parsed:', preco);
     return {
       id: String(i.id || i.nome),
       title: i.nome + (i.sabor ? ` — ${i.sabor}` : ''),
@@ -519,22 +562,8 @@ async function enviarWhatsApp() {
   if (descontoCupom > 0) {
     mpItens.push({ id: 'desconto', title: `Desconto cupom ${cupomAplicado?.codigo || ''}`, quantity: 1, unit_price: -descontoCupom, currency_id: 'BRL' });
   }
-
-  const btnFinalizar = document.getElementById('btn-finalizar-pedido');
-  if (btnFinalizar) { btnFinalizar.disabled = true; btnFinalizar.textContent = 'Aguarde...'; }
-
-  // Retirada: vai direto ao WhatsApp, sem MP
-  if (entregaTipo === 'retirada') {
-    const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
-    const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* Retirar na loja\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\nVou retirar na loja! ✅`;
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-    fecharCheckout();
-    carrinho = [];
-    atualizarCarrinho();
-    showToast('Pedido enviado! ✅');
-    if (btnFinalizar) { btnFinalizar.disabled = false; }
-    return;
-  }
+  localStorage.setItem('mp_pedido_pendente', JSON.stringify({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total, ts: Date.now() }));
+  const pedidoId = 'mp_' + Date.now();
 
   try {
     const res = await fetch(`${MULTIZAP_URL}/loja/${MULTIZAP_EMP}/mp-preference`, {
@@ -544,9 +573,7 @@ async function enviarWhatsApp() {
     });
     const data = await res.json();
     if (data.ok && data.checkoutUrl) {
-      fecharCheckout();
-      carrinho = [];
-      atualizarCarrinho();
+      fecharCheckout(); carrinho = []; atualizarCarrinho();
       window.location.href = data.checkoutUrl;
       return;
     }

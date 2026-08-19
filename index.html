@@ -178,6 +178,27 @@
           <button class="entrega-btn" onclick="setEntrega('entrega', this)"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg> Entrega</button>
         </div>
       </div>
+      <div id="pagamento-group" style="display:none;">
+        <div class="store-form-group">
+          <label class="store-form-label">Forma de Pagamento</label>
+          <div class="entrega-toggle">
+            <button class="pagamento-btn active" onclick="setPagamento('pix', this)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg> PIX
+            </button>
+            <button class="pagamento-btn" onclick="setPagamento('cartao', this)">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Cartão
+            </button>
+          </div>
+        </div>
+        <div id="pix-info-panel" style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;margin-bottom:4px;">
+          <div style="font-size:12px;color:#15803d;font-weight:600;margin-bottom:8px;">Pague via PIX e envie o comprovante pelo WhatsApp</div>
+          <div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Chave PIX (CNPJ)</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <code id="pix-chave-txt" style="font-size:14px;font-weight:700;color:#111;letter-spacing:0.5px;flex:1;">68.565.010/0001-08</code>
+            <button onclick="copiarPix()" id="btn-copiar-pix" style="padding:6px 12px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;white-space:nowrap;">Copiar</button>
+          </div>
+        </div>
+      </div>
       <div id="endereco-group" style="display:none;">
         <div class="store-form-group">
           <label class="store-form-label">CEP *</label>
