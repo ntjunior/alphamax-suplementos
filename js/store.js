@@ -461,6 +461,56 @@ function copiarPix() {
   });
 }
 
+function copiarPixModal() {
+  navigator.clipboard.writeText('68565010000108').then(() => {
+    const btn = document.getElementById('btn-copiar-pix-modal');
+    if (btn) { btn.textContent = 'Copiado!'; setTimeout(() => btn.textContent = 'Copiar', 2000); }
+  });
+}
+
+let _pixWaMsg = '';
+function abrirWhatsAppPix() {
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(_pixWaMsg)}`, '_blank');
+}
+
+function fecharModalPix() {
+  document.getElementById('modal-pix').style.display = 'none';
+}
+
+function _crc16Pix(str) {
+  let crc = 0xFFFF;
+  for (let i = 0; i < str.length; i++) {
+    crc ^= str.charCodeAt(i) << 8;
+    for (let j = 0; j < 8; j++) {
+      crc = (crc & 0x8000) ? ((crc << 1) ^ 0x1021) : (crc << 1);
+      crc &= 0xFFFF;
+    }
+  }
+  return crc;
+}
+
+function gerarPixPayload(valor) {
+  const chave = '68565010000108';
+  const nome = 'Alpha Max Supl';
+  const cidade = 'Caieiras';
+  const c = (id, v) => id + String(v.length).padStart(2,'0') + v;
+  const mai = c('26', c('00','br.gov.bcb.pix') + c('01', chave));
+  let p = c('00','01') + mai + c('52','0000') + c('53','986');
+  if (valor > 0) p += c('54', valor.toFixed(2));
+  p += c('58','BR') + c('59', nome) + c('60', cidade) + c('62', c('05','***')) + '6304';
+  return p + _crc16Pix(p).toString(16).toUpperCase().padStart(4,'0');
+}
+
+function exibirModalPix(total, waMsg) {
+  _pixWaMsg = waMsg;
+  document.getElementById('pix-total-label').textContent = `Total: R$ ${total.toFixed(2).replace('.', ',')}`;
+  const qrEl = document.getElementById('pix-qrcode');
+  qrEl.innerHTML = '';
+  const payload = gerarPixPayload(total);
+  new QRCode(qrEl, { text: payload, width: 200, height: 200, correctLevel: QRCode.CorrectLevel.M });
+  document.getElementById('modal-pix').style.display = 'flex';
+}
+
 function abrirCheckout() {
   if (!carrinho.length) return;
   const total = totalCarrinho();
@@ -535,15 +585,15 @@ async function enviarWhatsApp() {
     return;
   }
 
-  // Entrega via PIX: registra pedido e manda WhatsApp com instrução
+  // Entrega via PIX: mostra QR Code
   if (pagamentoTipo === 'pix') {
     await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total, status: 'aguardando' });
     notificarLojista({ nome, telefone: tel, itens_texto: itensTxt, total, entregaTipo });
     const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
-    const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* Entrega\n📍 *Endereço:* ${enderecoFinal}\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\n💠 *Pagamento via PIX*\nChave: 68.565.010/0001-08\n\nVou enviar o comprovante! ✅`;
-    window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
-    fecharCheckout(); carrinho = []; atualizarCarrinho();
-    showToast('Pedido enviado! Pague via PIX e envie o comprovante ✅');
+    const waMsg = `🛒 *Pedido Alpha Max*\n\n👤 ${nome}\n📍 ${enderecoFinal}\n\n${itens}\n\n💰 *R$ ${total.toFixed(2).replace('.', ',')}*\n\n💠 Pagamento via PIX — segue o comprovante!`;
+    fecharCheckout();
+    exibirModalPix(total, waMsg);
+    carrinho = []; atualizarCarrinho();
     if (btnFinalizar) { btnFinalizar.disabled = false; }
     return;
   }
