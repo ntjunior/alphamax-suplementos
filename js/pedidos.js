@@ -351,6 +351,63 @@ async function reenviarMensagem() {
   }
 }
 
+async function lancarNoCaixa() {
+  const p = pedidoSelecionado;
+  if (!p) return;
+
+  const total = parseFloat(p.total) || 0;
+  if (total <= 0) { App.showToast('Pedido sem valor para lançar', 'warning'); return; }
+
+  // Busca caixa aberto
+  const res = await fetch(`${SUPABASE_URL_P}/rest/v1/caixas?status=eq.aberto&order=aberto_em.desc&limit=1`, {
+    headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}` }
+  });
+  const caixas = await res.json();
+  if (!caixas.length) {
+    App.showToast('Nenhum caixa aberto. Abra o caixa primeiro.', 'error');
+    return;
+  }
+  const caixa = caixas[0];
+
+  // Verifica se já foi lançado
+  const jaLancado = (caixa.movimentacoes || []).some(m => m.pedidoOnlineId === p.id);
+  if (jaLancado) {
+    App.showToast('Este pedido já foi lançado neste caixa!', 'warning');
+    return;
+  }
+
+  const mov = {
+    id: 'online_' + p.id,
+    tipo: 'venda',
+    valor: total,
+    descricao: `Pedido Online — ${p.nome}`,
+    pagamento: p.pagamento || 'online',
+    createdAt: new Date().toISOString(),
+    pedidoOnlineId: p.id
+  };
+
+  const novasMov = [...(caixa.movimentacoes || []), mov];
+  const novoSaldo = (parseFloat(caixa.saldo_inicial) || 0) +
+    novasMov.reduce((s, m) => s + (m.tipo === 'venda' || m.tipo === 'entrada' ? m.valor : -m.valor), 0);
+
+  await fetch(`${SUPABASE_URL_P}/rest/v1/caixas?id=eq.${caixa.id}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ movimentacoes: novasMov, saldo_final: novoSaldo })
+  });
+
+  // Atualiza caixa_id na venda
+  await fetch(`${SUPABASE_URL_P}/rest/v1/vendas?id=eq.online_${p.id}`, {
+    method: 'PATCH',
+    headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ caixa_id: caixa.id })
+  });
+
+  App.showToast(`R$ ${total.toFixed(2).replace('.', ',')} lançado no caixa!`, 'success');
+  const btn = document.getElementById('btn-lancar-caixa');
+  if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="check"></i> Lançado no Caixa'; App.refreshIcons?.(); }
+}
+
 function imprimirPedido() {
   if (!pedidoSelecionado) return;
   const p = pedidoSelecionado;
