@@ -228,12 +228,15 @@ async function baixarEstoquePedido(itensTxt) {
 const MSG_DEFAULTS_P = {
   confirmado: '✅ *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *confirmado*!\n\nEm breve será separado. Entraremos em contato com os dados para pagamento via PIX.',
   enviado:    '🚀 *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *enviado*! 📦\n\nEm breve chegará até você. Obrigado pela preferência! 💪',
+  enviado_retirada: '🏪 *Alpha Max Suplementos*\n\nOlá [Nome]! Sua encomenda está *pronta para retirar*! ✅\n\nPode vir até nossa loja buscar. Te esperamos! 💪',
   cancelado:  '❌ *Alpha Max Suplementos*\n\nOlá [Nome]. Seu pedido foi *cancelado*.\n\nEntre em contato pelo WhatsApp para mais informações.'
 };
 
-function getMsgTemplate(status, nome) {
+function getMsgTemplate(status, nome, pedido) {
   const salvas = JSON.parse(localStorage.getItem('msg_templates_alphamax') || '{}');
-  const template = salvas[status] || MSG_DEFAULTS_P[status] || '';
+  let key = status;
+  if (status === 'enviado' && pedido && !pedido.endereco) key = 'enviado_retirada';
+  const template = salvas[key] || salvas[status] || MSG_DEFAULTS_P[key] || MSG_DEFAULTS_P[status] || '';
   return template.replace(/\[Nome\]/g, nome || 'Cliente');
 }
 
@@ -241,7 +244,7 @@ async function enviarWhatsAppStatus(pedido, status) {
   if (!pedido.telefone) return;
   const tel = pedido.telefone.replace(/\D/g,'').replace(/^0/,'').replace(/^55/,'');
   const nome = pedido.nome || 'Cliente';
-  const msg = getMsgTemplate(status, nome);
+  const msg = getMsgTemplate(status, nome, pedido);
   if (!msg) return;
 
   const enviado = await enviarViaWebhook(pedido, msg, status);
@@ -340,7 +343,7 @@ async function reenviarMensagem() {
   }
   const nome = p.nome || 'Cliente';
   const tel = (p.telefone || '').replace(/\D/g,'').replace(/^0/,'').replace(/^55/,'');
-  const msg = getMsgTemplate(status, nome);
+  const msg = getMsgTemplate(status, nome, p);
   const enviado = await enviarViaWebhook(p, msg, 'reenvio');
   if (enviado) {
     App.showToast('Mensagem reenviada via WhatsApp!', 'success');
