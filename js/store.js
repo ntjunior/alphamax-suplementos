@@ -631,13 +631,11 @@ async function enviarWhatsApp() {
     console.warn('MP checkout erro:', e);
   }
 
-  // Fallback: abre WhatsApp se MP falhar
-  if (entregaTipo !== 'retirada') {
-    // Entrega mas MP falhou: registrar pedido agora via WhatsApp
-    await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total });
-    localStorage.removeItem('mp_pedido_pendente');
-  }
-  if (btnFinalizar) { btnFinalizar.disabled = false; btnFinalizar.textContent = 'Finalizar Pedido'; }
+  // Fallback: MP falhou — não registra pedido, apenas avisa o cliente
+  localStorage.removeItem('mp_pedido_pendente');
+  if (btnFinalizar) { btnFinalizar.disabled = false; btnFinalizar.textContent = 'Pagar com Mercado Pago'; }
+  showToast('Erro ao abrir pagamento. Tente novamente.', 'error');
+  return;
   const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
   const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* ${entregaTipo === 'retirada' ? 'Retirar na loja' : `Entrega — ${endereco}`}\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\nAguardo confirmacao e dados para pagamento via PIX! ✅`;
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`, '_blank');
