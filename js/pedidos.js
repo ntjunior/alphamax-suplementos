@@ -28,6 +28,17 @@ function statusBadge(status) {
   return `<span class="status-badge ${STATUS_CLASSES[s]}">${STATUS_LABELS[s] || s}</span>`;
 }
 
+function _pagamentoBadge(pagamento, endereco) {
+  if (!pagamento) pagamento = endereco ? 'pix' : 'retirada';
+  const map = {
+    pix:         { label: 'PIX',           color: '#16a34a', bg: 'rgba(34,197,94,0.12)' },
+    retirada:    { label: 'Retirada',      color: '#ca8a04', bg: 'rgba(234,179,8,0.12)' },
+    mercadopago: { label: 'Cartão/MP',     color: '#2563eb', bg: 'rgba(59,130,246,0.12)' },
+  };
+  const cfg = map[pagamento] || { label: pagamento, color: 'var(--text-muted)', bg: 'transparent' };
+  return `<span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:${cfg.bg};color:${cfg.color}">${cfg.label}</span>`;
+}
+
 async function carregarPedidos() {
   document.getElementById('pedidos-count-label').textContent = 'Carregando...';
   try {
@@ -56,7 +67,7 @@ function renderPedidos() {
 
   const tbody = document.getElementById('tbody-pedidos');
   if (lista.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-state-icon"><i data-lucide="clipboard-list"></i></div><div class="empty-state-text">Nenhum pedido encontrado</div></div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon"><i data-lucide="clipboard-list"></i></div><div class="empty-state-text">Nenhum pedido encontrado</div></div></td></tr>`;
     if (window.lucide) lucide.createIcons();
     return;
   }
@@ -65,6 +76,7 @@ function renderPedidos() {
     const data = p.created_at ? new Date(p.created_at).toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' }) : '—';
     const itensResumo = (p.itens_texto || '').split('\n').slice(0,2).join(', ').replace(/•\s*/g,'').trim() || '—';
     const entrega = p.endereco ? 'Entrega' : 'Retirada';
+    const pagBadge = _pagamentoBadge(p.pagamento, p.endereco);
     const selected = pedidoSelecionado && pedidoSelecionado.id === p.id ? 'selected' : '';
     return `
       <tr class="pedido-row ${selected}" onclick="verDetalhe('${p.id}')">
@@ -74,6 +86,7 @@ function renderPedidos() {
         <td style="font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${itensResumo}</td>
         <td class="text-right font-bold text-red" style="white-space:nowrap;">R$ ${Number(p.total || 0).toFixed(2).replace('.', ',')}</td>
         <td style="font-size:12px;">${entrega}</td>
+        <td>${pagBadge}</td>
         <td>${statusBadge(p.status)}</td>
       </tr>
     `;
@@ -99,7 +112,7 @@ function verDetalhe(id) {
   document.getElementById('det-tel').textContent = p.telefone || 'Sem telefone';
   document.getElementById('det-data').textContent = data;
   document.getElementById('det-status-badge').innerHTML = statusBadge(p.status);
-  document.getElementById('det-endereco').textContent = p.endereco || 'Retirada na loja';
+  document.getElementById('det-endereco').innerHTML = (p.endereco || 'Retirada na loja') + '&nbsp;&nbsp;' + _pagamentoBadge(p.pagamento, p.endereco);
   document.getElementById('det-total').textContent = `R$ ${Number(p.total || 0).toFixed(2).replace('.', ',')}`;
 
   const itensEl = document.getElementById('det-itens');

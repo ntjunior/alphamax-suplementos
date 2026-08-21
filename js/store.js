@@ -574,7 +574,7 @@ async function enviarWhatsApp() {
 
   // Retirada: WhatsApp direto
   if (entregaTipo === 'retirada') {
-    await registrarPedidoOnline({ nome, telefone: tel, endereco: '', itens_texto: itensTxt, total });
+    await registrarPedidoOnline({ nome, telefone: tel, endereco: '', itens_texto: itensTxt, total, pagamento: 'retirada' });
     notificarLojista({ nome, telefone: tel, itens_texto: itensTxt, total, entregaTipo });
     const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
     const msg = `🛒 *NOVO PEDIDO - Alpha Max Suplementos*\n\n👤 *Nome:* ${nome}\n📞 *Telefone:* ${tel}\n📦 *Entrega:* Retirar na loja\n\n*Itens:*\n${itens}\n\n💰 *TOTAL: R$ ${total.toFixed(2).replace('.', ',')}*\n\nVou retirar na loja! ✅`;
@@ -587,7 +587,7 @@ async function enviarWhatsApp() {
 
   // Entrega via PIX: mostra QR Code
   if (pagamentoTipo === 'pix') {
-    await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total, status: 'aguardando' });
+    await registrarPedidoOnline({ nome, telefone: tel, endereco: enderecoFinal, itens_texto: itensTxt, total, status: 'aguardando', pagamento: 'pix' });
     notificarLojista({ nome, telefone: tel, itens_texto: itensTxt, total, entregaTipo });
     const itens = carrinho.map(i => `• ${i.qty}x ${i.nome} — R$ ${(i.preco * i.qty).toFixed(2).replace('.', ',')}`).join('\n');
     const waMsg = `🛒 *Pedido Alpha Max*\n\n👤 ${nome}\n📍 ${enderecoFinal}\n\n${itens}\n\n💰 *R$ ${total.toFixed(2).replace('.', ',')}*\n\n💠 Pagamento via PIX — segue o comprovante!`;
@@ -646,7 +646,7 @@ async function enviarWhatsApp() {
 }
 
 // ===== REGISTRAR PEDIDO ONLINE =====
-async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, total, status = 'aguardando' }) {
+async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, total, status = 'aguardando', pagamento = 'pix' }) {
   const totalFinal = parseFloat(total) > 0 ? parseFloat(total) : carrinho.reduce((s, i) => s + i.preco * i.qty, 0);
   try {
     const res = await fetch(
@@ -661,6 +661,7 @@ async function registrarPedidoOnline({ nome, telefone, endereco, itens_texto, to
           itens_texto,
           total: totalFinal,
           status,
+          pagamento,
           created_at: new Date().toISOString()
         })
       }
@@ -700,7 +701,7 @@ async function notificarLojista({ nome, telefone, itens_texto, total, entregaTip
   if (!pending) return;
   try {
     const d = JSON.parse(pending);
-    await registrarPedidoOnline({ nome: d.nome, telefone: d.telefone, endereco: d.endereco, itens_texto: d.itens_texto, total: d.total, status: 'confirmado' });
+    await registrarPedidoOnline({ nome: d.nome, telefone: d.telefone, endereco: d.endereco, itens_texto: d.itens_texto, total: d.total, status: 'confirmado', pagamento: 'mercadopago' });
     notificarLojista({ nome: d.nome, telefone: d.telefone, itens_texto: d.itens_texto, total: d.total, entregaTipo: 'entrega' });
     localStorage.removeItem('mp_pedido_pendente');
   } catch(e) { console.warn('Erro ao registrar pedido MP retorno:', e); }
