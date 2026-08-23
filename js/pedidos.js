@@ -412,12 +412,20 @@ async function lancarNoCaixa() {
     body: JSON.stringify({ movimentacoes: novasMov, saldo_final: novoSaldo })
   });
 
-  // Atualiza caixa_id na venda
-  await fetch(`${SUPABASE_URL_P}/rest/v1/vendas?id=eq.online_${p.id}`, {
-    method: 'PATCH',
-    headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-    body: JSON.stringify({ caixa_id: caixa.id })
-  });
+  // Insere venda no DB para dashboard e relatórios contabilizarem
+  const vendaId = 'online_' + p.id;
+  if (!DB.getVendaById(vendaId)) {
+    DB.addVenda({
+      id: vendaId,
+      total: total,
+      itens: [],
+      pagamento: p.pagamento || 'pix',
+      caixaId: caixa.id,
+      clienteNome: p.nome || '',
+      origem: 'online',
+      createdAt: p.created_at || new Date().toISOString()
+    });
+  }
 
   App.showToast(`R$ ${total.toFixed(2).replace('.', ',')} lançado no caixa!`, 'success');
   const btn = document.getElementById('btn-lancar-caixa');

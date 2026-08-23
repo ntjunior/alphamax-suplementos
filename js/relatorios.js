@@ -23,7 +23,7 @@ function getVendasPeriodo() {
 function renderRelatorio() {
   const vendas = getVendasPeriodo();
   const faturamento = vendas.reduce((s, v) => s + v.total, 0);
-  const custo = vendas.reduce((s, v) => s + v.itens.reduce((si, i) => si + (i.precoCusto || 0) * i.quantidade, 0), 0);
+  const custo = vendas.reduce((s, v) => s + (v.itens || []).reduce((si, i) => si + (i.precoCusto || 0) * i.quantidade, 0), 0);
   const lucro = faturamento - custo;
   const margem = faturamento > 0 ? ((lucro / faturamento) * 100).toFixed(1) : 0;
   const ticket = vendas.length > 0 ? faturamento / vendas.length : 0;
