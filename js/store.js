@@ -87,7 +87,6 @@ function cardHTML(p) {
   const semEstoque = p.estoque <= 0;
   const emoji = p.emoji || emojiCategoria(p.categoria);
   const preco = p.precoVenda || 0;
-  const parcela = (preco / 5).toFixed(2).replace('.', ',');
   const imgContent = p.imagemUrl
     ? `<img src="${p.imagemUrl}" alt="${p.nome}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
        <span class="card-emoji-fallback" style="display:none;">${emoji}</span>`
@@ -111,7 +110,6 @@ function cardHTML(p) {
         <div class="produto-preco-store">
           R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong>
         </div>
-        <div class="produto-parcelas">R$ ${parcela} até <strong>5x</strong> sem juros</div>
         <button class="btn-adicionar ${semEstoque ? 'btn-sem-estoque' : ''}" onclick="event.stopPropagation();${semEstoque ? '' : `adicionarCarrinho('${p.id}')`}" ${semEstoque ? 'disabled' : ''}>
           ${semEstoque ? 'Sem Estoque' : 'COMPRAR'}
         </button>
@@ -226,7 +224,6 @@ function abrirProduto(id) {
   produtoModalId = id;
   const semEstoque = p.estoque <= 0;
   const preco = p.precoVenda || 0;
-  const parcela = (preco / 5).toFixed(2).replace('.', ',');
   const emoji = p.emoji || emojiCategoria(p.categoria);
 
   const imgWrap = document.getElementById('mp-img-wrap');
@@ -239,7 +236,7 @@ function abrirProduto(id) {
   document.getElementById('mp-sabor').textContent = p.sabor ? `Sabor: ${p.sabor}` : '';
   document.getElementById('mp-desc').textContent = p.descricao || 'Sem descrição disponível.';
   document.getElementById('mp-preco').textContent = `R$ ${preco.toFixed(2).replace('.', ',')}`;
-  document.getElementById('mp-parcelas').textContent = `ou R$ ${parcela} em até 5x sem juros`;
+  document.getElementById('mp-parcelas').textContent = '';
   document.getElementById('mp-estoque-info').innerHTML = semEstoque
     ? '<span style="color:#e53935;font-weight:700;">Sem estoque</span>'
     : `<span style="color:#16a34a;font-weight:700;">${p.estoque} em estoque</span>`;
