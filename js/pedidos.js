@@ -367,6 +367,29 @@ async function reenviarMensagem() {
   }
 }
 
+function _parsearItensOnline(itensTxt) {
+  if (!itensTxt) return [];
+  const produtos = DB.getProdutos();
+  return itensTxt.split('\n').filter(Boolean).map(linha => {
+    const match = linha.match(/•\s*(\d+)x\s+(.+?)\s+—\s+R\$\s*([\d.,]+)/);
+    if (!match) return null;
+    const quantidade = parseInt(match[1]);
+    const nome = match[2].trim();
+    const totalLinha = parseFloat(match[3].replace('.', '').replace(',', '.'));
+    const precoVenda = quantidade > 0 ? totalLinha / quantidade : totalLinha;
+    const prod = produtos.find(p => p.nome.toLowerCase() === nome.toLowerCase())
+              || produtos.find(p => nome.toLowerCase().includes(p.nome.toLowerCase()))
+              || produtos.find(p => p.nome.toLowerCase().includes(nome.toLowerCase()));
+    return {
+      nome,
+      quantidade,
+      precoVenda,
+      precoCusto: prod ? (prod.precoCusto || 0) : 0,
+      produtoId: prod ? prod.id : null
+    };
+  }).filter(Boolean);
+}
+
 async function lancarNoCaixa() {
   const p = pedidoSelecionado;
   if (!p) return;
@@ -427,7 +450,7 @@ async function lancarNoCaixa() {
     headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
     body: JSON.stringify({
       id: vendaId,
-      itens: [],
+      itens: _parsearItensOnline(p.itens_texto),
       subtotal: total,
       desconto: 0,
       total: total,
