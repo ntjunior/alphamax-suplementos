@@ -3,8 +3,12 @@ const SB_KEY_CLI = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 
 let clienteParaExcluir = null;
 
-function getEstatisticasCliente(clienteId) {
-  const vendas = DB.getVendas().filter(v => v.clienteId === clienteId);
+function getEstatisticasCliente(clienteId, clienteNome) {
+  const nomeNorm = (clienteNome || '').toLowerCase();
+  const vendas = DB.getVendas().filter(v =>
+    v.clienteId === clienteId ||
+    (nomeNorm && (v.clienteNome || '').toLowerCase() === nomeNorm)
+  );
   const totalGasto = vendas.reduce((s, v) => s + v.total, 0);
   const ultima = vendas.length > 0 ? vendas.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] : null;
   return { qtd: vendas.length, totalGasto, ultima, vendas: vendas.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) };
@@ -24,7 +28,7 @@ function renderClientes() {
   }
 
   const clienteRows = clientes.map(c => {
-    const stats = getEstatisticasCliente(c.id);
+    const stats = getEstatisticasCliente(c.id, c.nome);
     const iniciais = c.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
     return `
       <tr style="cursor:pointer;" onclick="verHistorico('${c.id}')">
@@ -56,7 +60,7 @@ async function verHistorico(clienteId) {
   const cliente = DB.getClienteById(clienteId);
   if (!cliente) return;
 
-  const stats = getEstatisticasCliente(clienteId);
+  const stats = getEstatisticasCliente(clienteId, cliente.nome);
   const iniciais = cliente.nome.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase();
 
   document.getElementById('historico-empty').classList.add('hidden');
