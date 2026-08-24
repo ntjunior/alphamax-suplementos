@@ -250,7 +250,12 @@ function fecharModal(id) {
   document.getElementById(id).classList.remove('show');
 }
 
-document.getElementById('busca-produtos').addEventListener('input', renderProdutos);
+document.getElementById('busca-produtos').addEventListener('input', () => {
+  if (document.getElementById('busca-produtos').value.trim()) {
+    document.getElementById('filtro-cat').value = '';
+  }
+  renderProdutos();
+});
 document.getElementById('filtro-cat').addEventListener('change', renderProdutos);
 
 document.querySelectorAll('.modal-overlay').forEach(m => {
