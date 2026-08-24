@@ -374,6 +374,21 @@ async function lancarNoCaixa() {
   const total = parseFloat(p.total) || 0;
   if (total <= 0) { App.showToast('Pedido sem valor para lançar', 'warning'); return; }
 
+  const btn = document.getElementById('btn-lancar-caixa');
+  const vendaId = 'online_' + p.id;
+
+  // Verifica duplicata real no Supabase (qualquer caixa)
+  const dupCheck = await fetch(
+    `${SUPABASE_URL_P}/rest/v1/vendas?id=eq.${encodeURIComponent(vendaId)}&select=id`,
+    { headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}` } }
+  );
+  const dupRows = await dupCheck.json();
+  if (Array.isArray(dupRows) && dupRows.length > 0) {
+    App.showToast('Este pedido já foi lançado!', 'warning');
+    if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="check"></i> Já Lançado'; App.refreshIcons?.(); }
+    return;
+  }
+
   // Busca caixa aberto
   const res = await fetch(`${SUPABASE_URL_P}/rest/v1/caixas?status=eq.aberto&order=aberto_em.desc&limit=1`, {
     headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}` }
@@ -385,15 +400,8 @@ async function lancarNoCaixa() {
   }
   const caixa = caixas[0];
 
-  // Verifica se já foi lançado
-  const jaLancado = (caixa.movimentacoes || []).some(m => m.pedidoOnlineId === p.id);
-  if (jaLancado) {
-    App.showToast('Este pedido já foi lançado neste caixa!', 'warning');
-    return;
-  }
-
   const mov = {
-    id: 'online_' + p.id,
+    id: vendaId,
     tipo: 'venda',
     valor: total,
     descricao: `Pedido Online — ${p.nome}`,
@@ -412,23 +420,33 @@ async function lancarNoCaixa() {
     body: JSON.stringify({ movimentacoes: novasMov, saldo_final: novoSaldo })
   });
 
-  // Insere venda no DB para dashboard e relatórios contabilizarem
-  const vendaId = 'online_' + p.id;
-  if (!DB.getVendaById(vendaId)) {
-    DB.addVenda({
+  // Insere venda com ID estável para dashboard e relatórios
+  const pagNomes = { pix: 'PIX', retirada: 'Retirada', mercadopago: 'Cartão/MP' };
+  const vendaRes = await fetch(`${SUPABASE_URL_P}/rest/v1/vendas`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY_P, 'Authorization': `Bearer ${SUPABASE_KEY_P}`, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+    body: JSON.stringify({
       id: vendaId,
-      total: total,
       itens: [],
+      subtotal: total,
+      desconto: 0,
+      total: total,
       pagamento: p.pagamento || 'pix',
-      caixaId: caixa.id,
-      clienteNome: p.nome || '',
-      origem: 'online',
-      createdAt: p.created_at || new Date().toISOString()
-    });
+      pagamento_nome: pagNomes[p.pagamento] || 'PIX',
+      cliente_nome: p.nome || 'Cliente Online',
+      status: 'pago',
+      caixa_id: caixa.id,
+      created_at: p.created_at || new Date().toISOString()
+    })
+  });
+
+  if (!vendaRes.ok) {
+    console.warn('Erro ao inserir venda:', await vendaRes.text());
+    App.showToast('Lançado no caixa, mas houve erro ao registrar venda.', 'warning');
+  } else {
+    App.showToast(`R$ ${total.toFixed(2).replace('.', ',')} lançado no caixa!`, 'success');
   }
 
-  App.showToast(`R$ ${total.toFixed(2).replace('.', ',')} lançado no caixa!`, 'success');
-  const btn = document.getElementById('btn-lancar-caixa');
   if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="check"></i> Lançado no Caixa'; App.refreshIcons?.(); }
 }
 
