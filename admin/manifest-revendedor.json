@@ -1,0 +1,25 @@
+{
+  "name": "Portal do Revendedor — Alpha Max",
+  "short_name": "Revendedor",
+  "description": "Portal de comissões Alpha Max Suplementos.",
+  "start_url": "/admin/revendedor.html",
+  "scope": "/admin/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#e53935",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
