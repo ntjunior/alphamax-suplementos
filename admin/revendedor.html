@@ -86,7 +86,15 @@
     .badge-codigo { background: rgba(229,57,53,.12); color: var(--red); border: 1px solid rgba(229,57,53,.3); border-radius: 6px; padding: 2px 8px; font-size: 11px; font-weight: 700; }
     .tag-pag { background: rgba(255,255,255,.06); border-radius: 5px; padding: 2px 8px; font-size: 11px; }
     /* esconde coluna Pagamento no mobile */
-    @media (max-width: 600px) { .col-pag { display: none; } }
+    @media (max-width: 600px) {
+      .col-pag { display: none; }
+      table { table-layout: auto; font-size: 12px; }
+      th, td { padding: 8px 8px; }
+      th:nth-child(1), td:nth-child(1) { width: 22%; }
+      th:nth-child(2), td:nth-child(2) { width: auto; }
+      th:nth-child(4), td:nth-child(4) { width: 24%; }
+      th:nth-child(5), td:nth-child(5) { width: 24%; }
+    }
   </style>
 </head>
 <body>
@@ -172,7 +180,7 @@
               <th>Cliente</th>
               <th class="col-pag">Pagamento</th>
               <th class="text-right">Total</th>
-              <th class="text-right">Comissão</th>
+              <th class="text-right">Comis.</th>
             </tr>
           </thead>
           <tbody id="tbody-vendas"></tbody>
