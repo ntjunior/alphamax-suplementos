@@ -57,8 +57,8 @@ a { text-decoration: none; color: inherit; }
   height: 96px; display: flex; align-items: center; gap: 20px;
 }
 .store-logo img {
-  height: 90px; object-fit: contain; display: block;
-  transition: opacity 0.2s;
+  height: 110px; object-fit: contain; display: block;
+  transition: opacity 0.2s; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.15));
 }
 .store-logo:hover img { opacity: 0.9; }
 .store-search { flex: 1; position: relative; max-width: 580px; }
