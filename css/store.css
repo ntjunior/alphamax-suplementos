@@ -295,6 +295,15 @@ a { text-decoration: none; color: inherit; }
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 .btn-favorito:hover { color: var(--red); border-color: var(--red); transform: scale(1.1); }
+.btn-compartilhar {
+  position: absolute; top: 12px; right: 52px;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(255,255,255,0.95); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #94a3b8; transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.btn-compartilhar:hover { color: #2563eb; border-color: #2563eb; transform: scale(1.1); }
 .produto-info { padding: 16px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .produto-marca-store {
   font-size: 10.5px; color: var(--red); text-transform: uppercase;

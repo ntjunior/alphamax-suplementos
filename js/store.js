@@ -100,6 +100,9 @@ function cardHTML(p) {
         <button class="btn-favorito" onclick="event.stopPropagation()" title="Favoritar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
         </button>
+        <button class="btn-compartilhar" onclick="event.stopPropagation();compartilharProduto('${p.id}','${p.nome.replace(/'/g,"\\'")}',${preco})" title="Compartilhar">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        </button>
       </div>
       <div class="produto-info">
         ${p.marca ? `<div class="produto-marca-store">${p.marca}</div>` : ''}
@@ -218,6 +221,33 @@ function filtrarCatBtn(cat) {
 }
 
 // ===== MODAL PRODUTO =====
+function compartilharProduto(id, nome, preco) {
+  const url = `https://alphamaxsuplemento.com.br/?produto=${id}`;
+  const texto = `*${nome}* — R$ ${preco.toFixed(2).replace('.', ',')}\n\nConfira na loja Alpha Max Suplementos:\n${url}`;
+  if (navigator.share) {
+    navigator.share({ title: nome, text: texto, url }).catch(() => {});
+  } else {
+    const menu = document.createElement('div');
+    menu.id = 'share-menu';
+    menu.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#fff;border-radius:16px;box-shadow:0 8px 32px rgba(0,0,0,0.18);padding:16px;z-index:9999;min-width:280px;';
+    menu.innerHTML = `
+      <div style="font-weight:700;font-size:14px;margin-bottom:12px;color:#111;">Compartilhar produto</div>
+      <a href="https://wa.me/?text=${encodeURIComponent(texto)}" target="_blank" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:#f0fdf4;color:#16a34a;font-weight:600;font-size:13px;text-decoration:none;margin-bottom:8px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#16a34a"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413z"/><path d="M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2z" fill="none" stroke="#16a34a" stroke-width="1.5"/></svg>
+        Compartilhar no WhatsApp
+      </a>
+      <button onclick="navigator.clipboard.writeText('${url}');document.getElementById('share-menu').remove();showToast('Link copiado!','success')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:#f3f4f6;color:#374151;font-weight:600;font-size:13px;border:none;cursor:pointer;width:100%;margin-bottom:8px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copiar link
+      </button>
+      <button onclick="document.getElementById('share-menu').remove()" style="width:100%;padding:8px;border:none;background:transparent;color:#9ca3af;font-size:13px;cursor:pointer;">Fechar</button>
+    `;
+    document.getElementById('share-menu')?.remove();
+    document.body.appendChild(menu);
+    setTimeout(() => { document.addEventListener('click', function h(e){ if(!menu.contains(e.target)){menu.remove();document.removeEventListener('click',h);} }); }, 100);
+  }
+}
+
 function abrirProduto(id) {
   const p = produtos.find(x => x.id === id);
   if (!p) return;
