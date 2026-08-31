@@ -33,14 +33,20 @@
 
     /* PORTAL */
     #tela-portal { display: none; }
-    .portal-header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; justify-content: space-between; }
-    .portal-header-logo { display: flex; align-items: center; gap: 12px; }
-    .portal-header-logo img { height: 48px; width: 48px; object-fit: cover; border-radius: 50%; }
-    .portal-header-info { font-size: 13px; color: var(--text-muted); }
-    .portal-header-info strong { color: var(--text); font-size: 15px; display: block; }
+    /* HEADER */
+    .portal-header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 12px 20px; }
+    .portal-header-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .portal-header-logo { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .portal-header-logo img { height: 44px; width: 44px; object-fit: cover; border-radius: 50%; flex-shrink: 0; border: 2px solid var(--red); }
+    .portal-header-info { min-width: 0; }
+    .portal-header-info strong { color: var(--text); font-size: 14px; font-weight: 700; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .portal-header-info span { font-size: 11px; color: var(--text-muted); }
+    .portal-header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .btn-fazer-pedido { background: var(--red); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .btn-logout { background: rgba(229,57,53,0.12); color: var(--red); border: 1px solid rgba(229,57,53,0.3); border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: 600; cursor: pointer; }
     .btn-logout { background: rgba(229,57,53,0.12); color: var(--red); border: 1px solid rgba(229,57,53,0.3); border-radius: 8px; padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; }
-    .portal-body { max-width: 960px; margin: 0 auto; padding: 24px 20px; }
-    .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .portal-body { max-width: 960px; margin: 0 auto; padding: 20px 16px; }
+    .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
     .kpi { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
     .kpi-label { font-size: 11px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
     .kpi-value { font-size: 26px; font-weight: 800; }
@@ -91,17 +97,18 @@
 <!-- TELA DO PORTAL -->
 <div id="tela-portal">
   <div class="portal-header">
-    <div class="portal-header-logo">
-      <img src="../logo-loja.png" alt="Alpha Max" onerror="this.style.display='none'">
-      <div class="portal-header-info">
-        <strong id="portal-nome">—</strong>
-        Portal do Revendedor
+    <div class="portal-header-top">
+      <div class="portal-header-logo">
+        <img src="../logo-loja.png" alt="Alpha Max" onerror="this.style.display='none'">
+        <div class="portal-header-info">
+          <strong id="portal-nome">—</strong>
+          <span id="portal-codigo-inline" class="badge-codigo" style="display:inline-block;margin-top:3px;font-size:10px;"></span>
+        </div>
       </div>
-    </div>
-    <div style="display:flex;align-items:center;gap:12px;">
-      <span class="badge-codigo" id="portal-codigo">—</span>
-      <button onclick="fazerPedido()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;">+ Fazer Pedido</button>
-      <button class="btn-logout" onclick="sair()">Sair</button>
+      <div class="portal-header-actions">
+        <button class="btn-fazer-pedido" onclick="fazerPedido()">+ Fazer Pedido</button>
+        <button class="btn-logout" onclick="sair()">Sair</button>
+      </div>
     </div>
   </div>
 
@@ -192,7 +199,7 @@ async function entrar() {
     document.getElementById('tela-login').style.display = 'none';
     document.getElementById('tela-portal').style.display = 'block';
     document.getElementById('portal-nome').textContent = cupom.nome;
-    document.getElementById('portal-codigo').textContent = cupom.codigo;
+    document.getElementById('portal-codigo-inline').textContent = cupom.codigo;
     document.getElementById('kpi-pct').textContent = (cupom.comissao_pct || 0) + '%';
   } catch(e) {
     erroEl.textContent = 'Erro de conexão. Tente novamente.'; erroEl.style.display = 'block';
