@@ -457,6 +457,7 @@ async function lancarNoCaixa() {
       pagamento: p.pagamento || 'pix',
       pagamento_nome: pagNomes[p.pagamento] || 'PIX',
       cliente_nome: p.nome || 'Cliente Online',
+      cupom_codigo: p.cupom || null,
       status: 'pago',
       caixa_id: caixa.id,
       created_at: p.created_at || new Date().toISOString()
