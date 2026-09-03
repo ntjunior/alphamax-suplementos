@@ -272,7 +272,7 @@ a { text-decoration: none; color: inherit; }
 }
 .produto-img {
   height: 210px; display: flex; align-items: center; justify-content: center;
-  background: linear-gradient(135deg, #fafbff, #f1f5ff);
+  background: #ffffff;
   position: relative; overflow: hidden;
   border-bottom: 1px solid var(--border);
 }
