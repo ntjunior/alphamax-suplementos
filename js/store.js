@@ -841,6 +841,17 @@ function showToast(msg) {
     renderProdutos(this.value);
   });
 
+  // Abrir produto direto se vier da URL (?produto=ID)
+  const produtoParam = new URLSearchParams(location.search).get('produto');
+  if (produtoParam) {
+    const tentarAbrir = () => {
+      const p = produtos.find(x => x.id === produtoParam);
+      if (p) { abrirProduto(produtoParam); return; }
+      setTimeout(tentarAbrir, 300);
+    };
+    setTimeout(tentarAbrir, 500);
+  }
+
   // Pré-aplicar cupom vindo da URL (?cupom=CODIGO)
   const cupomParam = new URLSearchParams(location.search).get('cupom');
   if (cupomParam) {
