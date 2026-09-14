@@ -30,6 +30,9 @@ body {
 }
 a { text-decoration: none; color: inherit; }
 
+/* ===== STICKY TOP WRAPPER ===== */
+.sticky-top { position: sticky; top: 0; z-index: 100; }
+
 /* ===== ANNOUNCE BAR ===== */
 .announce-bar {
   background: linear-gradient(90deg, #e53935 0%, #c62828 50%, #e53935 100%);
