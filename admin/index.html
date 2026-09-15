@@ -124,6 +124,17 @@
   </div>
 </div>
 
+<!-- Modal Detalhes Venda -->
+<div class="modal-overlay" id="modal-venda-detalhe" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-venda-titulo">Detalhes da Venda</span>
+      <button class="modal-close" onclick="document.getElementById('modal-venda-detalhe').classList.remove('show')">✕</button>
+    </div>
+    <div class="modal-body" id="modal-venda-body"></div>
+  </div>
+</div>
+
 <div id="toast-container" class="toast-container"></div>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
@@ -154,7 +165,7 @@
       tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Sem vendas registradas</td></tr>';
     } else {
       tbody.innerHTML = ultimas.map(v => `
-        <tr>
+        <tr style="cursor:pointer;" onclick="verVenda('${v.id}')" title="Ver detalhes">
           <td>${App.formatDate(v.createdAt)}</td>
           <td>${v.clienteNome || 'Consumidor Final'}</td>
           <td>${App.getPagamentoBadge(v.pagamento)}</td>
@@ -196,6 +207,33 @@
     }
 
     App.drawBarChart('grafico-semana', labels, valores);
+  }
+
+  function verVenda(id) {
+    const v = DB.getVendas().find(x => x.id === id);
+    if (!v) return;
+    const nomesPag = { dinheiro: 'Dinheiro', pix: 'PIX', credito: 'Cartão Crédito', debito: 'Cartão Débito' };
+    const itens = (v.itens || []).map(i => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div>
+          <div style="font-weight:600;font-size:13px;">${i.nome}</div>
+          <div style="font-size:12px;color:var(--text-muted);">${App.formatCurrency(i.precoUnitario)} × ${i.quantidade}</div>
+        </div>
+        <div style="font-weight:700;color:var(--red);">${App.formatCurrency(i.subtotal)}</div>
+      </div>`).join('');
+    const desconto = v.desconto > 0 ? `<div style="display:flex;justify-content:space-between;font-size:13px;color:var(--green);margin-top:4px;"><span>Desconto</span><span>- ${App.formatCurrency(v.desconto)}</span></div>` : '';
+    const cupom = v.cupomCodigo ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Cupom: <strong>${v.cupomCodigo}</strong></div>` : '';
+    document.getElementById('modal-venda-titulo').textContent = `Venda #${id.slice(-6).toUpperCase()} — ${App.formatDate(v.createdAt)}`;
+    document.getElementById('modal-venda-body').innerHTML = `
+      ${itens}
+      <div style="margin-top:12px;padding-top:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;color:var(--text-muted);"><span>Subtotal</span><span>${App.formatCurrency(v.subtotal)}</span></div>
+        ${desconto}
+        <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;margin-top:8px;"><span>Total</span><span style="color:var(--red);">${App.formatCurrency(v.total)}</span></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:6px;">Pagamento: <strong>${nomesPag[v.pagamento] || v.pagamento}</strong></div>
+        ${cupom}
+      </div>`;
+    document.getElementById('modal-venda-detalhe').classList.add('show');
   }
 
   const hoje = new Date();
