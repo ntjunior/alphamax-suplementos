@@ -103,19 +103,18 @@ a { text-decoration: none; color: inherit; }
 .btn-admin:hover { color: var(--red); border-color: var(--red); background: #fff3f3; }
 
 /* ===== CATEGORY NAV ===== */
+.cat-nav-wrap { position: relative; background: var(--navy-2); border-bottom: 1px solid rgba(255,255,255,0.07); }
+.cat-nav-wrap::after { content:''; position:absolute; right:0; top:0; bottom:0; width:48px; background:linear-gradient(to left, var(--navy-2), transparent); pointer-events:none; }
 .cat-nav {
-  background: var(--navy-2);
-  border-bottom: 1px solid rgba(255,255,255,0.07);
-  overflow-x: auto; white-space: nowrap;
+  overflow-x: auto; white-space: nowrap; scrollbar-width: none;
 }
 .cat-nav::-webkit-scrollbar { display: none; }
 .cat-nav-inner {
-  max-width: 1320px; margin: 0 auto; padding: 0 28px;
-  display: flex; gap: 0;
+  display: inline-flex; gap: 0; padding: 0 16px;
 }
 .cat-nav-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 14px 20px; color: rgba(255,255,255,0.6); font-size: 13px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 13px 14px; color: rgba(255,255,255,0.6); font-size: 12px;
   font-weight: 600; background: none; border: none; cursor: pointer;
   border-bottom: 3px solid transparent; transition: all 0.2s; white-space: nowrap;
   font-family: inherit;
