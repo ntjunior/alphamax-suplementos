@@ -165,12 +165,24 @@ function aplicarCupom() {
     return;
   }
   cupomAtual = cupom;
+  // Aplica desconto automático se o cupom tiver desconto_pct
+  if (cupom.descontoPct > 0) {
+    descontoTipo = 'pct';
+    document.getElementById('input-desconto').value = cupom.descontoPct;
+    document.querySelectorAll('.desc-tipo-btn').forEach(b => b.classList.toggle('active', b.dataset.tipo === 'pct'));
+    calcTotais();
+  }
   statusEl.className = '';
   statusEl.style.cssText = 'margin-top:6px;font-size:12px;padding:6px 10px;border-radius:var(--radius);background:rgba(34,197,94,0.12);color:var(--green);';
-  statusEl.textContent = `Cupom "${cupom.codigo}" aplicado — ${cupom.nome} (${cupom.comissaoPct}% comissão)`;
+  const descontoInfo = cupom.descontoPct > 0 ? ` • ${cupom.descontoPct}% de desconto aplicado` : '';
+  statusEl.textContent = `Cupom "${cupom.codigo}" aplicado — ${cupom.nome} (${cupom.comissaoPct}% comissão${descontoInfo})`;
 }
 
 function limparCupom() {
+  if (cupomAtual?.descontoPct > 0) {
+    document.getElementById('input-desconto').value = '';
+    calcTotais();
+  }
   cupomAtual = null;
   document.getElementById('input-cupom').value = '';
   document.getElementById('cupom-status').className = 'hidden';
