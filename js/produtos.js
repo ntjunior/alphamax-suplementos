@@ -159,7 +159,7 @@ function editarProduto(id) {
   document.getElementById('produto-venda').value = p.precoVenda || '';
   document.getElementById('produto-estoque').value = p.estoque || 0;
   document.getElementById('produto-estoque-min').value = p.estoqueMin || 10;
-  document.getElementById('produto-ativo').value = (p.ativo === false || p.ativo === 0) ? '0' : '1';
+  document.getElementById('produto-ativo').value = (p.ativo === false || p.ativo === 0 || p.ativo === 'false') ? '0' : '1';
   document.getElementById('upload-progress').style.display = 'none';
   if (p.imagemUrl) {
     previewUrlImagem(p.imagemUrl);
