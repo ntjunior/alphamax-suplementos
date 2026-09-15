@@ -64,6 +64,7 @@
 </nav>
 </div><!-- /sticky-top -->
 
+<div id="header-spacer"></div>
 
 <div class="benefits-bar">
   <div class="benefits-inner">
@@ -302,6 +303,15 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="js/store.js"></script>
+<script>
+  function ajustarEspacador() {
+    const h = document.querySelector('.sticky-top');
+    const s = document.getElementById('header-spacer');
+    if (h && s) s.style.height = h.offsetHeight + 'px';
+  }
+  window.addEventListener('load', ajustarEspacador);
+  window.addEventListener('resize', ajustarEspacador);
+</script>
 <script>
   // Retorno do Mercado Pago
   (function() {

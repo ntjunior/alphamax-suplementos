@@ -30,8 +30,8 @@ body {
 }
 a { text-decoration: none; color: inherit; }
 
-/* ===== STICKY TOP WRAPPER ===== */
-.sticky-top { position: sticky; top: 0; z-index: 100; }
+/* ===== FIXED TOP WRAPPER ===== */
+.sticky-top { position: fixed; top: 0; left: 0; right: 0; z-index: 100; }
 
 /* ===== ANNOUNCE BAR ===== */
 .announce-bar {
