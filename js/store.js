@@ -206,7 +206,14 @@ function renderCategorias() {
 function filtrarCat(cat, btn) {
   catAtiva = cat;
   document.querySelectorAll('.cat-nav-btn').forEach(b => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
+  if (btn) {
+    btn.classList.add('active');
+    const nav = document.querySelector('.cat-nav');
+    if (nav) {
+      const offset = btn.offsetLeft - (nav.clientWidth / 2) + (btn.offsetWidth / 2);
+      nav.scrollTo({ left: offset, behavior: 'smooth' });
+    }
+  }
   renderProdutos(document.getElementById('store-busca').value);
   document.getElementById('store-main').scrollIntoView({ behavior: 'smooth' });
 }
