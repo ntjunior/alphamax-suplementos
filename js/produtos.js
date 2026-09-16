@@ -134,7 +134,6 @@ function abrirModalProduto() {
   document.getElementById('produto-estoque').value = '';
   document.getElementById('produto-estoque-min').value = '10';
   document.getElementById('produto-ativo').value = '1';
-  document.getElementById('produto-margem').value = '';
   document.getElementById('produto-markup').value = '';
   document.getElementById('preco-info').style.display = 'none';
   _resetFotoPreview('📦');
