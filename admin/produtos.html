@@ -140,25 +140,37 @@
           </select>
         </div>
       </div>
-      <div class="form-row" style="grid-template-columns:1fr 1fr;">
+      <div class="form-row-3">
         <div class="form-group">
           <label class="form-label">Preço de Custo (R$)</label>
-          <input type="number" id="produto-custo" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularMargem()">
+          <input type="number" id="produto-custo" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularPrecos()">
         </div>
         <div class="form-group">
-          <label class="form-label">Markup % <span style="font-size:11px;color:var(--text-muted);">(sugere preço)</span></label>
-          <input type="number" id="produto-markup" class="form-control" min="0" step="0.1" placeholder="Ex: 80" oninput="sugerirPreco()">
+          <label class="form-label">Markup %</label>
+          <input type="number" id="produto-markup" class="form-control" min="0" step="0.1" placeholder="Ex: 80" oninput="calcularPrecos()">
         </div>
-      </div>
-      <div class="form-row" style="grid-template-columns:1fr 1fr;">
         <div class="form-group">
           <label class="form-label">Preço de Venda (R$) <span class="required">*</span></label>
-          <input type="number" id="produto-venda" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularMargem()">
+          <input type="number" id="produto-venda" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularPrecos(true)">
           <div class="form-error" id="err-venda">Preço de venda é obrigatório</div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Margem (sobre custo)</label>
-          <input type="text" id="produto-margem" class="form-control" disabled placeholder="—">
+      </div>
+      <div id="preco-info" style="display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;gap:24px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Sugestão</div>
+          <div id="info-sugestao" style="font-size:15px;font-weight:700;color:var(--red);">—</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Lucro</div>
+          <div id="info-lucro" style="font-size:15px;font-weight:700;color:var(--green);">—</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Margem %</div>
+          <div id="info-margem" style="font-size:15px;font-weight:700;">—</div>
+        </div>
+        <div style="text-align:center;">
+          <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;">Multiplicador</div>
+          <div id="info-mult" style="font-size:15px;font-weight:700;">—</div>
         </div>
       </div>
       <div class="form-row">

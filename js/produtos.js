@@ -136,6 +136,7 @@ function abrirModalProduto() {
   document.getElementById('produto-ativo').value = '1';
   document.getElementById('produto-margem').value = '';
   document.getElementById('produto-markup').value = '';
+  document.getElementById('preco-info').style.display = 'none';
   _resetFotoPreview('📦');
   document.getElementById('upload-progress').style.display = 'none';
   document.querySelectorAll('.form-error').forEach(e => e.classList.remove('show'));
@@ -168,35 +169,47 @@ function editarProduto(id) {
     _resetFotoPreview(p.emoji || '📦');
   }
   document.querySelectorAll('.form-error').forEach(e => e.classList.remove('show'));
-  calcularMargem();
+  calcularPrecos(true);
   document.getElementById('modal-produto-titulo').textContent = 'Editar Produto';
   document.getElementById('modal-produto').classList.add('show');
 }
 
-function sugerirPreco() {
+function calcularPrecos(vendaManual) {
   const custo = parseFloat(document.getElementById('produto-custo').value) || 0;
   const markup = parseFloat(document.getElementById('produto-markup').value) || 0;
-  if (custo > 0 && markup > 0) {
-    document.getElementById('produto-venda').value = (custo * (1 + markup / 100)).toFixed(2);
-    calcularMargem();
+  const vendaInput = document.getElementById('produto-venda');
+  const info = document.getElementById('preco-info');
+
+  // Se custo e markup preenchidos, sugere preço de venda (a menos que usuário editou venda manualmente)
+  if (!vendaManual && custo > 0 && markup > 0) {
+    vendaInput.value = (custo * (1 + markup / 100)).toFixed(2);
+  }
+
+  const venda = parseFloat(vendaInput.value) || 0;
+
+  if (custo > 0 && venda > 0) {
+    const lucro = venda - custo;
+    const margem = ((lucro / custo) * 100).toFixed(1);
+    const mult = (venda / custo).toFixed(2);
+
+    // Atualiza markup se veio da venda manual
+    if (vendaManual && document.activeElement?.id === 'produto-venda') {
+      document.getElementById('produto-markup').value = parseFloat(margem).toFixed(1);
+    }
+
+    info.style.display = 'flex';
+    document.getElementById('info-sugestao').textContent = `R$ ${venda.toFixed(2).replace('.', ',')}`;
+    document.getElementById('info-lucro').textContent = `R$ ${lucro.toFixed(2).replace('.', ',')}`;
+    const margemEl = document.getElementById('info-margem');
+    margemEl.textContent = margem + '%';
+    margemEl.style.color = parseFloat(margem) >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('info-mult').textContent = mult + 'x';
+  } else {
+    info.style.display = 'none';
   }
 }
 
-function calcularMargem() {
-  const custo = parseFloat(document.getElementById('produto-custo').value) || 0;
-  const venda = parseFloat(document.getElementById('produto-venda').value) || 0;
-  const inputMargem = document.getElementById('produto-margem');
-  const inputMarkup = document.getElementById('produto-markup');
-  if (custo > 0 && venda > 0) {
-    const margem = ((venda - custo) / custo * 100).toFixed(1);
-    inputMargem.value = margem + '%';
-    inputMargem.style.color = parseFloat(margem) >= 0 ? 'var(--green)' : 'var(--red)';
-    if (document.activeElement?.id !== 'produto-markup') inputMarkup.value = parseFloat(margem).toFixed(1);
-  } else {
-    inputMargem.value = '';
-    if (document.activeElement?.id !== 'produto-markup') inputMarkup.value = '';
-  }
-}
+function calcularMargem() { calcularPrecos(); }
 
 function salvarProduto() {
   let valid = true;
