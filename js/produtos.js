@@ -135,6 +135,7 @@ function abrirModalProduto() {
   document.getElementById('produto-estoque-min').value = '10';
   document.getElementById('produto-ativo').value = '1';
   document.getElementById('produto-margem').value = '';
+  document.getElementById('produto-markup').value = '';
   _resetFotoPreview('📦');
   document.getElementById('upload-progress').style.display = 'none';
   document.querySelectorAll('.form-error').forEach(e => e.classList.remove('show'));
@@ -172,15 +173,29 @@ function editarProduto(id) {
   document.getElementById('modal-produto').classList.add('show');
 }
 
+function sugerirPreco() {
+  const custo = parseFloat(document.getElementById('produto-custo').value) || 0;
+  const markup = parseFloat(document.getElementById('produto-markup').value) || 0;
+  if (custo > 0 && markup > 0) {
+    document.getElementById('produto-venda').value = (custo * (1 + markup / 100)).toFixed(2);
+    calcularMargem();
+  }
+}
+
 function calcularMargem() {
   const custo = parseFloat(document.getElementById('produto-custo').value) || 0;
   const venda = parseFloat(document.getElementById('produto-venda').value) || 0;
-  const input = document.getElementById('produto-margem');
+  const inputMargem = document.getElementById('produto-margem');
+  const inputMarkup = document.getElementById('produto-markup');
   if (custo > 0 && venda > 0) {
     const margem = ((venda - custo) / custo * 100).toFixed(1);
-    input.value = margem + '%';
-    input.style.color = margem >= 0 ? 'var(--green)' : 'var(--red)';
-  } else { input.value = ''; }
+    inputMargem.value = margem + '%';
+    inputMargem.style.color = parseFloat(margem) >= 0 ? 'var(--green)' : 'var(--red)';
+    if (document.activeElement?.id !== 'produto-markup') inputMarkup.value = parseFloat(margem).toFixed(1);
+  } else {
+    inputMargem.value = '';
+    if (document.activeElement?.id !== 'produto-markup') inputMarkup.value = '';
+  }
 }
 
 function salvarProduto() {

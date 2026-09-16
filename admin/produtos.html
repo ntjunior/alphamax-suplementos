@@ -140,18 +140,24 @@
           </select>
         </div>
       </div>
-      <div class="form-row-3">
+      <div class="form-row" style="grid-template-columns:1fr 1fr;">
         <div class="form-group">
           <label class="form-label">Preço de Custo (R$)</label>
           <input type="number" id="produto-custo" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularMargem()">
         </div>
+        <div class="form-group">
+          <label class="form-label">Markup % <span style="font-size:11px;color:var(--text-muted);">(sugere preço)</span></label>
+          <input type="number" id="produto-markup" class="form-control" min="0" step="0.1" placeholder="Ex: 80" oninput="sugerirPreco()">
+        </div>
+      </div>
+      <div class="form-row" style="grid-template-columns:1fr 1fr;">
         <div class="form-group">
           <label class="form-label">Preço de Venda (R$) <span class="required">*</span></label>
           <input type="number" id="produto-venda" class="form-control" min="0" step="0.01" placeholder="0,00" oninput="calcularMargem()">
           <div class="form-error" id="err-venda">Preço de venda é obrigatório</div>
         </div>
         <div class="form-group">
-          <label class="form-label">Margem</label>
+          <label class="form-label">Margem (sobre custo)</label>
           <input type="text" id="produto-margem" class="form-control" disabled placeholder="—">
         </div>
       </div>
