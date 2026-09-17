@@ -7,6 +7,28 @@ const MULTIZAP_EMP    = 'alphamax';
 const MULTIZAP_SECRET = '6p5ipc07fkc4dbhc';
 const MSG_CONFIRMADO  = '✅ *Alpha Max Suplementos*\n\nOlá [Nome]! Seu pedido foi *confirmado*!\n\nEm breve será separado. Entraremos em contato com os dados para pagamento via PIX.';
 
+function formatarDescricao(texto) {
+  const linhas = texto.split('\n');
+  let html = '';
+  let emLista = false;
+  for (let linha of linhas) {
+    const t = linha.trim();
+    if (!t) {
+      if (emLista) { html += '</ul>'; emLista = false; }
+      continue;
+    }
+    if (t.startsWith('* ') || t.startsWith('- ')) {
+      if (!emLista) { html += '<ul style="margin:6px 0 6px 18px;padding:0;">'; emLista = true; }
+      html += `<li style="margin-bottom:3px;">${t.slice(2)}</li>`;
+    } else {
+      if (emLista) { html += '</ul>'; emLista = false; }
+      html += `<p style="margin:0 0 8px 0;">${t}</p>`;
+    }
+  }
+  if (emLista) html += '</ul>';
+  return html;
+}
+
 let produtos = [];
 let carrinho = [];
 let catAtiva = '';
@@ -273,7 +295,7 @@ function abrirProduto(id) {
   document.getElementById('mp-marca').textContent = p.marca || '';
   document.getElementById('mp-nome').textContent = p.nome;
   document.getElementById('mp-sabor').textContent = p.sabor ? `Sabor: ${p.sabor}` : '';
-  document.getElementById('mp-desc').textContent = p.descricao || 'Sem descrição disponível.';
+  document.getElementById('mp-desc').innerHTML = formatarDescricao(p.descricao || 'Sem descrição disponível.');
   document.getElementById('mp-preco').textContent = `R$ ${preco.toFixed(2).replace('.', ',')}`;
   document.getElementById('mp-parcelas').textContent = '';
   document.getElementById('mp-estoque-info').innerHTML = semEstoque
