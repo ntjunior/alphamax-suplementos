@@ -110,12 +110,14 @@ function cardHTML(p) {
         <div class="produto-stars">
           <span class="stars">★★★★★</span>
         </div>
-        <div class="produto-preco-store">
-          R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong>
+        <div class="produto-preco-btn">
+          <div class="produto-preco-store">
+            R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong>
+          </div>
+          <button class="btn-adicionar ${semEstoque ? 'btn-sem-estoque' : ''}" onclick="event.stopPropagation();${semEstoque ? '' : `adicionarCarrinho('${p.id}')`}" ${semEstoque ? 'disabled' : ''}>
+            ${semEstoque ? 'Sem Estoque' : 'COMPRAR'}
+          </button>
         </div>
-        <button class="btn-adicionar ${semEstoque ? 'btn-sem-estoque' : ''}" onclick="event.stopPropagation();${semEstoque ? '' : `adicionarCarrinho('${p.id}')`}" ${semEstoque ? 'disabled' : ''}>
-          ${semEstoque ? 'Sem Estoque' : 'COMPRAR'}
-        </button>
       </div>
     </div>
   `;
