@@ -330,7 +330,7 @@ a { text-decoration: none; color: inherit; }
 }
 .produto-parcelas strong { color: #334155; font-weight: 700; }
 .btn-adicionar {
-  width: 100%; margin-top: 12px; padding: 13px;
+  width: 100%; margin-top: auto; padding: 13px;
   background: linear-gradient(135deg, #16a34a, #15803d);
   color: #fff; border: none; border-radius: 10px;
   font-size: 14px; font-weight: 800; cursor: pointer;
