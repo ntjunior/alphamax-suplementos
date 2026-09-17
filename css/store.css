@@ -321,7 +321,7 @@ a { text-decoration: none; color: inherit; }
 .produto-stars { display: flex; align-items: center; gap: 2px; margin: 6px 0 2px; }
 .stars { color: #f59e0b; font-size: 15px; letter-spacing: 1px; line-height: 1; }
 .produto-preco-store {
-  font-size: 30px; color: #dc2626; margin-top: 6px; line-height: 1;
+  font-size: 30px; color: #dc2626; margin-top: auto; padding-top: 8px; line-height: 1;
   font-weight: 900; letter-spacing: -1.5px;
 }
 .produto-preco-store strong { font-weight: 900; }
@@ -330,7 +330,7 @@ a { text-decoration: none; color: inherit; }
 }
 .produto-parcelas strong { color: #334155; font-weight: 700; }
 .btn-adicionar {
-  width: 100%; margin-top: auto; padding: 13px;
+  width: 100%; margin-top: 12px; padding: 13px;
   background: linear-gradient(135deg, #16a34a, #15803d);
   color: #fff; border: none; border-radius: 10px;
   font-size: 14px; font-weight: 800; cursor: pointer;
