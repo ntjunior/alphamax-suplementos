@@ -909,7 +909,7 @@ function showToast(msg) {
 
 function mostrarPromoDia(p) {
   const preco = p.precoVenda || p.preco_venda || 0;
-  const precoDesc = (preco * 0.9);
+  const precoDesc = (preco * 0.8);
   const modal = document.getElementById('modal-promo-dia');
   const imgEl = document.getElementById('promo-img');
 
