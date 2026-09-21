@@ -935,7 +935,34 @@ function mostrarPromoDia(p) {
 }
 
 function fecharPromoDia() {
-  const modal = document.getElementById('modal-promo-dia');
-  modal.style.display = 'none';
+  document.getElementById('modal-promo-dia').style.display = 'none';
+  document.getElementById('promo-widget').style.display = 'none';
   localStorage.setItem('promo_dia_visto', new Date().toDateString());
+}
+
+function minimizarPromoDia() {
+  document.getElementById('modal-promo-dia').style.display = 'none';
+  // Preenche widget mini
+  const imgSrc = document.querySelector('#promo-img img');
+  const emoji = document.querySelector('#promo-emoji');
+  const widgetImg = document.getElementById('promo-widget-img');
+  if (imgSrc) {
+    widgetImg.innerHTML = `<img src="${imgSrc.src}" style="width:100%;height:100%;object-fit:contain;padding:4px;">`;
+  } else if (emoji) {
+    widgetImg.innerHTML = `<span style="font-size:26px;">${emoji.textContent}</span>`;
+  }
+  document.getElementById('promo-widget-preco').textContent = document.getElementById('promo-preco-por').textContent;
+  const widget = document.getElementById('promo-widget');
+  widget.style.display = 'block';
+  widget.style.animation = 'none';
+  setTimeout(() => widget.style.animation = 'promoEntrada .4s cubic-bezier(.22,1,.36,1)', 10);
+}
+
+function expandirPromoDia() {
+  document.getElementById('promo-widget').style.display = 'none';
+  const modal = document.getElementById('modal-promo-dia');
+  modal.style.display = 'flex';
+  const inner = modal.querySelector('div');
+  inner.style.animation = 'none';
+  setTimeout(() => inner.style.animation = 'promoEntrada .4s cubic-bezier(.22,1,.36,1)', 10);
 }
