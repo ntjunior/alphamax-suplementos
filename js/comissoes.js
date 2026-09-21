@@ -173,6 +173,7 @@ function renderVendedores() {
       <td class="text-right">${vendasU.length}</td>
       <td class="text-right">${App.formatCurrency(totalVendas)}</td>
       <td class="text-right" style="color:var(--green);font-weight:600;">${totalComissao > 0 ? App.formatCurrency(totalComissao) : '<span style="color:var(--text-muted);">—</span>'}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="editarVendedor('${u.id}')"><i data-lucide="pencil"></i></button></td>
     </tr>`;
   }).join('');
 }
@@ -304,6 +305,35 @@ document.getElementById('btn-confirmar-excluir-cupom').onclick = function () {
   renderCupons(); renderKpisCupom(); renderResumoCupons();
   if (window.lucide) lucide.createIcons();
 };
+
+// ===================== EDITAR VENDEDOR =====================
+function editarVendedor(id) {
+  const u = DB.getUsuarios().find(x => x.id === id);
+  if (!u) return;
+  document.getElementById('vend-edit-id').value = u.id;
+  document.getElementById('vend-edit-nome').value = u.nome;
+  document.getElementById('vend-edit-comissao').value = u.comissaoPct != null ? u.comissaoPct : '';
+  document.getElementById('vend-edit-ativo').value = u.ativo === false ? '0' : '1';
+  document.getElementById('err-vend-comissao').classList.remove('show');
+  document.getElementById('modal-editar-vendedor').classList.add('show');
+  if (window.lucide) lucide.createIcons();
+}
+
+function salvarVendedor() {
+  const id = document.getElementById('vend-edit-id').value;
+  const comissaoPct = parseFloat(document.getElementById('vend-edit-comissao').value);
+  const ativo = document.getElementById('vend-edit-ativo').value === '1';
+  const errEl = document.getElementById('err-vend-comissao');
+
+  if (isNaN(comissaoPct) || comissaoPct < 0) { errEl.classList.add('show'); return; }
+  errEl.classList.remove('show');
+
+  DB.updateUsuario(id, { comissaoPct, ativo });
+  App.showToast('Vendedor atualizado!', 'success');
+  fecharModal('modal-editar-vendedor');
+  renderVendedores(); renderKpisVendedor(); renderRankingVendedores();
+  if (window.lucide) lucide.createIcons();
+}
 
 function fecharModal(id) { document.getElementById(id).classList.remove('show'); }
 
