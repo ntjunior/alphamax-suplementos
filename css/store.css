@@ -298,14 +298,14 @@ a { text-decoration: none; color: inherit; }
 }
 .btn-favorito:hover { color: #e53935; border-color: #e53935; transform: scale(1.12); }
 .btn-compartilhar {
-  position: absolute; top: 10px; right: 48px;
+  position: absolute; top: 10px; right: 10px;
   width: 32px; height: 32px; border-radius: 50%;
   background: rgba(255,255,255,0.92); border: 1px solid #e8e8ee;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; color: #b0b8c9; transition: all 0.2s;
   box-shadow: 0 2px 6px rgba(0,0,0,0.08);
 }
-.btn-compartilhar:hover { color: #2563eb; border-color: #2563eb; transform: scale(1.12); }
+.btn-compartilhar:hover { color: #22c55e; border-color: #22c55e; transform: scale(1.12); }
 
 .produto-info {
   padding: 14px 16px 16px;
