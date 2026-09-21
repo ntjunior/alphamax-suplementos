@@ -338,17 +338,17 @@ a { text-decoration: none; color: inherit; }
 
 .btn-adicionar {
   width: 100%; margin-top: 10px; padding: 12px;
-  background: #e53935;
+  background: #22c55e;
   color: #fff; border: none; border-radius: 12px;
   font-size: 13px; font-weight: 800; cursor: pointer;
   transition: all 0.2s; letter-spacing: 1px;
-  box-shadow: 0 4px 14px rgba(229,57,53,0.3);
+  box-shadow: 0 4px 14px rgba(34,197,94,0.25);
   font-family: inherit; text-transform: uppercase;
 }
 .btn-adicionar:hover {
-  background: #c62828;
+  background: #16a34a;
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(229,57,53,0.4);
+  box-shadow: 0 6px 20px rgba(34,197,94,0.35);
 }
 .btn-sem-estoque {
   background: #e8eaed !important; color: #9aa0ab !important;
