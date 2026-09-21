@@ -366,15 +366,16 @@ async function aplicarCupom() {
 }
 
 // ===== CARRINHO =====
-function adicionarCarrinho(id) {
+function adicionarCarrinho(id, precoPromo) {
   const p = produtos.find(x => x.id === id);
   if (!p || p.estoque <= 0) return;
+  const preco = precoPromo || p.precoVenda;
   const exist = carrinho.find(i => i.id === id);
   if (exist) {
     if (exist.qty >= p.estoque) { showToast('Quantidade máxima atingida!'); return; }
     exist.qty++;
   } else {
-    carrinho.push({ id: p.id, nome: p.nome, marca: p.marca, preco: p.precoVenda, qty: 1, estoque: p.estoque, categoria: p.categoria, imagemUrl: p.imagemUrl, emoji: p.emoji });
+    carrinho.push({ id: p.id, nome: p.nome, marca: p.marca, preco, qty: 1, estoque: p.estoque, categoria: p.categoria, imagemUrl: p.imagemUrl, emoji: p.emoji });
   }
   atualizarCarrinho();
   showToast(`${p.nome.substring(0,28)}... adicionado!`);
@@ -889,4 +890,52 @@ function showToast(msg) {
     const _origAbrirCheckout = window.abrirCheckout;
     window._cupomParamPendente = cupomParam.toUpperCase();
   }
+
+  // Promoção do Dia
+  if (!produtoParam) {
+    const hoje = new Date().toDateString();
+    const visto = localStorage.getItem('promo_dia_visto');
+    if (visto !== hoje) {
+      const ativos = produtos.filter(p => p.ativo !== false && p.estoque > 0);
+      if (ativos.length > 0) {
+        // Produto do dia fixo por data (seed = dia do ano)
+        const seed = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+        const promoProduto = ativos[seed % ativos.length];
+        mostrarPromoDia(promoProduto);
+      }
+    }
+  }
 })();
+
+function mostrarPromoDia(p) {
+  const preco = p.precoVenda || p.preco_venda || 0;
+  const precoDesc = (preco * 0.9);
+  const modal = document.getElementById('modal-promo-dia');
+  const imgEl = document.getElementById('promo-img');
+
+  document.getElementById('promo-marca').textContent = p.marca || '';
+  document.getElementById('promo-nome').textContent = p.nome;
+  document.getElementById('promo-preco-de').textContent = `R$ ${preco.toFixed(2).replace('.', ',')}`;
+  document.getElementById('promo-preco-por').textContent = `R$ ${precoDesc.toFixed(2).replace('.', ',')}`;
+
+  if (p.imagemUrl || p.imagem_url) {
+    const url = p.imagemUrl || p.imagem_url;
+    imgEl.innerHTML = `<img src="${url}" style="width:100%;height:100%;object-fit:contain;padding:8px;" onerror="this.parentElement.innerHTML='<span style=font-size:44px>${p.emoji||'📦'}</span>'">`;
+  } else {
+    imgEl.innerHTML = `<span style="font-size:44px;">${p.emoji || '📦'}</span>`;
+  }
+
+  document.getElementById('promo-btn-comprar').onclick = () => {
+    fecharPromoDia();
+    adicionarCarrinho(p.id, precoDesc);
+  };
+
+  modal.style.display = 'flex';
+  setTimeout(() => modal.style.opacity = '1', 10);
+}
+
+function fecharPromoDia() {
+  const modal = document.getElementById('modal-promo-dia');
+  modal.style.display = 'none';
+  localStorage.setItem('promo_dia_visto', new Date().toDateString());
+}
