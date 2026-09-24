@@ -2,12 +2,29 @@ let periodoFin = 'mes';
 let tipoFiltro = 'todos';
 let movParaExcluir = null;
 
+// Serializa dados extras (categoria, obs) dentro do campo descricao como JSON
+function _encodeDesc(descricao, categoria, obs) {
+  return JSON.stringify({ d: descricao || '', c: categoria || '', o: obs || '' });
+}
+
+function _decodeDesc(raw) {
+  try {
+    const p = JSON.parse(raw);
+    if (p && typeof p === 'object' && 'd' in p) return p;
+  } catch (_) {}
+  return { d: raw || '', c: '', o: '' };
+}
+
 function filtrarPorPeriodoFin(movs, periodo) {
   const agora = new Date();
   if (periodo === 'mes') return movs.filter(m => { const d = new Date(m.createdAt); return d.getFullYear() === agora.getFullYear() && d.getMonth() === agora.getMonth(); });
   if (periodo === '7d') { const l = new Date(agora - 7 * 86400000); return movs.filter(m => new Date(m.createdAt) >= l); }
   if (periodo === '30d') { const l = new Date(agora - 30 * 86400000); return movs.filter(m => new Date(m.createdAt) >= l); }
   return movs;
+}
+
+function getMovsFinanceiro() {
+  return DB.getMovimentacoes().filter(m => m.tipo === 'entrada' || m.tipo === 'saida');
 }
 
 function setPeriodoFin(p, btn) {
@@ -25,13 +42,13 @@ function setTipoFiltro(tipo, btn) {
 }
 
 function getMovsFiltradas() {
-  let movs = filtrarPorPeriodoFin(DB.getMovimentacoes().filter(m => m.origem === 'financeiro'), periodoFin);
+  let movs = filtrarPorPeriodoFin(getMovsFinanceiro(), periodoFin);
   if (tipoFiltro !== 'todos') movs = movs.filter(m => m.tipo === tipoFiltro);
   return movs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 function renderKpis() {
-  const todas = filtrarPorPeriodoFin(DB.getMovimentacoes().filter(m => m.origem === 'financeiro'), periodoFin);
+  const todas = filtrarPorPeriodoFin(getMovsFinanceiro(), periodoFin);
   const entradas = todas.filter(m => m.tipo === 'entrada').reduce((s, m) => s + (m.valor || 0), 0);
   const saidas = todas.filter(m => m.tipo === 'saida').reduce((s, m) => s + (m.valor || 0), 0);
   const saldo = entradas - saidas;
@@ -55,6 +72,7 @@ function renderFinanceiro() {
   }
 
   tbody.innerHTML = movs.map(m => {
+    const parsed = _decodeDesc(m.descricao);
     const isEntrada = m.tipo === 'entrada';
     const badge = isEntrada
       ? '<span class="badge badge-entrada">Entrada</span>'
@@ -65,8 +83,8 @@ function renderFinanceiro() {
       <tr>
         <td style="white-space:nowrap;">${App.formatDate(m.createdAt)}</td>
         <td>${badge}</td>
-        <td>${m.categoria || '—'}</td>
-        <td style="max-width:220px;">${m.descricao || '—'}</td>
+        <td>${parsed.c || '—'}</td>
+        <td style="max-width:220px;">${parsed.d || '—'}${parsed.o ? `<div style="font-size:11px;color:var(--text-muted);">${parsed.o}</div>` : ''}</td>
         <td class="text-right font-bold" style="color:${valorColor};">${sinal} ${App.formatCurrency(m.valor || 0)}</td>
         <td>
           <div style="display:flex;gap:4px;">
@@ -116,16 +134,17 @@ function abrirModalLancamento() {
 function editarLancamento(id) {
   const m = DB.getMovimentacoes().find(x => x.id === id);
   if (!m) return;
+  const parsed = _decodeDesc(m.descricao);
   document.getElementById('lanc-id').value = m.id;
   document.getElementById('lanc-valor').value = m.valor || '';
-  document.getElementById('lanc-descricao').value = m.descricao || '';
-  document.getElementById('lanc-obs').value = m.obs || '';
+  document.getElementById('lanc-descricao').value = parsed.d || '';
+  document.getElementById('lanc-obs').value = parsed.o || '';
   document.getElementById('lanc-data').value = m.createdAt ? m.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
   tipoModal = m.tipo || 'entrada';
   document.getElementById('btn-tipo-entrada').classList.toggle('active', tipoModal === 'entrada');
   document.getElementById('btn-tipo-saida').classList.toggle('active', tipoModal === 'saida');
   atualizarCategorias(tipoModal);
-  document.getElementById('lanc-categoria').value = m.categoria || '';
+  document.getElementById('lanc-categoria').value = parsed.c || '';
   document.querySelectorAll('#modal-lancamento .form-error').forEach(e => e.classList.remove('show'));
   document.getElementById('modal-lancamento-titulo').textContent = 'Editar Lançamento';
   document.getElementById('modal-lancamento').classList.add('show');
@@ -145,12 +164,13 @@ function salvarLancamento() {
   if (!valor || valor <= 0) return;
 
   const createdAt = dataVal ? new Date(dataVal + 'T12:00:00').toISOString() : new Date().toISOString();
+  const descEncoded = _encodeDesc(descricao, categoria, obs);
 
   if (id) {
-    DB.updateMovimentacao(id, { tipo: tipoModal, valor, descricao, obs, categoria, createdAt, origem: 'financeiro' });
+    DB.updateMovimentacao(id, { tipo: tipoModal, valor, descricao: descEncoded, createdAt });
     App.showToast('Lançamento atualizado!', 'success');
   } else {
-    DB.addMovimentacao({ tipo: tipoModal, valor, descricao, obs, categoria, createdAt, origem: 'financeiro' });
+    DB.addMovimentacao({ tipo: tipoModal, valor, descricao: descEncoded, createdAt });
     App.showToast('Lançamento registrado!', 'success');
   }
 
