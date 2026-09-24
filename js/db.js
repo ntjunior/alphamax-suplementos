@@ -2,7 +2,7 @@ const DB = {
   URL: 'https://kefhuzwqfzkjcpavcamq.supabase.co',
   KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY',
 
-  _cache: { produtos: [], vendas: [], clientes: [], caixas: [], movimentacoes: [], usuarios: [], cupons: [] },
+  _cache: { produtos: [], vendas: [], clientes: [], caixas: [], movimentacoes: [], usuarios: [], cupons: [], lancamentos: [] },
 
   _h() {
     return {
@@ -81,7 +81,7 @@ const DB = {
 
   // ===================== INIT =====================
   async init() {
-    const [produtos, vendas, clientes, caixas, movs, usuarios, cupons] = await Promise.all([
+    const [produtos, vendas, clientes, caixas, movs, usuarios, cupons, lancamentos] = await Promise.all([
       this._select('produtos', 'order=created_at'),
       this._select('vendas', 'order=created_at'),
       this._select('clientes', 'order=created_at'),
@@ -89,6 +89,7 @@ const DB = {
       this._select('movimentacoes', 'order=created_at'),
       this._select('usuarios', 'order=created_at'),
       this._select('cupons', 'order=created_at'),
+      this._select('lancamentos', 'order=created_at').catch(() => []),
     ]);
     this._cache.produtos      = produtos.map(p => this._camel(p));
     this._cache.vendas        = vendas.map(v => this._camel(v));
@@ -97,6 +98,7 @@ const DB = {
     this._cache.movimentacoes = movs.map(m => this._camel(m));
     this._cache.usuarios      = usuarios.map(u => this._camel(u));
     this._cache.cupons        = cupons.map(c => this._camel(c));
+    this._cache.lancamentos   = lancamentos.map(l => this._camel(l));
 
     if (this._cache.usuarios.length === 0) {
       const admin = {
@@ -230,6 +232,30 @@ const DB = {
       return mov;
     }
     return null;
+  },
+
+  // ===================== LANÇAMENTOS FINANCEIROS =====================
+  getLancamentos() { return this._cache.lancamentos; },
+
+  addLancamento(l) {
+    l.id = l.id || this._id();
+    l.createdAt = l.createdAt || new Date().toISOString();
+    this._cache.lancamentos.push(l);
+    this._insert('lancamentos', l).catch(e => console.error('lancamentos insert:', e));
+    return l;
+  },
+
+  updateLancamento(id, data) {
+    const idx = this._cache.lancamentos.findIndex(l => l.id === id);
+    if (idx === -1) return null;
+    this._cache.lancamentos[idx] = { ...this._cache.lancamentos[idx], ...data };
+    this._update('lancamentos', id, data).catch(e => console.error('lancamentos update:', e));
+    return this._cache.lancamentos[idx];
+  },
+
+  deleteLancamento(id) {
+    this._cache.lancamentos = this._cache.lancamentos.filter(l => l.id !== id);
+    this._delete('lancamentos', id).catch(e => console.error('lancamentos delete:', e));
   },
 
   // ===================== MOVIMENTAÇÕES =====================

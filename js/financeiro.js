@@ -1,33 +1,6 @@
-const FIN_KEY = 'fin_lancamentos';
 let periodoFin = 'mes';
 let tipoFiltro = 'todos';
 let movParaExcluir = null;
-
-// ===== localStorage helpers =====
-function _getLancamentos() {
-  try { return JSON.parse(localStorage.getItem(FIN_KEY) || '[]'); } catch { return []; }
-}
-function _saveLancamentos(arr) {
-  localStorage.setItem(FIN_KEY, JSON.stringify(arr));
-}
-function _addLancamento(obj) {
-  obj.id = obj.id || (Date.now() + Math.random()).toString(36);
-  obj.createdAt = obj.createdAt || new Date().toISOString();
-  const arr = _getLancamentos();
-  arr.push(obj);
-  _saveLancamentos(arr);
-  return obj;
-}
-function _updateLancamento(id, data) {
-  const arr = _getLancamentos();
-  const idx = arr.findIndex(m => m.id === id);
-  if (idx === -1) return;
-  arr[idx] = { ...arr[idx], ...data };
-  _saveLancamentos(arr);
-}
-function _deleteLancamento(id) {
-  _saveLancamentos(_getLancamentos().filter(m => m.id !== id));
-}
 
 // ===== Período =====
 function filtrarPorPeriodoFin(items, periodo) {
@@ -53,14 +26,14 @@ function setTipoFiltro(tipo, btn) {
 }
 
 function getLancsFiltrados() {
-  let items = filtrarPorPeriodoFin(_getLancamentos(), periodoFin);
+  let items = filtrarPorPeriodoFin(DB.getLancamentos(), periodoFin);
   if (tipoFiltro !== 'todos') items = items.filter(m => m.tipo === tipoFiltro);
   return items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 // ===== KPIs =====
 function renderKpis() {
-  const todas = filtrarPorPeriodoFin(_getLancamentos(), periodoFin);
+  const todas = filtrarPorPeriodoFin(DB.getLancamentos(), periodoFin);
   const entradasLanc = todas.filter(m => m.tipo === 'entrada').reduce((s, m) => s + (m.valor || 0), 0);
   const saidas = todas.filter(m => m.tipo === 'saida').reduce((s, m) => s + (m.valor || 0), 0);
 
@@ -179,7 +152,7 @@ function abrirModalLancamento() {
 }
 
 function editarLancamento(id) {
-  const m = _getLancamentos().find(x => x.id === id);
+  const m = DB.getLancamentos().find(x => x.id === id);
   if (!m) return;
   document.getElementById('lanc-id').value = m.id;
   document.getElementById('lanc-valor').value = m.valor || '';
@@ -212,10 +185,10 @@ function salvarLancamento() {
   const createdAt = dataVal ? new Date(dataVal + 'T12:00:00').toISOString() : new Date().toISOString();
 
   if (id) {
-    _updateLancamento(id, { tipo: tipoModal, valor, descricao, obs, categoria, createdAt });
+    DB.updateLancamento(id, { tipo: tipoModal, valor, descricao, obs, categoria, createdAt });
     App.showToast('Lançamento atualizado!', 'success');
   } else {
-    _addLancamento({ tipo: tipoModal, valor, descricao, obs, categoria, createdAt });
+    DB.addLancamento({ tipo: tipoModal, valor, descricao, obs, categoria, createdAt });
     App.showToast('Lançamento registrado!', 'success');
   }
 
@@ -231,7 +204,7 @@ function confirmarExcluirLanc(id) {
 
 document.getElementById('btn-confirmar-excluir-lanc').addEventListener('click', () => {
   if (!movParaExcluir) return;
-  _deleteLancamento(movParaExcluir);
+  DB.deleteLancamento(movParaExcluir);
   movParaExcluir = null;
   fecharModal('modal-excluir-lanc');
   App.showToast('Lançamento excluído!', 'success');
