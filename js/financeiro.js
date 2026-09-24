@@ -1,35 +1,41 @@
+const FIN_KEY = 'fin_lancamentos';
 let periodoFin = 'mes';
 let tipoFiltro = 'todos';
 let movParaExcluir = null;
 
-// Serializa dados extras (categoria, obs) dentro do campo descricao como JSON
-function _encodeDesc(descricao, categoria, obs) {
-  return JSON.stringify({ d: descricao || '', c: categoria || '', o: obs || '' });
+// ===== localStorage helpers =====
+function _getLancamentos() {
+  try { return JSON.parse(localStorage.getItem(FIN_KEY) || '[]'); } catch { return []; }
+}
+function _saveLancamentos(arr) {
+  localStorage.setItem(FIN_KEY, JSON.stringify(arr));
+}
+function _addLancamento(obj) {
+  obj.id = obj.id || (Date.now() + Math.random()).toString(36);
+  obj.createdAt = obj.createdAt || new Date().toISOString();
+  const arr = _getLancamentos();
+  arr.push(obj);
+  _saveLancamentos(arr);
+  return obj;
+}
+function _updateLancamento(id, data) {
+  const arr = _getLancamentos();
+  const idx = arr.findIndex(m => m.id === id);
+  if (idx === -1) return;
+  arr[idx] = { ...arr[idx], ...data };
+  _saveLancamentos(arr);
+}
+function _deleteLancamento(id) {
+  _saveLancamentos(_getLancamentos().filter(m => m.id !== id));
 }
 
-function _decodeDesc(raw) {
-  try {
-    const p = JSON.parse(raw);
-    if (p && typeof p === 'object' && 'd' in p) return p;
-  } catch (_) {}
-  return { d: raw || '', c: '', o: '' };
-}
-
-function filtrarPorPeriodoFin(movs, periodo) {
+// ===== Período =====
+function filtrarPorPeriodoFin(items, periodo) {
   const agora = new Date();
-  if (periodo === 'mes') return movs.filter(m => { const d = new Date(m.createdAt); return d.getFullYear() === agora.getFullYear() && d.getMonth() === agora.getMonth(); });
-  if (periodo === '7d') { const l = new Date(agora - 7 * 86400000); return movs.filter(m => new Date(m.createdAt) >= l); }
-  if (periodo === '30d') { const l = new Date(agora - 30 * 86400000); return movs.filter(m => new Date(m.createdAt) >= l); }
-  return movs;
-}
-
-function getMovsFinanceiro() {
-  return DB.getMovimentacoes().filter(m => m.tipo === 'entrada' || m.tipo === 'saida');
-}
-
-function getVendasComoPeriodo(periodo) {
-  const vendas = DB.getVendas();
-  return filtrarPorPeriodoFin(vendas.map(v => ({ ...v, createdAt: v.createdAt })), periodo);
+  if (periodo === 'mes') return items.filter(m => { const d = new Date(m.createdAt); return d.getFullYear() === agora.getFullYear() && d.getMonth() === agora.getMonth(); });
+  if (periodo === '7d') { const l = new Date(agora - 7 * 86400000); return items.filter(m => new Date(m.createdAt) >= l); }
+  if (periodo === '30d') { const l = new Date(agora - 30 * 86400000); return items.filter(m => new Date(m.createdAt) >= l); }
+  return items;
 }
 
 function setPeriodoFin(p, btn) {
@@ -46,18 +52,19 @@ function setTipoFiltro(tipo, btn) {
   renderFinanceiro();
 }
 
-function getMovsFiltradas() {
-  let movs = filtrarPorPeriodoFin(getMovsFinanceiro(), periodoFin);
-  if (tipoFiltro !== 'todos') movs = movs.filter(m => m.tipo === tipoFiltro);
-  return movs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+function getLancsFiltrados() {
+  let items = filtrarPorPeriodoFin(_getLancamentos(), periodoFin);
+  if (tipoFiltro !== 'todos') items = items.filter(m => m.tipo === tipoFiltro);
+  return items.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
+// ===== KPIs =====
 function renderKpis() {
-  const todas = filtrarPorPeriodoFin(getMovsFinanceiro(), periodoFin);
+  const todas = filtrarPorPeriodoFin(_getLancamentos(), periodoFin);
   const entradasLanc = todas.filter(m => m.tipo === 'entrada').reduce((s, m) => s + (m.valor || 0), 0);
   const saidas = todas.filter(m => m.tipo === 'saida').reduce((s, m) => s + (m.valor || 0), 0);
 
-  const vendasPeriodo = getVendasComoPeriodo(periodoFin);
+  const vendasPeriodo = filtrarPorPeriodoFin(DB.getVendas(), periodoFin);
   const totalVendas = vendasPeriodo.reduce((s, v) => s + (v.total || 0), 0);
 
   const totalEntradas = entradasLanc + totalVendas;
@@ -71,28 +78,35 @@ function renderKpis() {
   document.getElementById('kpi-total-lancamentos').textContent = todas.length + vendasPeriodo.length;
 }
 
+// ===== Tabela =====
 function renderFinanceiro() {
   renderKpis();
 
-  const movs = getMovsFiltradas();
+  const lancs = getLancsFiltrados();
   const nomesPag = { dinheiro: 'Dinheiro', pix: 'PIX', credito: 'Crédito', debito: 'Débito' };
 
-  // Vendas do PDV como linhas de entrada (somente se filtro for 'todos' ou 'entrada')
   const vendasLinhas = (tipoFiltro === 'todos' || tipoFiltro === 'entrada')
-    ? getVendasComoPeriodo(periodoFin).map(v => ({
+    ? filtrarPorPeriodoFin(DB.getVendas(), periodoFin).map(v => ({
         _isVenda: true,
         createdAt: v.createdAt,
         tipo: 'entrada',
         categoria: 'Venda PDV',
         descricaoDisplay: `${v.clienteNome || 'Consumidor Final'} — ${nomesPag[v.pagamento] || v.pagamento || ''}`,
+        obs: '',
         valor: v.total || 0
       }))
     : [];
 
-  const linhasLanc = movs.map(m => {
-    const parsed = _decodeDesc(m.descricao);
-    return { _isVenda: false, id: m.id, createdAt: m.createdAt, tipo: m.tipo, categoria: parsed.c, descricaoDisplay: parsed.d, obs: parsed.o, valor: m.valor || 0 };
-  });
+  const linhasLanc = lancs.map(m => ({
+    _isVenda: false,
+    id: m.id,
+    createdAt: m.createdAt,
+    tipo: m.tipo,
+    categoria: m.categoria || '',
+    descricaoDisplay: m.descricao || '',
+    obs: m.obs || '',
+    valor: m.valor || 0
+  }));
 
   const todas = [...linhasLanc, ...vendasLinhas].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const tbody = document.getElementById('tbody-financeiro');
@@ -129,7 +143,8 @@ function renderFinanceiro() {
   if (window.lucide) lucide.createIcons();
 }
 
-let tipoModal = 'entrada';
+// ===== Modal =====
+let tipoModal = 'saida';
 
 function setTipoModal(tipo, btn) {
   tipoModal = tipo;
@@ -152,10 +167,10 @@ function abrirModalLancamento() {
   document.getElementById('lanc-descricao').value = '';
   document.getElementById('lanc-obs').value = '';
   document.getElementById('lanc-data').value = new Date().toISOString().slice(0, 10);
-  tipoModal = 'entrada';
-  document.getElementById('btn-tipo-entrada').classList.add('active');
-  document.getElementById('btn-tipo-saida').classList.remove('active');
-  atualizarCategorias('entrada');
+  tipoModal = 'saida';
+  document.getElementById('btn-tipo-entrada').classList.remove('active');
+  document.getElementById('btn-tipo-saida').classList.add('active');
+  atualizarCategorias('saida');
   document.querySelectorAll('#modal-lancamento .form-error').forEach(e => e.classList.remove('show'));
   document.getElementById('modal-lancamento-titulo').textContent = 'Novo Lançamento';
   document.getElementById('modal-lancamento').classList.add('show');
@@ -164,19 +179,18 @@ function abrirModalLancamento() {
 }
 
 function editarLancamento(id) {
-  const m = DB.getMovimentacoes().find(x => x.id === id);
+  const m = _getLancamentos().find(x => x.id === id);
   if (!m) return;
-  const parsed = _decodeDesc(m.descricao);
   document.getElementById('lanc-id').value = m.id;
   document.getElementById('lanc-valor').value = m.valor || '';
-  document.getElementById('lanc-descricao').value = parsed.d || '';
-  document.getElementById('lanc-obs').value = parsed.o || '';
+  document.getElementById('lanc-descricao').value = m.descricao || '';
+  document.getElementById('lanc-obs').value = m.obs || '';
   document.getElementById('lanc-data').value = m.createdAt ? m.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
-  tipoModal = m.tipo || 'entrada';
+  tipoModal = m.tipo || 'saida';
   document.getElementById('btn-tipo-entrada').classList.toggle('active', tipoModal === 'entrada');
   document.getElementById('btn-tipo-saida').classList.toggle('active', tipoModal === 'saida');
   atualizarCategorias(tipoModal);
-  document.getElementById('lanc-categoria').value = parsed.c || '';
+  document.getElementById('lanc-categoria').value = m.categoria || '';
   document.querySelectorAll('#modal-lancamento .form-error').forEach(e => e.classList.remove('show'));
   document.getElementById('modal-lancamento-titulo').textContent = 'Editar Lançamento';
   document.getElementById('modal-lancamento').classList.add('show');
@@ -196,13 +210,12 @@ function salvarLancamento() {
   if (!valor || valor <= 0) return;
 
   const createdAt = dataVal ? new Date(dataVal + 'T12:00:00').toISOString() : new Date().toISOString();
-  const descEncoded = _encodeDesc(descricao, categoria, obs);
 
   if (id) {
-    DB.updateMovimentacao(id, { tipo: tipoModal, valor, descricao: descEncoded, createdAt });
+    _updateLancamento(id, { tipo: tipoModal, valor, descricao, obs, categoria, createdAt });
     App.showToast('Lançamento atualizado!', 'success');
   } else {
-    DB.addMovimentacao({ tipo: tipoModal, valor, descricao: descEncoded, createdAt });
+    _addLancamento({ tipo: tipoModal, valor, descricao, obs, categoria, createdAt });
     App.showToast('Lançamento registrado!', 'success');
   }
 
@@ -210,6 +223,7 @@ function salvarLancamento() {
   renderFinanceiro();
 }
 
+// ===== Excluir =====
 function confirmarExcluirLanc(id) {
   movParaExcluir = id;
   document.getElementById('modal-excluir-lanc').classList.add('show');
@@ -217,7 +231,7 @@ function confirmarExcluirLanc(id) {
 
 document.getElementById('btn-confirmar-excluir-lanc').addEventListener('click', () => {
   if (!movParaExcluir) return;
-  DB.deleteMovimentacao(movParaExcluir);
+  _deleteLancamento(movParaExcluir);
   movParaExcluir = null;
   fecharModal('modal-excluir-lanc');
   App.showToast('Lançamento excluído!', 'success');
