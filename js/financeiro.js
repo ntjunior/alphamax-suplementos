@@ -27,6 +27,11 @@ function getMovsFinanceiro() {
   return DB.getMovimentacoes().filter(m => m.tipo === 'entrada' || m.tipo === 'saida');
 }
 
+function getVendasComoPeriodo(periodo) {
+  const vendas = DB.getVendas();
+  return filtrarPorPeriodoFin(vendas.map(v => ({ ...v, createdAt: v.createdAt })), periodo);
+}
+
 function setPeriodoFin(p, btn) {
   periodoFin = p;
   document.querySelectorAll('[data-pfin]').forEach(b => b.classList.remove('active'));
@@ -49,49 +54,76 @@ function getMovsFiltradas() {
 
 function renderKpis() {
   const todas = filtrarPorPeriodoFin(getMovsFinanceiro(), periodoFin);
-  const entradas = todas.filter(m => m.tipo === 'entrada').reduce((s, m) => s + (m.valor || 0), 0);
+  const entradasLanc = todas.filter(m => m.tipo === 'entrada').reduce((s, m) => s + (m.valor || 0), 0);
   const saidas = todas.filter(m => m.tipo === 'saida').reduce((s, m) => s + (m.valor || 0), 0);
-  const saldo = entradas - saidas;
 
-  document.getElementById('kpi-entradas').textContent = App.formatCurrency(entradas);
+  const vendasPeriodo = getVendasComoPeriodo(periodoFin);
+  const totalVendas = vendasPeriodo.reduce((s, v) => s + (v.total || 0), 0);
+
+  const totalEntradas = entradasLanc + totalVendas;
+  const saldo = totalEntradas - saidas;
+
+  document.getElementById('kpi-entradas').textContent = App.formatCurrency(totalEntradas);
+  document.getElementById('kpi-entradas-sub').textContent = `${App.formatCurrency(totalVendas)} em vendas PDV`;
   document.getElementById('kpi-saidas').textContent = App.formatCurrency(saidas);
   document.getElementById('kpi-saldo').textContent = App.formatCurrency(saldo);
   document.getElementById('kpi-saldo').style.color = saldo >= 0 ? 'var(--green)' : 'var(--red)';
-  document.getElementById('kpi-total-lancamentos').textContent = todas.length;
+  document.getElementById('kpi-total-lancamentos').textContent = todas.length + vendasPeriodo.length;
 }
 
 function renderFinanceiro() {
   renderKpis();
+
   const movs = getMovsFiltradas();
+  const nomesPag = { dinheiro: 'Dinheiro', pix: 'PIX', credito: 'Crédito', debito: 'Débito' };
+
+  // Vendas do PDV como linhas de entrada (somente se filtro for 'todos' ou 'entrada')
+  const vendasLinhas = (tipoFiltro === 'todos' || tipoFiltro === 'entrada')
+    ? getVendasComoPeriodo(periodoFin).map(v => ({
+        _isVenda: true,
+        createdAt: v.createdAt,
+        tipo: 'entrada',
+        categoria: 'Venda PDV',
+        descricaoDisplay: `${v.clienteNome || 'Consumidor Final'} — ${nomesPag[v.pagamento] || v.pagamento || ''}`,
+        valor: v.total || 0
+      }))
+    : [];
+
+  const linhasLanc = movs.map(m => {
+    const parsed = _decodeDesc(m.descricao);
+    return { _isVenda: false, id: m.id, createdAt: m.createdAt, tipo: m.tipo, categoria: parsed.c, descricaoDisplay: parsed.d, obs: parsed.o, valor: m.valor || 0 };
+  });
+
+  const todas = [...linhasLanc, ...vendasLinhas].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   const tbody = document.getElementById('tbody-financeiro');
 
-  if (movs.length === 0) {
+  if (todas.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon"><i data-lucide="landmark"></i></div><div class="empty-state-text">Nenhum lançamento encontrado</div></div></td></tr>`;
     if (window.lucide) lucide.createIcons();
     return;
   }
 
-  tbody.innerHTML = movs.map(m => {
-    const parsed = _decodeDesc(m.descricao);
+  tbody.innerHTML = todas.map(m => {
     const isEntrada = m.tipo === 'entrada';
     const badge = isEntrada
-      ? '<span class="badge badge-entrada">Entrada</span>'
+      ? `<span class="badge badge-entrada">${m._isVenda ? 'Venda PDV' : 'Entrada'}</span>`
       : '<span class="badge badge-saida">Saída</span>';
     const valorColor = isEntrada ? 'var(--green)' : 'var(--red)';
     const sinal = isEntrada ? '+' : '−';
+    const acoes = m._isVenda
+      ? '<span style="font-size:11px;color:var(--text-muted);">PDV</span>'
+      : `<div style="display:flex;gap:4px;">
+           <button class="btn btn-ghost btn-sm" onclick="editarLancamento('${m.id}')"><i data-lucide="pencil"></i></button>
+           <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="confirmarExcluirLanc('${m.id}')"><i data-lucide="trash-2"></i></button>
+         </div>`;
     return `
       <tr>
         <td style="white-space:nowrap;">${App.formatDate(m.createdAt)}</td>
         <td>${badge}</td>
-        <td>${parsed.c || '—'}</td>
-        <td style="max-width:220px;">${parsed.d || '—'}${parsed.o ? `<div style="font-size:11px;color:var(--text-muted);">${parsed.o}</div>` : ''}</td>
-        <td class="text-right font-bold" style="color:${valorColor};">${sinal} ${App.formatCurrency(m.valor || 0)}</td>
-        <td>
-          <div style="display:flex;gap:4px;">
-            <button class="btn btn-ghost btn-sm" onclick="editarLancamento('${m.id}')"><i data-lucide="pencil"></i></button>
-            <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="confirmarExcluirLanc('${m.id}')"><i data-lucide="trash-2"></i></button>
-          </div>
-        </td>
+        <td>${m.categoria || '—'}</td>
+        <td style="max-width:220px;">${m.descricaoDisplay || '—'}${m.obs ? `<div style="font-size:11px;color:var(--text-muted);">${m.obs}</div>` : ''}</td>
+        <td class="text-right font-bold" style="color:${valorColor};">${sinal} ${App.formatCurrency(m.valor)}</td>
+        <td>${acoes}</td>
       </tr>`;
   }).join('');
   if (window.lucide) lucide.createIcons();
