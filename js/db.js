@@ -243,6 +243,20 @@ const DB = {
     return m;
   },
 
+  updateMovimentacao(id, data) {
+    const idx = this._cache.movimentacoes.findIndex(m => m.id === id);
+    if (idx === -1) return null;
+    data.updatedAt = new Date().toISOString();
+    this._cache.movimentacoes[idx] = { ...this._cache.movimentacoes[idx], ...data };
+    this._update('movimentacoes', id, data).catch(e => console.error(e));
+    return this._cache.movimentacoes[idx];
+  },
+
+  deleteMovimentacao(id) {
+    this._cache.movimentacoes = this._cache.movimentacoes.filter(m => m.id !== id);
+    this._delete('movimentacoes', id).catch(e => console.error(e));
+  },
+
   // ===================== USUÁRIOS =====================
   getUsuarios()     { return this._cache.usuarios; },
   saveUsuarios(arr) { this._cache.usuarios = arr; },

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="../logo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Financeiro — Suplementos Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="../logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="financeiro.html" class="nav-item" data-page="financeiro"><span class="nav-icon"><i data-lucide="landmark"></i></span><span class="nav-label">Financeiro</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="pedidos.html" class="nav-item" data-page="pedidos"><span class="nav-icon"><i data-lucide="clipboard-list"></i></span><span class="nav-label">Pedidos</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+    <a href="mensagens.html" class="nav-item" data-page="mensagens"><span class="nav-icon"><i data-lucide="message-square"></i></span><span class="nav-label">Mensagens</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="landmark"></i> Financeiro</div>
+      <div class="page-subtitle">Controle de entradas e saídas</div>
+    </div>
+    <div class="header-actions">
+      <span id="caixa-badge" style="font-size:13px;font-weight:600;"></span>
+      <button class="btn btn-primary" onclick="abrirModalLancamento()"><i data-lucide="plus"></i> Novo Lançamento</button>
+    </div>
+  </header>
+
+  <div class="page-body">
+
+    <!-- KPIs -->
+    <div class="grid-4 mb-20">
+      <div class="kpi-card green">
+        <div class="kpi-icon"><i data-lucide="trending-up"></i></div>
+        <div class="kpi-label">Entradas</div>
+        <div class="kpi-value" id="kpi-entradas">R$ 0,00</div>
+      </div>
+      <div class="kpi-card red">
+        <div class="kpi-icon"><i data-lucide="trending-down"></i></div>
+        <div class="kpi-label">Saídas</div>
+        <div class="kpi-value" id="kpi-saidas">R$ 0,00</div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-icon"><i data-lucide="scale"></i></div>
+        <div class="kpi-label">Saldo</div>
+        <div class="kpi-value" id="kpi-saldo">R$ 0,00</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon"><i data-lucide="list"></i></div>
+        <div class="kpi-label">Lançamentos</div>
+        <div class="kpi-value" id="kpi-total-lancamentos">0</div>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-20" style="padding:14px 16px;">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Período:</span>
+          <button class="pill active" data-pfin="mes" onclick="setPeriodoFin('mes', this)">Este Mês</button>
+          <button class="pill" data-pfin="7d" onclick="setPeriodoFin('7d', this)">7 Dias</button>
+          <button class="pill" data-pfin="30d" onclick="setPeriodoFin('30d', this)">30 Dias</button>
+          <button class="pill" data-pfin="todos" onclick="setPeriodoFin('todos', this)">Todos</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;">Tipo:</span>
+          <button class="pill active" data-tfin="todos" onclick="setTipoFiltro('todos', this)">Todos</button>
+          <button class="pill" data-tfin="entrada" onclick="setTipoFiltro('entrada', this)">Entradas</button>
+          <button class="pill" data-tfin="saida" onclick="setTipoFiltro('saida', this)">Saídas</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Tipo</th>
+              <th>Categoria</th>
+              <th>Descrição</th>
+              <th class="text-right">Valor</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-financeiro"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal Lançamento -->
+<div class="modal-overlay" id="modal-lancamento">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-lancamento-titulo">Novo Lançamento</span>
+      <button class="modal-close" onclick="fecharModal('modal-lancamento')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="lanc-id">
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div style="display:flex;gap:8px;">
+          <button id="btn-tipo-entrada" class="payment-btn active" onclick="setTipoModal('entrada', this)" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--green);background:rgba(34,197,94,.12);color:var(--green);font-weight:600;cursor:pointer;">
+            <i data-lucide="trending-up" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i> Entrada
+          </button>
+          <button id="btn-tipo-saida" class="payment-btn" onclick="setTipoModal('saida', this)" style="flex:1;padding:10px;border-radius:8px;border:2px solid var(--border);background:transparent;color:var(--text-muted);font-weight:600;cursor:pointer;">
+            <i data-lucide="trending-down" style="width:16px;height:16px;vertical-align:middle;margin-right:4px;"></i> Saída
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Valor (R$) <span class="required">*</span></label>
+        <input type="number" id="lanc-valor" class="form-control" min="0.01" step="0.01" placeholder="0,00">
+        <div class="form-error" id="err-lanc-valor">Informe o valor</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select id="lanc-categoria" class="form-control"></select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" id="lanc-descricao" class="form-control" placeholder="Ex: Pagamento de aluguel">
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Data</label>
+        <input type="date" id="lanc-data" class="form-control">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-lancamento')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarLancamento()"><i data-lucide="save"></i> Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Excluir -->
+<div class="modal-overlay" id="modal-excluir-lanc">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">Confirmar Exclusão</span>
+      <button class="modal-close" onclick="fecharModal('modal-excluir-lanc')">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-dim);">Tem certeza que deseja excluir este lançamento? Esta ação não pode ser desfeita.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="fecharModal('modal-excluir-lanc')">Cancelar</button>
+      <button class="btn btn-danger" id="btn-confirmar-excluir-lanc"><i data-lucide="trash-2"></i> Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/financeiro.js"></script>
+</body>
+</html>
