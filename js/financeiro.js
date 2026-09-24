@@ -100,6 +100,7 @@ function abrirModalLancamento() {
   document.getElementById('lanc-id').value = '';
   document.getElementById('lanc-valor').value = '';
   document.getElementById('lanc-descricao').value = '';
+  document.getElementById('lanc-obs').value = '';
   document.getElementById('lanc-data').value = new Date().toISOString().slice(0, 10);
   tipoModal = 'entrada';
   document.getElementById('btn-tipo-entrada').classList.add('active');
@@ -118,6 +119,7 @@ function editarLancamento(id) {
   document.getElementById('lanc-id').value = m.id;
   document.getElementById('lanc-valor').value = m.valor || '';
   document.getElementById('lanc-descricao').value = m.descricao || '';
+  document.getElementById('lanc-obs').value = m.obs || '';
   document.getElementById('lanc-data').value = m.createdAt ? m.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
   tipoModal = m.tipo || 'entrada';
   document.getElementById('btn-tipo-entrada').classList.toggle('active', tipoModal === 'entrada');
@@ -134,6 +136,7 @@ function salvarLancamento() {
   const id = document.getElementById('lanc-id').value;
   const valor = parseFloat(document.getElementById('lanc-valor').value);
   const descricao = document.getElementById('lanc-descricao').value.trim();
+  const obs = document.getElementById('lanc-obs').value.trim();
   const categoria = document.getElementById('lanc-categoria').value;
   const dataVal = document.getElementById('lanc-data').value;
 
@@ -144,10 +147,10 @@ function salvarLancamento() {
   const createdAt = dataVal ? new Date(dataVal + 'T12:00:00').toISOString() : new Date().toISOString();
 
   if (id) {
-    DB.updateMovimentacao(id, { tipo: tipoModal, valor, descricao, categoria, createdAt, origem: 'financeiro' });
+    DB.updateMovimentacao(id, { tipo: tipoModal, valor, descricao, obs, categoria, createdAt, origem: 'financeiro' });
     App.showToast('Lançamento atualizado!', 'success');
   } else {
-    DB.addMovimentacao({ tipo: tipoModal, valor, descricao, categoria, createdAt, origem: 'financeiro' });
+    DB.addMovimentacao({ tipo: tipoModal, valor, descricao, obs, categoria, createdAt, origem: 'financeiro' });
     App.showToast('Lançamento registrado!', 'success');
   }
 
