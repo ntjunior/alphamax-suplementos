@@ -143,6 +143,15 @@ function cardHTML(p) {
 }
 
 // ===== RENDER PRODUTOS =====
+function ordenarLista(lista) {
+  const ordem = (document.getElementById('store-ordem') || {}).value || 'nome-az';
+  if (ordem === 'nome-az')   return [...lista].sort((a, b) => a.nome.localeCompare(b.nome));
+  if (ordem === 'nome-za')   return [...lista].sort((a, b) => b.nome.localeCompare(a.nome));
+  if (ordem === 'preco-asc') return [...lista].sort((a, b) => (a.precoVenda || 0) - (b.precoVenda || 0));
+  if (ordem === 'preco-desc') return [...lista].sort((a, b) => (b.precoVenda || 0) - (a.precoVenda || 0));
+  return lista;
+}
+
 function renderProdutos(busca = '') {
   const grade = document.getElementById('grade-produtos-store');
   let lista = produtos;
@@ -158,6 +167,8 @@ function renderProdutos(busca = '') {
       (p.descricao || '').toLowerCase().includes(b)
     );
   }
+
+  lista = ordenarLista(lista);
 
   if (!lista.length) {
     grade.innerHTML = '<div class="store-empty"><div class="store-empty-icon">🔍</div><div>Nenhum produto encontrado</div></div>';
@@ -183,7 +194,7 @@ function renderProdutos(busca = '') {
   let html = '';
 
   cats.forEach(cat => {
-    const prods = lista.filter(p => p.categoria === cat);
+    const prods = ordenarLista(lista.filter(p => p.categoria === cat));
     const icon = iconCategoria(cat);
     html += `
       <section class="cat-section">
