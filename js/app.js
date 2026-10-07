@@ -355,10 +355,12 @@ const App = {
       ctx.fillText(val >= 1000 ? (val / 1000).toFixed(1) + 'k' : val.toFixed(0), padding.left - 6, y + 4);
     }
 
+    const bars = [];
     values.forEach((v, i) => {
       const x = padding.left + gap * i + gap / 2 - barW / 2;
       const barH = (v / max) * chartH;
       const y = padding.top + chartH - barH;
+      bars.push({ x, y, w: barW, h: barH, value: v, label: labels[i] });
 
       const grad = ctx.createLinearGradient(0, y, 0, y + barH);
       grad.addColorStop(0, color);
@@ -373,6 +375,37 @@ const App = {
       ctx.textAlign = 'center';
       ctx.fillText(labels[i], padding.left + gap * i + gap / 2, padding.top + chartH + 20);
     });
+
+    // Tooltip
+    let tooltip = document.getElementById('chart-tooltip');
+    if (!tooltip) {
+      tooltip = document.createElement('div');
+      tooltip.id = 'chart-tooltip';
+      tooltip.style.cssText = 'position:fixed;background:#1e1e2e;color:#fff;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;pointer-events:none;display:none;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.4);border:1px solid #333;white-space:nowrap;';
+      document.body.appendChild(tooltip);
+    }
+
+    canvas._bars = bars;
+    canvas.onmousemove = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const mx = (e.clientX - rect.left) * scaleX;
+      const my = (e.clientY - rect.top) * scaleY;
+      const hit = canvas._bars.find(b => b.h > 0 && mx >= b.x && mx <= b.x + b.w && my >= b.y && my <= b.y + b.h);
+      if (hit) {
+        const fmt = hit.value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        tooltip.textContent = `${hit.label}: ${fmt}`;
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX + 12) + 'px';
+        tooltip.style.top = (e.clientY - 36) + 'px';
+        canvas.style.cursor = 'pointer';
+      } else {
+        tooltip.style.display = 'none';
+        canvas.style.cursor = 'default';
+      }
+    };
+    canvas.onmouseleave = () => { tooltip.style.display = 'none'; };
   },
 
   getStockBadge(estoque, estoqueMin) {
