@@ -86,29 +86,34 @@ function renderCarrinho() {
   const empty = document.getElementById('cart-empty');
   const btnFinalizar = document.getElementById('btn-finalizar');
 
+  const badge = document.getElementById('cart-count-badge');
   if (carrinho.length === 0) {
-    list.innerHTML = `<div class="cart-empty" id="cart-empty"><div class="empty-state-icon" style="margin-bottom:8px;"><i data-lucide="shopping-cart"></i></div><div>Carrinho vazio</div><div style="font-size:12px;color:var(--text-muted);margin-top:4px;">Clique em um produto para adicionar</div></div>`;
+    list.innerHTML = `<div class="cart-empty"><div class="cart-empty-icon"><i data-lucide="shopping-cart"></i></div><div style="font-weight:600;">Carrinho vazio</div><div style="font-size:12px;color:var(--text-muted);">Clique em um produto para adicionar</div></div>`;
     btnFinalizar.disabled = true;
+    if (badge) { badge.style.display = 'none'; }
+    if (window.lucide) lucide.createIcons();
     return;
   }
 
   btnFinalizar.disabled = pagamentoSelecionado === '';
+  if (badge) { badge.textContent = carrinho.reduce((s, i) => s + i.quantidade, 0); badge.style.display = ''; }
 
   list.innerHTML = carrinho.map((item, idx) => `
     <div class="cart-item">
-      <div style="flex:1;min-width:0;">
-        <div class="cart-item-name">${item.nome}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-nome">${item.nome}</div>
         <div class="cart-item-sub">${App.formatCurrency(item.precoUnitario)} × ${item.quantidade}</div>
       </div>
-      <div class="cart-qty">
-        <button class="cart-qty-btn" onclick="alterarQtd(${idx}, -1)">−</button>
+      <div class="cart-qty-ctrl">
+        <button onclick="alterarQtd(${idx}, -1)">−</button>
         <input type="number" class="cart-qty-input" value="${item.quantidade}" min="1" max="${item.estoqueDisp}" onchange="setQtd(${idx}, this.value)">
-        <button class="cart-qty-btn" onclick="alterarQtd(${idx}, 1)">+</button>
+        <button onclick="alterarQtd(${idx}, 1)">+</button>
       </div>
-      <div class="cart-item-total">${App.formatCurrency(item.subtotal)}</div>
-      <button class="cart-item-remove" onclick="removerItem(${idx})">✕</button>
+      <div class="cart-item-preco">${App.formatCurrency(item.subtotal)}</div>
+      <button class="cart-item-remove" onclick="removerItem(${idx})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:0 4px;">✕</button>
     </div>
   `).join('');
+  if (window.lucide) lucide.createIcons();
 }
 
 function alterarQtd(idx, delta) {
@@ -141,7 +146,7 @@ function limparCarrinho() {
   carrinho = [];
   pagamentoSelecionado = '';
   cupomAtual = null;
-  document.querySelectorAll('.payment-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.pdv-pag-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('input-desconto').value = '';
   document.getElementById('dinheiro-wrapper').classList.add('hidden');
   document.getElementById('valor-recebido') && (document.getElementById('valor-recebido').value = '');
@@ -213,7 +218,7 @@ function atualizarTotais() {
 
 function selecionarPagamento(pag) {
   pagamentoSelecionado = pag;
-  document.querySelectorAll('.payment-btn').forEach(b => b.classList.toggle('active', b.dataset.pag === pag));
+  document.querySelectorAll('.pdv-pag-btn').forEach(b => b.classList.toggle('active', b.dataset.pag === pag));
   const wrapper = document.getElementById('dinheiro-wrapper');
   wrapper.classList.toggle('hidden', pag !== 'dinheiro');
   if (pag !== 'dinheiro') {
@@ -380,6 +385,13 @@ function verificarCaixaAberto() {
   }
 }
 
+
+function toggleExtraPanel() {
+  const panel = document.getElementById('extra-panel');
+  const btn = document.getElementById('btn-extra-toggle');
+  const open = panel.classList.toggle('open');
+  btn.classList.toggle('active', open);
+}
 
 (async () => {
   await App.initPage('pdv');
