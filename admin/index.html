@@ -167,27 +167,49 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title"><i data-lucide="alert-triangle"></i> Produtos com Estoque Baixo</span>
-        <a href="estoque.html" class="btn btn-warning btn-sm">Gerenciar Estoque</a>
+    <div class="grid-2 mb-24">
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="alert-triangle"></i> Estoque Baixo</span>
+          <a href="estoque.html" class="btn btn-warning btn-sm">Gerenciar</a>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th>Categoria</th>
+                <th class="text-right">Estoque</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-estoque-baixo">
+              <tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Todos os produtos com estoque OK</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Produto</th>
-              <th>Marca</th>
-              <th>Categoria</th>
-              <th class="text-right">Estoque</th>
-              <th>Status</th>
-              <th>Ação</th>
-            </tr>
-          </thead>
-          <tbody id="tbody-estoque-baixo">
-            <tr><td colspan="6" class="text-center text-muted" style="padding:24px;">Todos os produtos com estoque OK</td></tr>
-          </tbody>
-        </table>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="package-check"></i> Produtos Vendidos Hoje</span>
+          <span id="vendidos-hoje-total" style="font-size:12px;color:var(--text-muted);"></span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Produto</th>
+                <th class="text-right">Qtd</th>
+                <th class="text-right">Total</th>
+                <th>Canal</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-vendidos-hoje">
+              <tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Sem vendas hoje</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -278,18 +300,46 @@
 
     const tbodyBaixo = document.getElementById('tbody-estoque-baixo');
     if (baixo.length === 0) {
-      tbodyBaixo.innerHTML = '<tr><td colspan="6" class="text-center text-muted" style="padding:24px;">Todos os produtos com estoque OK</td></tr>';
+      tbodyBaixo.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Todos os produtos com estoque OK</td></tr>';
     } else {
       tbodyBaixo.innerHTML = baixo.map(p => `
         <tr>
           <td>${p.nome}</td>
-          <td>${p.marca || '-'}</td>
           <td>${p.categoria || '-'}</td>
           <td class="text-right font-bold">${p.estoque}</td>
           <td>${App.getStockBadge(p.estoque, p.estoqueMin)}</td>
-          <td><a href="estoque.html" class="btn btn-sm btn-warning">+ Entrada</a></td>
         </tr>
       `).join('');
+    }
+
+    // Produtos vendidos hoje (PDV + ML)
+    const vendidosMap = {};
+    for (const v of vendasHoje) {
+      const canal = v.origem === 'mercadolivre' ? 'ML' : 'PDV';
+      for (const item of (v.itens || [])) {
+        const key = item.nome;
+        if (!vendidosMap[key]) vendidosMap[key] = { nome: item.nome, qtd: 0, total: 0, canais: new Set() };
+        vendidosMap[key].qtd += item.quantidade;
+        vendidosMap[key].total += item.subtotal;
+        vendidosMap[key].canais.add(canal);
+      }
+    }
+    const vendidos = Object.values(vendidosMap).sort((a, b) => b.qtd - a.qtd);
+    const tbodyVendidos = document.getElementById('tbody-vendidos-hoje');
+    const totalItens = vendidos.reduce((s, v) => s + v.qtd, 0);
+    document.getElementById('vendidos-hoje-total').textContent = totalItens > 0 ? `${totalItens} unidades` : '';
+    if (vendidos.length === 0) {
+      tbodyVendidos.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Sem vendas hoje</td></tr>';
+    } else {
+      tbodyVendidos.innerHTML = vendidos.map(v => {
+        const canaisList = [...v.canais].map(c => `<span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:20px;background:${c==='ML'?'#fef9c3':'#dbeafe'};color:${c==='ML'?'#854d0e':'#1e40af'};">${c}</span>`).join(' ');
+        return `<tr>
+          <td style="font-size:13px;">${v.nome}</td>
+          <td class="text-right font-bold">${v.qtd}</td>
+          <td class="text-right text-red font-bold">${App.formatCurrency(v.total)}</td>
+          <td>${canaisList}</td>
+        </tr>`;
+      }).join('');
     }
 
     const dias = [];
