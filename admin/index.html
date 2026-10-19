@@ -404,8 +404,15 @@
     ML.carregarKpis();
   })();
 
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) ML.carregarKpis();
+  document.addEventListener('visibilitychange', async () => {
+    if (!document.hidden) {
+      try {
+        const rows = await DB._select('vendas', 'order=created_at');
+        DB._cache.vendas = rows.map(r => DB._camel(r));
+      } catch(e) {}
+      carregarDashboard();
+      ML.carregarKpis();
+    }
   });
 </script>
 </body>

@@ -195,8 +195,14 @@
 <script src="../js/app.js"></script>
 <script src="../js/relatorios.js"></script>
 <script>
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) renderRelatorio();
+  document.addEventListener('visibilitychange', async () => {
+    if (!document.hidden) {
+      try {
+        const rows = await DB._select('vendas', 'order=created_at');
+        DB._cache.vendas = rows.map(r => DB._camel(r));
+      } catch(e) { /* mantém cache atual */ }
+      renderRelatorio();
+    }
   });
 </script>
 </body>
