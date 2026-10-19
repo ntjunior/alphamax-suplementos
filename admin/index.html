@@ -99,6 +99,36 @@
       </div>
     </div>
 
+    <!-- Card Mercado Livre -->
+    <div class="card mb-24" style="border-top:3px solid #FFE600;">
+      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
+        <span class="card-title" style="display:flex;align-items:center;gap:8px;">
+          <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="8" fill="#FFE600"/><path d="M8 24c0-8.837 7.163-16 16-16s16 7.163 16 16-7.163 16-16 16S8 32.837 8 24Z" fill="#fff"/><path d="M15 22l5 5 5-5 5 5 3-3" stroke="#333" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Vendas Mercado Livre
+        </span>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span id="ml-status-badge" style="font-size:12px;font-weight:600;color:var(--text-muted);">○ Não configurado</span>
+          <button onclick="ML.abrirConfig()" class="btn btn-ghost btn-sm"><i data-lucide="settings"></i> Configurar</button>
+          <button onclick="mlSincronizar()" class="btn btn-sm" id="btn-ml-sync" style="background:#FFE600;color:#333;font-weight:700;border:none;"><i data-lucide="refresh-cw"></i> Sincronizar</button>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px 0 8px;">
+        <div style="text-align:center;">
+          <div id="ml-pedidos-hoje" style="font-size:28px;font-weight:800;color:var(--text);">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Pedidos Hoje</div>
+        </div>
+        <div style="text-align:center;border-left:1px solid var(--border);border-right:1px solid var(--border);">
+          <div id="ml-valor-hoje" style="font-size:28px;font-weight:800;color:var(--text);">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Faturado Hoje</div>
+        </div>
+        <div style="text-align:center;">
+          <div id="ml-pendentes" style="font-size:28px;font-weight:800;color:var(--text);">—</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Aguardando Pgto</div>
+        </div>
+      </div>
+      <div id="ml-log" style="display:none;font-size:12px;color:var(--text-muted);background:var(--bg-input);border-radius:8px;padding:10px 12px;margin-top:8px;max-height:100px;overflow-y:auto;font-family:monospace;"></div>
+    </div>
+
     <div class="card">
       <div class="card-header">
         <span class="card-title"><i data-lucide="alert-triangle"></i> Produtos com Estoque Baixo</span>
@@ -125,6 +155,38 @@
   </div>
 </div>
 
+<!-- Modal Config Mercado Livre -->
+<div class="modal-overlay" id="modal-ml-config" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ Configurar Mercado Livre</span>
+      <button class="modal-close" onclick="document.getElementById('modal-ml-config').classList.remove('show')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg-input);border-radius:8px;padding:12px;font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">
+        <strong style="color:var(--text);">Como obter o Access Token:</strong><br>
+        1. Acesse <strong>developers.mercadolivre.com.br</strong><br>
+        2. Crie um App ou use um existente<br>
+        3. Use o OAuth para gerar o token (válido por 6h)<br>
+        4. Seu <strong>Seller ID</strong> aparece em <em>api.mercadolibre.com/users/me</em>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Seller ID (seu ID numérico no ML)</label>
+        <input type="text" id="ml-cfg-seller" class="form-input" placeholder="Ex: 123456789">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Access Token</label>
+        <input type="password" id="ml-cfg-token" class="form-input" placeholder="APP_USR-...">
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Token expira em 6 horas. Atualize quando necessário.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-ml-config').classList.remove('show')">Cancelar</button>
+      <button class="btn btn-primary" onclick="ML.salvarConfig()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Detalhes Venda -->
 <div class="modal-overlay" id="modal-venda-detalhe" onclick="if(event.target===this)this.classList.remove('show')">
   <div class="modal modal-sm">
@@ -141,6 +203,7 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
+<script src="../js/mercadolivre.js"></script>
 <script>
   function carregarDashboard() {
     const vendas = DB.getVendas();
@@ -237,12 +300,37 @@
     document.getElementById('modal-venda-detalhe').classList.add('show');
   }
 
+  async function mlSincronizar() {
+    const btn = document.getElementById('btn-ml-sync');
+    const logEl = document.getElementById('ml-log');
+    if (!ML.isOk()) { ML.abrirConfig(); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2"></i> Sincronizando...';
+    lucide.createIcons();
+    logEl.style.display = 'block';
+    logEl.innerHTML = '';
+    try {
+      const res = await ML.sincronizar(msg => { logEl.innerHTML += msg + '<br>'; logEl.scrollTop = logEl.scrollHeight; });
+      App.showToast(`ML: ${res.sincronizados} pedido(s) importado(s)!`, 'success');
+      carregarDashboard();
+      ML.carregarKpis();
+    } catch(e) {
+      App.showToast(e.message, 'error');
+      logEl.innerHTML += `<span style="color:var(--red);">${e.message}</span>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="refresh-cw"></i> Sincronizar';
+      lucide.createIcons();
+    }
+  }
+
   const hoje = new Date();
 
   (async () => {
     await App.initPage('dashboard');
     document.getElementById('data-hoje').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     carregarDashboard();
+    ML.carregarKpis();
   })();
 </script>
 </body>
