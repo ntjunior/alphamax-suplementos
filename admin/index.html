@@ -100,33 +100,71 @@
     </div>
 
     <!-- Card Mercado Livre -->
-    <div class="card mb-24" style="border-top:3px solid #FFE600;">
-      <div class="card-header" style="flex-wrap:wrap;gap:8px;">
-        <span class="card-title" style="display:flex;align-items:center;gap:8px;">
-          <svg width="22" height="22" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="8" fill="#FFE600"/><path d="M8 24c0-8.837 7.163-16 16-16s16 7.163 16 16-7.163 16-16 16S8 32.837 8 24Z" fill="#fff"/><path d="M15 22l5 5 5-5 5 5 3-3" stroke="#333" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          Vendas Mercado Livre
-        </span>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-          <span id="ml-status-badge" style="font-size:12px;font-weight:600;color:var(--text-muted);">○ Não configurado</span>
-          <button onclick="ML.abrirConfig()" class="btn btn-ghost btn-sm"><i data-lucide="settings"></i> Configurar</button>
-          <button onclick="mlSincronizar()" class="btn btn-sm" id="btn-ml-sync" style="background:#FFE600;color:#333;font-weight:700;border:none;"><i data-lucide="refresh-cw"></i> Sincronizar</button>
+    <style>
+      .ml-card { border:none; border-radius:16px; overflow:hidden; margin-bottom:24px; background:var(--bg-card); box-shadow:0 2px 12px rgba(0,0,0,.08); }
+      .ml-card-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:18px 20px 16px; border-bottom:1px solid var(--border); }
+      .ml-brand { display:flex; align-items:center; gap:10px; }
+      .ml-brand-icon { width:36px; height:36px; background:#FFE600; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+      .ml-brand-name { font-size:15px; font-weight:700; letter-spacing:-.2px; }
+      .ml-brand-sub { font-size:11px; color:var(--text-muted); margin-top:1px; }
+      .ml-header-right { display:flex; align-items:center; gap:8px; }
+      .ml-status { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px; background:var(--bg-input); }
+      .ml-status.online { color:#16a34a; background:#dcfce7; }
+      .ml-status.offline { color:var(--text-muted); }
+      .ml-status-dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+      .btn-ml-config { background:transparent; border:1px solid var(--border); color:var(--text-muted); border-radius:8px; padding:6px 12px; font-size:12px; cursor:pointer; display:flex; align-items:center; gap:5px; transition:.15s; }
+      .btn-ml-config:hover { border-color:var(--text-muted); color:var(--text); }
+      .btn-ml-sync { background:#FFE600; color:#1a1a1a; border:none; border-radius:8px; padding:7px 16px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .15s, transform .1s; }
+      .btn-ml-sync:hover { opacity:.88; }
+      .btn-ml-sync:active { transform:scale(.97); }
+      .btn-ml-sync:disabled { opacity:.5; cursor:not-allowed; }
+      .ml-kpis { display:grid; grid-template-columns:repeat(3,1fr); padding:4px 0; }
+      .ml-kpi { padding:20px 24px; text-align:center; position:relative; }
+      .ml-kpi + .ml-kpi::before { content:''; position:absolute; left:0; top:20%; height:60%; width:1px; background:var(--border); }
+      .ml-kpi-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; font-size:17px; }
+      .ml-kpi-val { font-size:26px; font-weight:800; line-height:1; color:var(--text); }
+      .ml-kpi-label { font-size:11px; color:var(--text-muted); margin-top:5px; text-transform:uppercase; letter-spacing:.5px; }
+      .ml-log-wrap { border-top:1px solid var(--border); padding:0 20px; max-height:0; overflow:hidden; transition:max-height .3s ease, padding .3s ease; }
+      .ml-log-wrap.open { max-height:120px; padding:12px 20px; }
+      .ml-log { font-size:11.5px; color:var(--text-muted); font-family:monospace; overflow-y:auto; max-height:96px; line-height:1.6; }
+    </style>
+    <div class="ml-card">
+      <div class="ml-card-header">
+        <div class="ml-brand">
+          <div class="ml-brand-icon">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="#fff"/><path d="M5 10l3 3 3-3 3 3 1-1" stroke="#333" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div>
+            <div class="ml-brand-name">Mercado Livre</div>
+            <div class="ml-brand-sub">Sincronização de pedidos</div>
+          </div>
+        </div>
+        <div class="ml-header-right">
+          <div id="ml-status-badge" class="ml-status offline"><span class="ml-status-dot"></span><span>Não configurado</span></div>
+          <button onclick="ML.abrirConfig()" class="btn-ml-config"><i data-lucide="settings" style="width:13px;height:13px;"></i> Configurar</button>
+          <button onclick="mlSincronizar()" class="btn-ml-sync" id="btn-ml-sync"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Sincronizar</button>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding:16px 0 8px;">
-        <div style="text-align:center;">
-          <div id="ml-pedidos-hoje" style="font-size:28px;font-weight:800;color:var(--text);">—</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Pedidos Hoje</div>
+      <div class="ml-kpis">
+        <div class="ml-kpi">
+          <div class="ml-kpi-icon" style="background:#fef9c3;">📦</div>
+          <div id="ml-pedidos-hoje" class="ml-kpi-val">—</div>
+          <div class="ml-kpi-label">Pedidos Hoje</div>
         </div>
-        <div style="text-align:center;border-left:1px solid var(--border);border-right:1px solid var(--border);">
-          <div id="ml-valor-hoje" style="font-size:28px;font-weight:800;color:var(--text);">—</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Faturado Hoje</div>
+        <div class="ml-kpi">
+          <div class="ml-kpi-icon" style="background:#dcfce7;">💰</div>
+          <div id="ml-valor-hoje" class="ml-kpi-val">—</div>
+          <div class="ml-kpi-label">Faturado Hoje</div>
         </div>
-        <div style="text-align:center;">
-          <div id="ml-pendentes" style="font-size:28px;font-weight:800;color:var(--text);">—</div>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Aguardando Pgto</div>
+        <div class="ml-kpi">
+          <div class="ml-kpi-icon" style="background:#fce7f3;">⏳</div>
+          <div id="ml-pendentes" class="ml-kpi-val">—</div>
+          <div class="ml-kpi-label">Aguardando Pgto</div>
         </div>
       </div>
-      <div id="ml-log" style="display:none;font-size:12px;color:var(--text-muted);background:var(--bg-input);border-radius:8px;padding:10px 12px;margin-top:8px;max-height:100px;overflow-y:auto;font-family:monospace;"></div>
+      <div id="ml-log-wrap" class="ml-log-wrap">
+        <div id="ml-log" class="ml-log"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -303,11 +341,12 @@
   async function mlSincronizar() {
     const btn = document.getElementById('btn-ml-sync');
     const logEl = document.getElementById('ml-log');
+    const logWrap = document.getElementById('ml-log-wrap');
     if (!ML.isOk()) { ML.abrirConfig(); return; }
     btn.disabled = true;
-    btn.innerHTML = '<i data-lucide="loader-2"></i> Sincronizando...';
+    btn.innerHTML = '<i data-lucide="loader-2" style="width:14px;height:14px;animation:spin 1s linear infinite;"></i> Sincronizando...';
     lucide.createIcons();
-    logEl.style.display = 'block';
+    logWrap.classList.add('open');
     logEl.innerHTML = '';
     try {
       const res = await ML.sincronizar(msg => { logEl.innerHTML += msg + '<br>'; logEl.scrollTop = logEl.scrollHeight; });
@@ -319,8 +358,9 @@
       logEl.innerHTML += `<span style="color:var(--red);">${e.message}</span>`;
     } finally {
       btn.disabled = false;
-      btn.innerHTML = '<i data-lucide="refresh-cw"></i> Sincronizar';
+      btn.innerHTML = '<i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Sincronizar';
       lucide.createIcons();
+      setTimeout(() => logWrap.classList.remove('open'), 4000);
     }
   }
 

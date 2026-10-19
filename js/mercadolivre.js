@@ -142,8 +142,9 @@ const ML = (() => {
     if (s('ml-pendentes')) s('ml-pendentes').textContent = pendentes;
     const badge = s('ml-status-badge');
     if (badge) {
-      badge.textContent = isOk() ? (online ? '● Conectado' : '● Token inválido') : '○ Não configurado';
-      badge.style.color = isOk() && online ? 'var(--green)' : 'var(--text-muted)';
+      const conectado = isOk() && online;
+      badge.className = 'ml-status ' + (conectado ? 'online' : 'offline');
+      badge.innerHTML = `<span class="ml-status-dot"></span><span>${isOk() ? (online ? 'Conectado' : 'Token inválido') : 'Não configurado'}</span>`;
     }
   }
 
