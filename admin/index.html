@@ -103,11 +103,11 @@
 
     <!-- Card Mercado Livre -->
     <style>
-      .ml-card { border:none; border-radius:16px; overflow:hidden; margin-bottom:24px; background:var(--bg-card); box-shadow:0 2px 12px rgba(0,0,0,.08); }
-      .ml-card-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:18px 20px 16px; border-bottom:1px solid var(--border); }
+      .ml-card { border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:24px; background:var(--bg-card); }
+      .ml-card-header { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:16px 20px; border-bottom:1px solid var(--border); }
       .ml-brand { display:flex; align-items:center; gap:10px; }
-      .ml-brand-icon { width:36px; height:36px; background:#FFE600; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
-      .ml-brand-name { font-size:15px; font-weight:700; letter-spacing:-.2px; }
+      .ml-brand-icon { width:34px; height:34px; background:#FFE600; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+      .ml-brand-name { font-size:14px; font-weight:700; }
       .ml-brand-sub { font-size:11px; color:var(--text-muted); margin-top:1px; }
       .ml-header-right { display:flex; align-items:center; gap:8px; }
       .ml-status { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px; background:var(--bg-input); }
@@ -120,12 +120,13 @@
       .btn-ml-sync:hover { opacity:.88; }
       .btn-ml-sync:active { transform:scale(.97); }
       .btn-ml-sync:disabled { opacity:.5; cursor:not-allowed; }
-      .ml-kpis { display:grid; grid-template-columns:repeat(3,1fr); padding:4px 0; }
-      .ml-kpi { padding:20px 24px; text-align:center; position:relative; }
-      .ml-kpi + .ml-kpi::before { content:''; position:absolute; left:0; top:20%; height:60%; width:1px; background:var(--border); }
-      .ml-kpi-icon { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin:0 auto 10px; font-size:17px; }
-      .ml-kpi-val { font-size:26px; font-weight:800; line-height:1; color:var(--text); }
-      .ml-kpi-label { font-size:11px; color:var(--text-muted); margin-top:5px; text-transform:uppercase; letter-spacing:.5px; }
+      .ml-kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; padding:16px; }
+      .ml-kpi-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px; position:relative; overflow:hidden; }
+      .ml-kpi-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:var(--radius) var(--radius) 0 0; }
+      .ml-kpi-card.yellow::before { background:#FFE600; }
+      .ml-kpi-card.green::before  { background:var(--green); }
+      .ml-kpi-card.blue::before   { background:var(--blue); }
+      .ml-kpi-card .kpi-icon { margin-bottom:12px; }
       .ml-log-wrap { border-top:1px solid var(--border); padding:0 20px; max-height:0; overflow:hidden; transition:max-height .3s ease, padding .3s ease; }
       .ml-log-wrap.open { max-height:120px; padding:12px 20px; }
       .ml-log { font-size:11.5px; color:var(--text-muted); font-family:monospace; overflow-y:auto; max-height:96px; line-height:1.6; }
@@ -148,20 +149,29 @@
         </div>
       </div>
       <div class="ml-kpis">
-        <div class="ml-kpi">
-          <div class="ml-kpi-icon" style="background:#fef9c3;">📦</div>
-          <div id="ml-pedidos-hoje" class="ml-kpi-val">—</div>
-          <div class="ml-kpi-label">Pedidos Hoje</div>
+        <div class="ml-kpi-card yellow">
+          <div class="kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          </div>
+          <div class="kpi-label">Pedidos Hoje</div>
+          <div class="kpi-value" id="ml-pedidos-hoje">—</div>
+          <div class="kpi-sub">pedidos no ML</div>
         </div>
-        <div class="ml-kpi">
-          <div class="ml-kpi-icon" style="background:#dcfce7;">💰</div>
-          <div id="ml-valor-hoje" class="ml-kpi-val">—</div>
-          <div class="ml-kpi-label">Faturado Hoje</div>
+        <div class="ml-kpi-card green">
+          <div class="kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div class="kpi-label">Faturado Hoje</div>
+          <div class="kpi-value" id="ml-valor-hoje">—</div>
+          <div class="kpi-sub">receita do ML</div>
         </div>
-        <div class="ml-kpi">
-          <div class="ml-kpi-icon" style="background:#fce7f3;">⏳</div>
-          <div id="ml-pendentes" class="ml-kpi-val">—</div>
-          <div class="ml-kpi-label">Aguardando Pgto</div>
+        <div class="ml-kpi-card blue">
+          <div class="kpi-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="kpi-label">Aguardando Pgto</div>
+          <div class="kpi-value" id="ml-pendentes">—</div>
+          <div class="kpi-sub">pagamentos pendentes</div>
         </div>
       </div>
       <div id="ml-log-wrap" class="ml-log-wrap">
