@@ -22,17 +22,32 @@ function getVendasPeriodo() {
 
 function renderRelatorio() {
   const vendas = getVendasPeriodo();
+  const vendasPDV = vendas.filter(v => v.origem !== 'mercadolivre');
+  const vendasML  = vendas.filter(v => v.origem === 'mercadolivre');
+
   const faturamento = vendas.reduce((s, v) => s + v.total, 0);
-  const custo = vendas.reduce((s, v) => s + (v.itens || []).reduce((si, i) => si + (i.precoCusto || 0) * i.quantidade, 0), 0);
-  const lucro = faturamento - custo;
+  const fatPDV = vendasPDV.reduce((s, v) => s + v.total, 0);
+  const fatML  = vendasML.reduce((s, v) => s + v.total, 0);
+  const custo  = vendas.reduce((s, v) => s + (v.itens || []).reduce((si, i) => si + (i.precoCusto || 0) * i.quantidade, 0), 0);
+  const lucro  = faturamento - custo;
   const margem = faturamento > 0 ? ((lucro / faturamento) * 100).toFixed(1) : 0;
   const ticket = vendas.length > 0 ? faturamento / vendas.length : 0;
+  const ticketPDV = vendasPDV.length > 0 ? fatPDV / vendasPDV.length : 0;
 
-  document.getElementById('rel-faturamento').textContent = App.formatCurrency(faturamento);
-  document.getElementById('rel-lucro').textContent = App.formatCurrency(lucro);
-  document.getElementById('rel-margem-label').textContent = `margem: ${margem}%`;
-  document.getElementById('rel-ticket').textContent = App.formatCurrency(ticket);
-  document.getElementById('rel-qtd').textContent = vendas.length;
+  const s = id => document.getElementById(id);
+  s('rel-faturamento').textContent   = App.formatCurrency(faturamento);
+  s('rel-fat-sub').textContent       = vendasPDV.length && vendasML.length
+    ? `PDV ${App.formatCurrency(fatPDV)} · ML ${App.formatCurrency(fatML)}` : '';
+  s('rel-lucro').textContent         = App.formatCurrency(lucro);
+  s('rel-margem-label').textContent  = `margem: ${margem}%`;
+  s('rel-ticket').textContent        = App.formatCurrency(ticket);
+  s('rel-ticket-sub').textContent    = vendasPDV.length ? `PDV: ${App.formatCurrency(ticketPDV)}` : '';
+  s('rel-qtd').textContent           = vendas.length;
+  s('rel-qtd-sub').textContent       = vendasML.length ? `PDV: ${vendasPDV.length} · ML: ${vendasML.length}` : '';
+  s('rel-pdv-total').textContent     = App.formatCurrency(fatPDV);
+  s('rel-pdv-qtd').textContent       = `${vendasPDV.length} venda${vendasPDV.length !== 1 ? 's' : ''}`;
+  s('rel-ml-total').textContent      = App.formatCurrency(fatML);
+  s('rel-ml-qtd').textContent        = `${vendasML.length} pedido${vendasML.length !== 1 ? 's' : ''}`;
 
   renderGrafico(vendas);
   renderMaisVendidos(vendas);
