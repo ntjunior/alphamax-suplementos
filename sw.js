@@ -21,8 +21,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  // Supabase e APIs externas: sempre network-first
-  if (e.request.url.includes('supabase.co') || e.request.url.includes('multizap')) return;
+  // Supabase, ML e APIs externas: sempre network-first
+  if (e.request.url.includes('supabase.co') || e.request.url.includes('multizap') || e.request.url.includes('/ml-api')) return;
   e.respondWith(
     caches.match(e.request).then(cached => {
       const network = fetch(e.request).then(res => {

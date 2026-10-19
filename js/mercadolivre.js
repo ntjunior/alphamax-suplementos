@@ -1,6 +1,9 @@
 const ML = (() => {
   const CFG_KEY = 'ml_config';
-  const API = 'https://api.mercadolibre.com';
+  // Usa proxy Netlify para evitar CORS; em dev local aponta direto
+  const API = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
+    ? 'https://api.mercadolibre.com'
+    : '/ml-api';
 
   function getCfg() {
     try { return JSON.parse(localStorage.getItem(CFG_KEY)) || {}; } catch { return {}; }
