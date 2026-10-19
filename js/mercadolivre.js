@@ -71,6 +71,7 @@ const ML = (() => {
 
     for (const ped of pedidos) {
       const jaExiste = DB.getVendas().find(v => v.mlOrderId === String(ped.id));
+      log(`Pedido ${ped.id}: ${jaExiste ? 'JÁ EXISTE (pulando)' : 'novo'} | data: ${ped.date_created}`);
       if (jaExiste) { pulados++; continue; }
 
       const itens = (ped.order_items || []).map(oi => {
@@ -86,7 +87,7 @@ const ML = (() => {
         };
       });
 
-      DB.addVenda({
+      const venda = DB.addVenda({
         itens,
         total: ped.total_amount || itens.reduce((s, i) => s + i.subtotal, 0),
         subtotal: ped.total_amount || itens.reduce((s, i) => s + i.subtotal, 0),
@@ -98,6 +99,7 @@ const ML = (() => {
         origem: 'mercadolivre',
         createdAt: ped.date_created
       });
+      log(`→ venda criada id=${venda.id} origem=${venda.origem} createdAt=${venda.createdAt}`);
 
       for (const item of itens) {
         if (item.produtoId) {
