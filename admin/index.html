@@ -45,28 +45,30 @@
   <div class="page-body">
     <div class="grid-4 mb-24" id="kpi-grid">
       <div class="kpi-card">
-        <div class="kpi-icon"><i data-lucide="banknote"></i></div>
-        <div class="kpi-label">Vendido Hoje</div>
-        <div class="kpi-value" id="kpi-vendido">R$ 0,00</div>
-        <div class="kpi-sub" id="kpi-vendido-sub">0 vendas hoje</div>
+        <div class="kpi-icon"><i data-lucide="shopping-cart"></i></div>
+        <div class="kpi-label">PDV — Frente de Caixa</div>
+        <div class="kpi-value" id="kpi-pdv-total">R$ 0,00</div>
+        <div class="kpi-sub" id="kpi-pdv-sub">0 vendas</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-icon" style="background:rgba(255,230,0,.15);">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" stroke="currentColor" stroke-width="1.5"/><path d="M5 10l3 3 3-3 3 3 1-1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="kpi-label">Mercado Livre</div>
+        <div class="kpi-value" id="kpi-ml-total">R$ 0,00</div>
+        <div class="kpi-sub" id="kpi-ml-sub">0 pedidos</div>
       </div>
       <div class="kpi-card green">
-        <div class="kpi-icon"><i data-lucide="shopping-cart"></i></div>
-        <div class="kpi-label">Vendas Hoje</div>
-        <div class="kpi-value" id="kpi-qtd">0</div>
-        <div class="kpi-sub" id="kpi-qtd-sub">transações</div>
+        <div class="kpi-icon"><i data-lucide="banknote"></i></div>
+        <div class="kpi-label">Total Vendas Hoje</div>
+        <div class="kpi-value" id="kpi-vendido">R$ 0,00</div>
+        <div class="kpi-sub" id="kpi-vendido-sub">0 transações</div>
       </div>
       <div class="kpi-card blue">
         <div class="kpi-icon"><i data-lucide="target"></i></div>
         <div class="kpi-label">Ticket Médio</div>
         <div class="kpi-value" id="kpi-ticket">R$ 0,00</div>
         <div class="kpi-sub">por venda hoje</div>
-      </div>
-      <div class="kpi-card yellow">
-        <div class="kpi-icon"><i data-lucide="alert-triangle"></i></div>
-        <div class="kpi-label">Estoque Baixo</div>
-        <div class="kpi-value" id="kpi-estoque-baixo">0</div>
-        <div class="kpi-sub">produtos com alerta</div>
       </div>
     </div>
 
@@ -167,49 +169,25 @@
       </div>
     </div>
 
-    <div class="grid-2 mb-24">
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i data-lucide="alert-triangle"></i> Estoque Baixo</span>
-          <a href="estoque.html" class="btn btn-warning btn-sm">Gerenciar</a>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th>Categoria</th>
-                <th class="text-right">Estoque</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="tbody-estoque-baixo">
-              <tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Todos os produtos com estoque OK</td></tr>
-            </tbody>
-          </table>
-        </div>
+    <div class="card mb-24">
+      <div class="card-header">
+        <span class="card-title"><i data-lucide="package-check"></i> Produtos Vendidos Hoje</span>
+        <span id="vendidos-hoje-total" style="font-size:12px;color:var(--text-muted);font-weight:600;"></span>
       </div>
-
-      <div class="card">
-        <div class="card-header">
-          <span class="card-title"><i data-lucide="package-check"></i> Produtos Vendidos Hoje</span>
-          <span id="vendidos-hoje-total" style="font-size:12px;color:var(--text-muted);"></span>
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th class="text-right">Qtd</th>
-                <th class="text-right">Total</th>
-                <th>Canal</th>
-              </tr>
-            </thead>
-            <tbody id="tbody-vendidos-hoje">
-              <tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Sem vendas hoje</td></tr>
-            </tbody>
-          </table>
-        </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Produto</th>
+              <th class="text-right">Qtd</th>
+              <th class="text-right">Total</th>
+              <th>Canal</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-vendidos-hoje">
+            <tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Sem vendas hoje</td></tr>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
@@ -270,18 +248,24 @@
     const produtos = DB.getProdutos();
 
     const vendasHoje = vendas.filter(v => App.isToday(v.createdAt));
-    const totalHoje = vendasHoje.reduce((s, v) => s + v.total, 0);
-    const qtdHoje = vendasHoje.length;
-    const ticket = qtdHoje > 0 ? totalHoje / qtdHoje : 0;
+    const vendasPDV = vendasHoje.filter(v => v.origem !== 'mercadolivre');
+    const vendasML  = vendasHoje.filter(v => v.origem === 'mercadolivre');
 
-    document.getElementById('kpi-vendido').textContent = App.formatCurrency(totalHoje);
-    document.getElementById('kpi-vendido-sub').textContent = `${qtdHoje} venda${qtdHoje !== 1 ? 's' : ''} hoje`;
-    document.getElementById('kpi-qtd').textContent = qtdHoje;
-    document.getElementById('kpi-qtd-sub').textContent = 'transações';
-    document.getElementById('kpi-ticket').textContent = App.formatCurrency(ticket);
+    const totalPDV  = vendasPDV.reduce((s, v) => s + v.total, 0);
+    const totalML   = vendasML.reduce((s, v) => s + v.total, 0);
+    const totalHoje = vendasHoje.reduce((s, v) => s + v.total, 0);
+    const qtdHoje   = vendasHoje.length;
+    const ticket    = qtdHoje > 0 ? totalHoje / qtdHoje : 0;
+
+    document.getElementById('kpi-pdv-total').textContent = App.formatCurrency(totalPDV);
+    document.getElementById('kpi-pdv-sub').textContent   = `${vendasPDV.length} venda${vendasPDV.length !== 1 ? 's' : ''}`;
+    document.getElementById('kpi-ml-total').textContent  = App.formatCurrency(totalML);
+    document.getElementById('kpi-ml-sub').textContent    = `${vendasML.length} pedido${vendasML.length !== 1 ? 's' : ''}`;
+    document.getElementById('kpi-vendido').textContent   = App.formatCurrency(totalHoje);
+    document.getElementById('kpi-vendido-sub').textContent = `${qtdHoje} transaç${qtdHoje !== 1 ? 'ões' : 'ão'}`;
+    document.getElementById('kpi-ticket').textContent    = App.formatCurrency(ticket);
 
     const baixo = produtos.filter(p => p.estoque < (p.estoqueMin || 10));
-    document.getElementById('kpi-estoque-baixo').textContent = baixo.length;
 
     const tbody = document.getElementById('tbody-ultimas-vendas');
     const ultimas = [...vendas].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
@@ -298,19 +282,6 @@
       `).join('');
     }
 
-    const tbodyBaixo = document.getElementById('tbody-estoque-baixo');
-    if (baixo.length === 0) {
-      tbodyBaixo.innerHTML = '<tr><td colspan="4" class="text-center text-muted" style="padding:24px;">Todos os produtos com estoque OK</td></tr>';
-    } else {
-      tbodyBaixo.innerHTML = baixo.map(p => `
-        <tr>
-          <td>${p.nome}</td>
-          <td>${p.categoria || '-'}</td>
-          <td class="text-right font-bold">${p.estoque}</td>
-          <td>${App.getStockBadge(p.estoque, p.estoqueMin)}</td>
-        </tr>
-      `).join('');
-    }
 
     // Produtos vendidos hoje (PDV + ML)
     const vendidosMap = {};
