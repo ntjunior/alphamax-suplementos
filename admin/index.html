@@ -258,8 +258,9 @@
     const produtos = DB.getProdutos();
 
     const vendasHoje = vendas.filter(v => App.isToday(v.createdAt));
-    const vendasPDV = vendasHoje.filter(v => v.origem !== 'mercadolivre');
-    const vendasML  = vendasHoje.filter(v => v.origem === 'mercadolivre');
+    const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
+    const vendasPDV = vendasHoje.filter(v => !isML(v));
+    const vendasML  = vendasHoje.filter(isML);
 
     const totalPDV  = vendasPDV.reduce((s, v) => s + v.total, 0);
     const totalML   = vendasML.reduce((s, v) => s + v.total, 0);
@@ -296,7 +297,7 @@
     // Produtos vendidos hoje (PDV + ML)
     const vendidosMap = {};
     for (const v of vendasHoje) {
-      const canal = v.origem === 'mercadolivre' ? 'ML' : 'PDV';
+      const canal = (v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre') ? 'ML' : 'PDV';
       for (const item of (v.itens || [])) {
         const key = item.nome;
         if (!vendidosMap[key]) vendidosMap[key] = { nome: item.nome, qtd: 0, total: 0, canais: new Set() };

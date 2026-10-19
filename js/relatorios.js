@@ -22,8 +22,9 @@ function getVendasPeriodo() {
 
 function renderRelatorio() {
   const vendas = getVendasPeriodo();
-  const vendasPDV = vendas.filter(v => v.origem !== 'mercadolivre');
-  const vendasML  = vendas.filter(v => v.origem === 'mercadolivre');
+  const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
+  const vendasPDV = vendas.filter(v => !isML(v));
+  const vendasML  = vendas.filter(isML);
 
   const faturamento = vendas.reduce((s, v) => s + v.total, 0);
   const fatPDV = vendasPDV.reduce((s, v) => s + v.total, 0);
