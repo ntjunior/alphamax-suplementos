@@ -403,6 +403,10 @@
     carregarDashboard();
     ML.carregarKpis();
   })();
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) ML.carregarKpis();
+  });
 </script>
 </body>
 </html>
