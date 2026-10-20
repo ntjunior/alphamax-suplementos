@@ -212,20 +212,32 @@
     </div>
     <div class="modal-body">
       <div style="background:var(--bg-input);border-radius:8px;padding:12px;font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">
-        <strong style="color:var(--text);">Como obter o Access Token:</strong><br>
-        1. Acesse <strong>developers.mercadolivre.com.br</strong><br>
-        2. Crie um App ou use um existente<br>
-        3. Use o OAuth para gerar o token (válido por 6h)<br>
-        4. Seu <strong>Seller ID</strong> aparece em <em>api.mercadolibre.com/users/me</em>
+        <strong style="color:var(--text);">Renovação automática:</strong> preencha Client ID, Client Secret e Refresh Token para o token ser renovado automaticamente a cada 6h.<br>
+        <span style="font-size:11px;">Obtenha em <strong>developers.mercadolibre.com.br</strong> → seu App → OAuth</span>
       </div>
       <div class="form-group">
-        <label class="form-label">Seller ID (seu ID numérico no ML)</label>
+        <label class="form-label">Seller ID</label>
         <input type="text" id="ml-cfg-seller" class="form-input" placeholder="Ex: 123456789">
       </div>
       <div class="form-group">
         <label class="form-label">Access Token</label>
         <input type="password" id="ml-cfg-token" class="form-input" placeholder="APP_USR-...">
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Token expira em 6 horas. Atualize quando necessário.</div>
+      </div>
+      <div style="border-top:1px solid var(--border);margin:12px 0 14px;padding-top:14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;margin-bottom:10px;">RENOVAÇÃO AUTOMÁTICA (opcional)</div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Client ID</label>
+          <input type="text" id="ml-cfg-client-id" class="form-input" placeholder="Ex: 1234567890">
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Client Secret</label>
+          <input type="password" id="ml-cfg-client-secret" class="form-input" placeholder="seu client secret">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Refresh Token</label>
+          <input type="password" id="ml-cfg-refresh-token" class="form-input" placeholder="TG-...">
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Com esses dados o sistema renova o token sozinho.</div>
+        </div>
       </div>
     </div>
     <div class="modal-footer">

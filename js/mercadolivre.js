@@ -1,6 +1,5 @@
 const ML = (() => {
   const CFG_KEY = 'ml_config';
-  // Usa proxy Netlify para evitar CORS; em dev local aponta direto
   const API = location.hostname === 'localhost' || location.hostname === '127.0.0.1'
     ? 'https://api.mercadolibre.com'
     : '/ml-api';
@@ -18,11 +17,74 @@ const ML = (() => {
     return !!(c.sellerId && c.accessToken);
   }
 
-  async function _get(path) {
+  function _tokenExpirado() {
+    const c = getCfg();
+    if (!c.expiresAt) return false;
+    return Date.now() >= c.expiresAt - 10 * 60 * 1000; // 10 min antes
+  }
+
+  async function _refreshToken() {
     const cfg = getCfg();
-    const res = await fetch(`${API}${path}`, {
+    if (!cfg.clientId || !cfg.clientSecret || !cfg.refreshToken) {
+      throw new Error('Configure Client ID, Client Secret e Refresh Token para renovação automática.');
+    }
+
+    const body = new URLSearchParams({
+      grant_type: 'refresh_token',
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      refresh_token: cfg.refreshToken
+    });
+
+    const res = await fetch(`${API}/oauth/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json' },
+      body
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(`Falha ao renovar token ML: ${err.message || res.status}`);
+    }
+
+    const data = await res.json();
+    saveCfg({
+      ...cfg,
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token || cfg.refreshToken,
+      expiresAt: Date.now() + (data.expires_in || 21600) * 1000
+    });
+
+    console.log('[ML] Token renovado com sucesso.');
+    return data.access_token;
+  }
+
+  async function _ensureToken() {
+    if (_tokenExpirado()) {
+      try { await _refreshToken(); } catch (e) { console.warn('[ML] Renovação automática falhou:', e.message); }
+    }
+  }
+
+  async function _get(path) {
+    await _ensureToken();
+    const cfg = getCfg();
+    let res = await fetch(`${API}${path}`, {
       headers: { 'Authorization': `Bearer ${cfg.accessToken}` }
     });
+
+    if (res.status === 401) {
+      // Tenta renovar uma vez e repetir
+      try {
+        await _refreshToken();
+        const newCfg = getCfg();
+        res = await fetch(`${API}${path}`, {
+          headers: { 'Authorization': `Bearer ${newCfg.accessToken}` }
+        });
+      } catch (e) {
+        throw new Error('Token ML expirado. Atualize nas configurações.');
+      }
+    }
+
     if (res.status === 401) throw new Error('Token ML expirado. Atualize nas configurações.');
     if (!res.ok) throw new Error(`Erro ML ${res.status}`);
     return res.json();
@@ -153,14 +215,32 @@ const ML = (() => {
     const el = id => document.getElementById(id);
     if (el('ml-cfg-seller')) el('ml-cfg-seller').value = cfg.sellerId || '';
     if (el('ml-cfg-token')) el('ml-cfg-token').value = cfg.accessToken || '';
+    if (el('ml-cfg-client-id')) el('ml-cfg-client-id').value = cfg.clientId || '';
+    if (el('ml-cfg-client-secret')) el('ml-cfg-client-secret').value = cfg.clientSecret || '';
+    if (el('ml-cfg-refresh-token')) el('ml-cfg-refresh-token').value = cfg.refreshToken || '';
     el('modal-ml-config')?.classList.add('show');
   }
 
   function salvarConfig() {
     const sellerId = document.getElementById('ml-cfg-seller')?.value?.trim();
     const accessToken = document.getElementById('ml-cfg-token')?.value?.trim();
-    if (!sellerId || !accessToken) { App.showToast('Preencha Seller ID e Token.', 'warning'); return; }
-    saveCfg({ sellerId, accessToken });
+    const clientId = document.getElementById('ml-cfg-client-id')?.value?.trim();
+    const clientSecret = document.getElementById('ml-cfg-client-secret')?.value?.trim();
+    const refreshToken = document.getElementById('ml-cfg-refresh-token')?.value?.trim();
+
+    if (!sellerId || !accessToken) { App.showToast('Preencha Seller ID e Access Token.', 'warning'); return; }
+
+    const cfg = getCfg();
+    saveCfg({
+      ...cfg,
+      sellerId,
+      accessToken,
+      clientId: clientId || cfg.clientId || '',
+      clientSecret: clientSecret || cfg.clientSecret || '',
+      refreshToken: refreshToken || cfg.refreshToken || '',
+      expiresAt: (clientId && refreshToken) ? (cfg.expiresAt || Date.now() + 6 * 3600 * 1000) : cfg.expiresAt
+    });
+
     document.getElementById('modal-ml-config')?.classList.remove('show');
     App.showToast('Mercado Livre configurado!', 'success');
     carregarKpis();
