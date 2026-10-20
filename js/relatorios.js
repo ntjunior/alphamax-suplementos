@@ -29,7 +29,7 @@ function renderRelatorio() {
   const faturamento = vendas.reduce((s, v) => s + v.total, 0);
   const fatPDV = vendasPDV.reduce((s, v) => s + v.total, 0);
   const fatML  = vendasML.reduce((s, v) => s + v.total, 0);
-  const custo  = vendas.reduce((s, v) => s + (v.itens || []).reduce((si, i) => si + (i.precoCusto || 0) * i.quantidade, 0), 0);
+  const custo  = vendas.reduce((s, v) => s + (v.itens || []).reduce((si, i) => si + (i.precoCusto || 0) * (i.quantidade ?? i.qty ?? 1), 0), 0);
   const lucro  = faturamento - custo;
   const margem = faturamento > 0 ? ((lucro / faturamento) * 100).toFixed(1) : 0;
   const ticket = vendas.length > 0 ? faturamento / vendas.length : 0;
@@ -95,7 +95,7 @@ function renderMaisVendidos(vendas) {
   vendas.forEach(v => {
     v.itens.forEach(i => {
       if (!map[i.produtoId]) map[i.produtoId] = { nome: i.nome, qtd: 0, fat: 0 };
-      map[i.produtoId].qtd += i.quantidade;
+      map[i.produtoId].qtd += (i.quantidade ?? i.qty ?? 1);
       map[i.produtoId].fat += i.subtotal;
     });
   });
@@ -181,7 +181,7 @@ function renderTabelaVendas(vendas) {
     <tr style="${(v.mlStatus === 'cancelled') ? 'opacity:.5;text-decoration:line-through;' : ''}">
       <td style="white-space:nowrap;">${App.formatDate(v.createdAt)}</td>
       <td>${v.clienteNome || 'Consumidor Final'}</td>
-      <td style="font-size:12px;color:var(--text-muted);">${v.itens.map(i => `${i.quantidade}x ${i.nome.substring(0, 20)}`).join(', ')}</td>
+      <td style="font-size:12px;color:var(--text-muted);">${v.itens.map(i => `${i.quantidade ?? i.qty ?? 1}x ${i.nome.substring(0, 20)}`).join(', ')}</td>
       <td>${App.getPagamentoBadge(v.pagamento)}</td>
       <td>${statusBadge(v)}</td>
       <td class="text-right">${App.formatCurrency(v.subtotal)}</td>

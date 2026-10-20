@@ -180,7 +180,8 @@ async function registrarVendaOnline(pedido) {
       const m = linha.match(/[•\-]?\s*(\d+)x\s+(.+?)\s+—\s+R\$\s*([\d,.]+)/);
       if (!m) return null;
       const preco = parseFloat(m[3].replace('.','').replace(',','.'));
-      return { nome: m[2].trim(), qty: parseInt(m[1]), preco, total: preco };
+      const quantidade = parseInt(m[1]);
+      return { nome: m[2].trim(), quantidade, qty: quantidade, precoUnitario: preco, subtotal: preco * quantidade };
     }).filter(Boolean);
 
     const venda = {
