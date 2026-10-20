@@ -423,11 +423,25 @@
 
   const hoje = new Date();
 
+  async function mlAutoSync() {
+    if (!ML.isOk()) return;
+    try {
+      await ML.sincronizar();
+      const rows = await DB._select('vendas', 'order=created_at');
+      DB._cache.vendas = rows.map(r => DB._camel(r));
+      carregarDashboard();
+      ML.carregarKpis();
+    } catch(e) { console.warn('[ML auto-sync]', e.message); }
+  }
+
   (async () => {
     await App.initPage('dashboard');
     document.getElementById('data-hoje').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     carregarDashboard();
     ML.carregarKpis();
+    // Sincroniza na abertura e depois a cada 5 minutos
+    await mlAutoSync();
+    setInterval(mlAutoSync, 5 * 60 * 1000);
   })();
 
   document.addEventListener('visibilitychange', async () => {
