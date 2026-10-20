@@ -776,15 +776,44 @@ canvas { display: block; }
 .total-final-label { font-size: 14px; font-weight: 700; color: var(--text); }
 .total-final-value { font-size: 24px; font-weight: 700; color: var(--red); }
 
+/* ===================== RECIBO PREVIEW ===================== */
+.recibo {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 13px;
+  color: #111;
+  background: #fff;
+  max-width: 320px;
+  margin: 0 auto;
+  padding: 8px 0;
+}
+.recibo-header { text-align: center; margin-bottom: 6px; }
+.recibo-loja { font-size: 17px; font-weight: 700; letter-spacing: .03em; }
+.recibo-sub { font-size: 11px; color: #555; }
+.recibo-divider { border: none; border-top: 1px dashed #999; margin: 8px 0; }
+.recibo-itens { width: 100%; border-collapse: collapse; }
+.recibo-item-nome { font-size: 12px; padding: 2px 0; width: 70%; }
+.recibo-item-val { font-size: 12px; text-align: right; font-weight: 600; }
+.recibo-item-qty { font-size: 11px; color: #666; padding-bottom: 4px; }
+.recibo-totais { width: 100%; border-collapse: collapse; font-size: 12px; }
+.recibo-totais td { padding: 2px 0; }
+.recibo-totais td:last-child { text-align: right; font-weight: 600; }
+.recibo-desconto td { color: #16a34a; }
+.recibo-total-row td { font-size: 15px; font-weight: 700; padding-top: 4px; }
+.recibo-rodape { text-align: center; font-size: 11px; color: #666; padding-top: 4px; }
+
 /* ===================== RECIBO PRINT ===================== */
 @media print {
-  .no-print { display: none !important; }
-  body { background: #fff; color: #000; }
-  .recibo { max-width: 300px; margin: 0 auto; font-family: monospace; font-size: 13px; color: #000; }
-  .recibo-title { text-align: center; font-weight: bold; font-size: 16px; margin-bottom: 8px; }
-  .recibo-divider { border-top: 1px dashed #000; margin: 8px 0; }
-  .recibo-row { display: flex; justify-content: space-between; }
-  .recibo-total { font-weight: bold; font-size: 15px; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body > *:not(#modal-recibo) { display: none !important; }
+  .modal-overlay { position: static !important; background: none !important; display: block !important; }
+  .modal { box-shadow: none !important; border: none !important; max-width: 100% !important; }
+  .modal-header, .modal-footer { display: none !important; }
+  .modal-body { padding: 0 !important; }
+  .recibo { max-width: 100%; font-size: 12pt; color: #000; }
+  .recibo-loja { font-size: 16pt; }
+  .recibo-total-row td { font-size: 14pt; }
+  .recibo-divider { border-top: 1px solid #000; }
+  .recibo-sub, .recibo-item-qty, .recibo-rodape { color: #333; }
 }
 
 /* ===================== RESPONSIVE ===================== */

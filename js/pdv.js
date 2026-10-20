@@ -321,27 +321,39 @@ function mostrarRecibo(venda) {
 
   document.getElementById('recibo-content').innerHTML = `
     <div class="recibo">
-      <div class="recibo-title">SUPLEMENTOS PRO</div>
-      <div style="text-align:center;font-size:12px;color:var(--text-muted);margin-bottom:8px;">${App.formatDate(venda.createdAt)}</div>
+      <div class="recibo-header">
+        <div class="recibo-loja">Alpha Max Suplementos</div>
+        <div class="recibo-sub">Ponto de Venda</div>
+        <div class="recibo-sub">${App.formatDate(venda.createdAt)}</div>
+      </div>
       <div class="recibo-divider"></div>
-      ${venda.itens.map(i => `
-        <div class="recibo-row" style="font-size:13px;margin-bottom:4px;">
-          <span>${i.nome.substring(0,25)}</span>
-          <span>${App.formatCurrency(i.subtotal)}</span>
-        </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">${i.quantidade}x ${App.formatCurrency(i.precoUnitario)}</div>
-      `).join('')}
+      <table class="recibo-itens">
+        ${venda.itens.map(i => `
+          <tr>
+            <td class="recibo-item-nome">${i.nome.substring(0,30)}</td>
+            <td class="recibo-item-val">${App.formatCurrency(i.subtotal)}</td>
+          </tr>
+          <tr>
+            <td class="recibo-item-qty">${i.quantidade}x ${App.formatCurrency(i.precoUnitario)}</td>
+            <td></td>
+          </tr>
+        `).join('')}
+      </table>
       <div class="recibo-divider"></div>
-      <div class="recibo-row" style="font-size:13px;"><span>Subtotal</span><span>${App.formatCurrency(venda.subtotal)}</span></div>
-      ${venda.desconto > 0 ? `<div class="recibo-row" style="font-size:13px;color:var(--green);"><span>Desconto</span><span>- ${App.formatCurrency(venda.desconto)}</span></div>` : ''}
-      <div class="recibo-row recibo-total" style="font-size:16px;font-weight:700;color:var(--red);margin-top:6px;"><span>TOTAL</span><span>${App.formatCurrency(venda.total)}</span></div>
+      <table class="recibo-totais">
+        <tr><td>Subtotal</td><td>${App.formatCurrency(venda.subtotal)}</td></tr>
+        ${venda.desconto > 0 ? `<tr class="recibo-desconto"><td>Desconto</td><td>- ${App.formatCurrency(venda.desconto)}</td></tr>` : ''}
+        <tr class="recibo-total-row"><td>TOTAL</td><td>${App.formatCurrency(venda.total)}</td></tr>
+      </table>
       <div class="recibo-divider"></div>
-      <div class="recibo-row" style="font-size:12px;"><span>Pagamento</span><span>${nomesPag[venda.pagamento]}</span></div>
-      ${recibido > 0 ? `<div class="recibo-row" style="font-size:12px;"><span>Recebido</span><span>${App.formatCurrency(recibido)}</span></div><div class="recibo-row" style="font-size:13px;color:var(--green);"><span>Troco</span><span>${App.formatCurrency(troco)}</span></div>` : ''}
-      ${venda.clienteNome ? `<div class="recibo-row" style="font-size:12px;margin-top:4px;"><span>Cliente</span><span>${venda.clienteNome}</span></div>` : ''}
-      ${venda.cupomCodigo ? `<div class="recibo-row" style="font-size:12px;margin-top:4px;color:var(--green);"><span>Cupom</span><span>${venda.cupomCodigo}</span></div>` : ''}
+      <table class="recibo-totais">
+        <tr><td>Pagamento</td><td>${nomesPag[venda.pagamento] || venda.pagamento}</td></tr>
+        ${recibido > 0 ? `<tr><td>Recebido</td><td>${App.formatCurrency(recibido)}</td></tr><tr><td>Troco</td><td>${App.formatCurrency(troco)}</td></tr>` : ''}
+        ${venda.clienteNome ? `<tr><td>Cliente</td><td>${venda.clienteNome}</td></tr>` : ''}
+        ${venda.cupomCodigo ? `<tr><td>Cupom</td><td>${venda.cupomCodigo}</td></tr>` : ''}
+      </table>
       <div class="recibo-divider"></div>
-      <div style="text-align:center;font-size:11px;color:var(--text-muted);">Obrigado pela preferência!</div>
+      <div class="recibo-rodape">Obrigado pela preferência!</div>
     </div>
   `;
   document.getElementById('modal-recibo').classList.add('show');
