@@ -118,9 +118,17 @@ const ML = (() => {
     return melhor;
   }
 
+  let _syncLock = false;
+
   async function sincronizar(onLog) {
     if (!isOk()) throw new Error('Configure o Mercado Livre primeiro.');
+    if (_syncLock) return { sincronizados: 0, pulados: 0, cancelados: 0 };
+    _syncLock = true;
     const log = onLog || (() => {});
+    try { return await _sincronizarInterno(log); } finally { _syncLock = false; }
+  }
+
+  async function _sincronizarInterno(log) {
 
     log('Buscando pedidos de hoje...');
     const data = await buscarPedidosHoje();
@@ -212,6 +220,10 @@ const ML = (() => {
     }
 
     log(`Concluído: ${sincronizados} importado(s), ${pulados} já existia(m), ${cancelados} cancelado(s).`);
+
+    // Aguarda inserts chegarem ao Supabase antes de liberar o lock
+    if (sincronizados > 0 || cancelados > 0) await new Promise(r => setTimeout(r, 1500));
+
     return { sincronizados, pulados, cancelados };
   }
 
