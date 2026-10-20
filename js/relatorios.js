@@ -150,9 +150,16 @@ function renderTabelaVendas(vendas) {
   const tbody = document.getElementById('tbody-vendas-relatorio');
 
   if (sorted.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:24px;">Nenhuma venda no período selecionado</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted" style="padding:24px;">Nenhuma venda no período selecionado</td></tr>';
     return;
   }
+
+  const liquido = v => {
+    if (v.origem !== 'mercadolivre' && v.pagamento !== 'mercadolivre') return null;
+    const taxa = v.taxaML ?? v.itens?.reduce((s, i) => s + (i.taxaML || 0), 0) ?? 0;
+    if (!taxa) return null;
+    return { taxa, valor: (v.total || 0) - taxa };
+  };
 
   const statusBadge = v => {
     const s = v.mlStatus || (v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre' ? 'paid' : 'concluida');
@@ -168,7 +175,9 @@ function renderTabelaVendas(vendas) {
     return `<span style="font-size:11px;font-weight:600;color:${color};background:${color}18;padding:2px 8px;border-radius:20px;white-space:nowrap;">${label}</span>`;
   };
 
-  tbody.innerHTML = sorted.map(v => `
+  tbody.innerHTML = sorted.map(v => {
+    const liq = liquido(v);
+    return `
     <tr style="${(v.mlStatus === 'cancelled') ? 'opacity:.5;text-decoration:line-through;' : ''}">
       <td style="white-space:nowrap;">${App.formatDate(v.createdAt)}</td>
       <td>${v.clienteNome || 'Consumidor Final'}</td>
@@ -178,8 +187,9 @@ function renderTabelaVendas(vendas) {
       <td class="text-right">${App.formatCurrency(v.subtotal)}</td>
       <td class="text-right text-green">${v.desconto > 0 ? '- ' + App.formatCurrency(v.desconto) : '—'}</td>
       <td class="text-right font-bold text-red">${App.formatCurrency(v.total)}</td>
-    </tr>
-  `).join('');
+      <td class="text-right" style="font-size:12px;">${liq ? `<span style="color:#10b981;font-weight:600;">${App.formatCurrency(liq.valor)}</span><br><span style="color:var(--text-muted);font-size:10px;">taxa: ${App.formatCurrency(liq.taxa)}</span>` : '—'}</td>
+    </tr>`;
+  }).join('');
 }
 
 function setPeriodo(periodo, btn) {
