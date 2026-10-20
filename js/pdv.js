@@ -322,8 +322,7 @@ function mostrarRecibo(venda) {
   document.getElementById('recibo-content').innerHTML = `
     <div class="recibo">
       <div class="recibo-header">
-        <div class="recibo-loja">Alpha Max Suplementos</div>
-        <div class="recibo-sub">Ponto de Venda</div>
+        <img src="../logo.png" alt="Alpha Max" class="recibo-logo">
         <div class="recibo-sub">${App.formatDate(venda.createdAt)}</div>
       </div>
       <div class="recibo-divider"></div>

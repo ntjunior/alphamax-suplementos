@@ -787,6 +787,7 @@ canvas { display: block; }
   padding: 8px 0;
 }
 .recibo-header { text-align: center; margin-bottom: 6px; }
+.recibo-logo { width: 160px; height: auto; display: block; margin: 0 auto 4px; }
 .recibo-loja { font-size: 17px; font-weight: 700; letter-spacing: .03em; }
 .recibo-sub { font-size: 11px; color: #555; }
 .recibo-divider { border: none; border-top: 1px dashed #999; margin: 8px 0; }
