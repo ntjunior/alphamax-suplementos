@@ -185,12 +185,14 @@ const ML = (() => {
       return;
     }
     try {
-      const data = await buscarPedidosHoje();
-      const pedidos = data?.results || [];
-      const ativos = pedidos.filter(p => p.status !== 'cancelled');
-      const pendentes = ativos.filter(p => p.status === 'payment_required' || p.status === 'confirmed');
-      const total = ativos.reduce((s, p) => s + (p.total_amount || 0), 0);
-      _setKpi(ativos.length, App.formatCurrency(total), pendentes.length, true);
+      // Valida conexão com a API
+      await buscarPedidosHoje();
+
+      // Conta do banco (consistente com tabela de vendas)
+      const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
+      const vendasML = DB.getVendas().filter(v => isML(v) && App.isToday(v.createdAt));
+      const total = vendasML.reduce((s, v) => s + (v.total || 0), 0);
+      _setKpi(vendasML.length, App.formatCurrency(total), '—', true);
     } catch (e) {
       _setKpi('Erro', '—', '—', false);
       console.warn('ML KPI error:', e.message);
