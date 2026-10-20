@@ -322,7 +322,7 @@ function mostrarRecibo(venda) {
   document.getElementById('recibo-content').innerHTML = `
     <div class="recibo">
       <div class="recibo-header">
-        <img src="../logo.png" alt="Alpha Max" class="recibo-logo">
+        <img src="../logo-loja.png" alt="Alpha Max" class="recibo-logo">
         <div class="recibo-sub">${App.formatDate(venda.createdAt)}</div>
       </div>
       <div class="recibo-divider"></div>
