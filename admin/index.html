@@ -444,15 +444,8 @@
     setInterval(mlAutoSync, 5 * 60 * 1000);
   })();
 
-  document.addEventListener('visibilitychange', async () => {
-    if (!document.hidden) {
-      try {
-        const rows = await DB._select('vendas', 'order=created_at');
-        DB._cache.vendas = rows.map(r => DB._camel(r));
-      } catch(e) {}
-      carregarDashboard();
-      ML.carregarKpis();
-    }
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) mlAutoSync();
   });
 </script>
 </body>
