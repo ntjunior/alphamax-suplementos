@@ -177,7 +177,19 @@ const ML = (() => {
     let sincronizados = 0, pulados = 0;
 
     for (const ped of pedidos) {
-      const jaExiste = DB.getVendas().find(v => v.mlOrderId === String(ped.id));
+      const mlId = String(ped.id);
+      // Verifica cache E Supabase para evitar duplicatas
+      let jaExiste = DB.getVendas().find(v => v.mlOrderId === mlId);
+      if (!jaExiste) {
+        try {
+          const rows = await DB._select('vendas', `ml_order_id=eq.${mlId}&select=id,ml_order_id,ml_status`);
+          if (rows && rows.length > 0) {
+            jaExiste = DB._camel(rows[0]);
+            // Atualiza cache se estava faltando
+            if (!DB._cache.vendas.find(v => v.mlOrderId === mlId)) DB._cache.vendas.push(jaExiste);
+          }
+        } catch(e) {}
+      }
       if (jaExiste) {
         // Atualiza status se mudou
         if (jaExiste.mlStatus !== ped.status) {
