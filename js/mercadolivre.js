@@ -98,12 +98,22 @@ const ML = (() => {
     const ini = new Date(hoje); ini.setHours(0, 0, 0, 0);
     const fim = new Date(hoje); fim.setHours(23, 59, 59, 999);
 
-    return _get(
-      `/orders/search?seller=${cfg.sellerId}` +
+    const base = `/orders/search?seller=${cfg.sellerId}` +
       `&order.date_created.from=${ini.toISOString()}` +
       `&order.date_created.to=${fim.toISOString()}` +
-      `&sort=date_desc&limit=50`
-    );
+      `&sort=date_desc&limit=50`;
+
+    const [ativos, cancelados] = await Promise.all([
+      _get(base),
+      _get(base + '&order.status=cancelled').catch(() => ({ results: [] }))
+    ]);
+
+    const todos = [...(ativos?.results || []), ...(cancelados?.results || [])];
+    // deduplica por id
+    const map = {};
+    todos.forEach(p => { map[p.id] = p; });
+
+    return { results: Object.values(map) };
   }
 
   function _matchProduto(nomeML) {
