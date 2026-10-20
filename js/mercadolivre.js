@@ -204,15 +204,12 @@ const ML = (() => {
       });
 
       const total = ped.total_amount || itens.reduce((s, i) => s + i.subtotal, 0);
-      const taxaML = itens.reduce((s, i) => s + (i.taxaML || 0), 0);
 
       DB.addVenda({
         itens,
         total,
         subtotal: total,
         desconto: 0,
-        taxaML,
-        valorLiquido: total - taxaML,
         pagamento: 'mercadolivre',
         clienteNome: ped.buyer?.nickname || 'Comprador ML',
         mlOrderId: String(ped.id),
