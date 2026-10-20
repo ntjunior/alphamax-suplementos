@@ -127,13 +127,49 @@ const ML = (() => {
     const pedidos = (data?.results || []).filter(p => p.status !== 'cancelled');
 
     if (pedidos.length === 0) { log('Nenhum pedido encontrado hoje.'); return { sincronizados: 0, pulados: 0 }; }
+    // Inclui cancelados para atualizar status no banco
+    const todosPedidos = data?.results || [];
     log(`${pedidos.length} pedido(s) encontrado(s).`);
+
+    // Atualiza status de pedidos já salvos que foram cancelados
+    let cancelados = 0;
+    for (const ped of todosPedidos) {
+      if (ped.status === 'cancelled') {
+        const existente = DB.getVendas().find(v => v.mlOrderId === String(ped.id));
+        if (existente && existente.mlStatus !== 'cancelled') {
+          await DB._update('vendas', existente.id, { mlStatus: 'cancelled' });
+          const idx = DB._cache.vendas.findIndex(v => v.id === existente.id);
+          if (idx >= 0) DB._cache.vendas[idx].mlStatus = 'cancelled';
+          // Devolve estoque
+          for (const item of existente.itens || []) {
+            if (item.produtoId) {
+              const prod = DB.getProdutos().find(p => p.id === item.produtoId);
+              if (prod) {
+                DB.updateProduto(item.produtoId, { estoque: (prod.estoque || 0) + item.quantidade });
+                log(`Estoque devolvido: ${prod.nome} +${item.quantidade}`);
+              }
+            }
+          }
+          cancelados++;
+          log(`Pedido #${ped.id} marcado como cancelado.`);
+        }
+      }
+    }
 
     let sincronizados = 0, pulados = 0;
 
     for (const ped of pedidos) {
       const jaExiste = DB.getVendas().find(v => v.mlOrderId === String(ped.id));
-      if (jaExiste) { pulados++; continue; }
+      if (jaExiste) {
+        // Atualiza status se mudou
+        if (jaExiste.mlStatus !== ped.status) {
+          await DB._update('vendas', jaExiste.id, { mlStatus: ped.status });
+          const idx = DB._cache.vendas.findIndex(v => v.id === jaExiste.id);
+          if (idx >= 0) DB._cache.vendas[idx].mlStatus = ped.status;
+          log(`Pedido #${ped.id} status atualizado: ${ped.status}`);
+        }
+        pulados++; continue;
+      }
 
       const itens = (ped.order_items || []).map(oi => {
         const prod = _matchProduto(oi.item?.title || '');
@@ -175,8 +211,8 @@ const ML = (() => {
       log(`Pedido #${ped.id} importado.`);
     }
 
-    log(`Concluído: ${sincronizados} importado(s), ${pulados} já existia(m).`);
-    return { sincronizados, pulados };
+    log(`Concluído: ${sincronizados} importado(s), ${pulados} já existia(m), ${cancelados} cancelado(s).`);
+    return { sincronizados, pulados, cancelados };
   }
 
   async function carregarKpis() {
