@@ -150,16 +150,31 @@ function renderTabelaVendas(vendas) {
   const tbody = document.getElementById('tbody-vendas-relatorio');
 
   if (sorted.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted" style="padding:24px;">Nenhuma venda no período selecionado</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:24px;">Nenhuma venda no período selecionado</td></tr>';
     return;
   }
 
+  const statusBadge = v => {
+    const s = v.mlStatus || (v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre' ? 'paid' : 'concluida');
+    const map = {
+      cancelled:        ['#ef4444','Cancelado'],
+      payment_required: ['#f59e0b','Aguard. Pgto'],
+      confirmed:        ['#3b82f6','Confirmado'],
+      payment_in_process: ['#8b5cf6','Pgto Processando'],
+      paid:             ['#10b981','Pago'],
+      concluida:        ['#10b981','Concluída'],
+    };
+    const [color, label] = map[s] || ['#6b7280', s];
+    return `<span style="font-size:11px;font-weight:600;color:${color};background:${color}18;padding:2px 8px;border-radius:20px;white-space:nowrap;">${label}</span>`;
+  };
+
   tbody.innerHTML = sorted.map(v => `
-    <tr>
+    <tr style="${(v.mlStatus === 'cancelled') ? 'opacity:.5;text-decoration:line-through;' : ''}">
       <td style="white-space:nowrap;">${App.formatDate(v.createdAt)}</td>
       <td>${v.clienteNome || 'Consumidor Final'}</td>
       <td style="font-size:12px;color:var(--text-muted);">${v.itens.map(i => `${i.quantidade}x ${i.nome.substring(0, 20)}`).join(', ')}</td>
       <td>${App.getPagamentoBadge(v.pagamento)}</td>
+      <td>${statusBadge(v)}</td>
       <td class="text-right">${App.formatCurrency(v.subtotal)}</td>
       <td class="text-right text-green">${v.desconto > 0 ? '- ' + App.formatCurrency(v.desconto) : '—'}</td>
       <td class="text-right font-bold text-red">${App.formatCurrency(v.total)}</td>
