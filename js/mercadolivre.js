@@ -129,13 +129,56 @@ const ML = (() => {
   }
 
   let _syncLock = false;
+  const _LOCK_KEY = 'ml_sync_lock';
+  const _LOCK_TTL = 60000; // 60s
+
+  function _acquireCrossTabLock() {
+    try {
+      const now = Date.now();
+      const raw = localStorage.getItem(_LOCK_KEY);
+      if (raw) {
+        const ts = parseInt(raw, 10) || 0;
+        if (now - ts < _LOCK_TTL) return false;
+      }
+      localStorage.setItem(_LOCK_KEY, String(now));
+      return true;
+    } catch { return true; }
+  }
+  function _releaseCrossTabLock() {
+    try { localStorage.removeItem(_LOCK_KEY); } catch {}
+  }
+
+  async function _limparDuplicatas(log) {
+    try {
+      const rows = await DB._select('vendas', 'origem=eq.mercadolivre&select=id,ml_order_id,created_at&order=created_at.asc');
+      const grupos = {};
+      for (const r of rows) {
+        if (!r.ml_order_id) continue;
+        (grupos[r.ml_order_id] = grupos[r.ml_order_id] || []).push(r);
+      }
+      let removidos = 0;
+      for (const mlId in grupos) {
+        const lista = grupos[mlId];
+        if (lista.length > 1) {
+          for (let i = 1; i < lista.length; i++) {
+            await DB._delete('vendas', lista[i].id);
+            DB._cache.vendas = DB._cache.vendas.filter(v => v.id !== lista[i].id);
+            removidos++;
+          }
+          log(`Duplicata removida: pedido #${mlId} (${lista.length - 1} extra).`);
+        }
+      }
+      return removidos;
+    } catch (e) { console.warn('[ML] cleanup falhou:', e.message); return 0; }
+  }
 
   async function sincronizar(onLog) {
     if (!isOk()) throw new Error('Configure o Mercado Livre primeiro.');
-    if (_syncLock) return { sincronizados: 0, pulados: 0, cancelados: 0 };
+    if (_syncLock) return { sincronizados: 0, pulados: 0, cancelados: 0, duplicatasRemovidas: 0 };
+    if (!_acquireCrossTabLock()) return { sincronizados: 0, pulados: 0, cancelados: 0, duplicatasRemovidas: 0 };
     _syncLock = true;
     const log = onLog || (() => {});
-    try { return await _sincronizarInterno(log); } finally { _syncLock = false; }
+    try { return await _sincronizarInterno(log); } finally { _syncLock = false; _releaseCrossTabLock(); }
   }
 
   async function _sincronizarInterno(log) {
@@ -175,21 +218,21 @@ const ML = (() => {
     }
 
     let sincronizados = 0, pulados = 0;
+    // Antes de importar, remove duplicatas remanescentes de syncs antigos
+    const duplicatasRemovidas = await _limparDuplicatas(log);
 
     for (const ped of pedidos) {
       const mlId = String(ped.id);
-      // Verifica cache E Supabase para evitar duplicatas
-      let jaExiste = DB.getVendas().find(v => v.mlOrderId === mlId);
-      if (!jaExiste) {
-        try {
-          const rows = await DB._select('vendas', `ml_order_id=eq.${mlId}&select=id,ml_order_id,ml_status`);
-          if (rows && rows.length > 0) {
-            jaExiste = DB._camel(rows[0]);
-            // Atualiza cache se estava faltando
-            if (!DB._cache.vendas.find(v => v.mlOrderId === mlId)) DB._cache.vendas.push(jaExiste);
-          }
-        } catch(e) {}
-      }
+      // Sempre consulta Supabase (fonte de verdade), não só o cache
+      let jaExiste = null;
+      try {
+        const rows = await DB._select('vendas', `ml_order_id=eq.${mlId}&select=id,ml_order_id,ml_status`);
+        if (rows && rows.length > 0) {
+          jaExiste = DB._camel(rows[0]);
+          if (!DB._cache.vendas.find(v => v.mlOrderId === mlId)) DB._cache.vendas.push(jaExiste);
+        }
+      } catch(e) {}
+      if (!jaExiste) jaExiste = DB.getVendas().find(v => v.mlOrderId === mlId);
       if (jaExiste) {
         // Atualiza status se mudou
         if (jaExiste.mlStatus !== ped.status) {
@@ -217,18 +260,41 @@ const ML = (() => {
 
       const total = ped.total_amount || itens.reduce((s, i) => s + i.subtotal, 0);
 
-      DB.addVenda({
-        itens,
-        total,
-        subtotal: total,
-        desconto: 0,
-        pagamento: 'mercadolivre',
-        clienteNome: ped.buyer?.nickname || 'Comprador ML',
-        mlOrderId: String(ped.id),
-        mlStatus: ped.status,
-        origem: 'mercadolivre',
-        createdAt: ped.date_created
-      });
+      // Re-verifica logo antes do insert (fecha janela de corrida)
+      try {
+        const dup = await DB._select('vendas', `ml_order_id=eq.${mlId}&select=id`);
+        if (dup && dup.length > 0) {
+          log(`Pedido #${mlId} já existia (double-check). Pulado.`);
+          pulados++; continue;
+        }
+      } catch(e) {}
+
+      const vendaId = DB._id();
+      try {
+        await DB._insert('vendas', {
+          id: vendaId,
+          itens,
+          total,
+          subtotal: total,
+          desconto: 0,
+          pagamento: 'mercadolivre',
+          clienteNome: ped.buyer?.nickname || 'Comprador ML',
+          mlOrderId: String(ped.id),
+          mlStatus: ped.status,
+          origem: 'mercadolivre',
+          createdAt: ped.date_created || new Date().toISOString()
+        });
+        DB._cache.vendas.push({
+          id: vendaId, itens, total, subtotal: total, desconto: 0,
+          pagamento: 'mercadolivre', clienteNome: ped.buyer?.nickname || 'Comprador ML',
+          mlOrderId: String(ped.id), mlStatus: ped.status, origem: 'mercadolivre',
+          createdAt: ped.date_created || new Date().toISOString()
+        });
+      } catch (e) {
+        console.error('[ML] insert falhou:', e.message);
+        log(`Falha ao inserir pedido #${mlId}: ${e.message}`);
+        continue;
+      }
 
       for (const item of itens) {
         if (item.produtoId) {
@@ -244,12 +310,12 @@ const ML = (() => {
       log(`Pedido #${ped.id} importado.`);
     }
 
-    log(`Concluído: ${sincronizados} importado(s), ${pulados} já existia(m), ${cancelados} cancelado(s).`);
+    log(`Concluído: ${sincronizados} importado(s), ${pulados} já existia(m), ${cancelados} cancelado(s)${duplicatasRemovidas ? `, ${duplicatasRemovidas} duplicata(s) removida(s)` : ''}.`);
 
     // Aguarda inserts chegarem ao Supabase antes de liberar o lock
     if (sincronizados > 0 || cancelados > 0) await new Promise(r => setTimeout(r, 1500));
 
-    return { sincronizados, pulados, cancelados };
+    return { sincronizados, pulados, cancelados, duplicatasRemovidas };
   }
 
   async function carregarKpis() {
