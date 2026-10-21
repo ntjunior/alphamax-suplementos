@@ -116,6 +116,24 @@ const ML = (() => {
     return { results: Object.values(map) };
   }
 
+  async function buscarCanceladosRecentes(diasAtras = 7) {
+    const cfg = getCfg();
+    if (!isOk()) return [];
+    const fim = new Date();
+    const ini = new Date(fim); ini.setDate(ini.getDate() - diasAtras);
+    const base = `/orders/search?seller=${cfg.sellerId}` +
+      `&order.date_last_updated.from=${ini.toISOString()}` +
+      `&order.date_last_updated.to=${fim.toISOString()}` +
+      `&order.status=cancelled&sort=date_desc&limit=50`;
+    try {
+      const r = await _get(base);
+      return r?.results || [];
+    } catch (e) {
+      console.warn('[ML] buscarCanceladosRecentes falhou:', e.message);
+      return [];
+    }
+  }
+
   function _matchProduto(nomeML) {
     const produtos = DB.getProdutos();
     const palavrasML = nomeML.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
@@ -187,10 +205,20 @@ const ML = (() => {
     const data = await buscarPedidosHoje();
     const pedidos = (data?.results || []).filter(p => p.status !== 'cancelled');
 
-    if (pedidos.length === 0) { log('Nenhum pedido encontrado hoje.'); return { sincronizados: 0, pulados: 0 }; }
-    // Inclui cancelados para atualizar status no banco
+    // Inclui cancelados de hoje
     const todosPedidos = data?.results || [];
-    log(`${pedidos.length} pedido(s) encontrado(s).`);
+
+    // Também busca pedidos cancelados nos últimos 7 dias (pega cancelamentos de pedidos antigos)
+    const canceladosRecentes = await buscarCanceladosRecentes(7);
+    const idsExistentes = new Set(todosPedidos.map(p => String(p.id)));
+    let canceladosExtras = 0;
+    for (const c of canceladosRecentes) {
+      if (!idsExistentes.has(String(c.id))) { todosPedidos.push(c); canceladosExtras++; }
+    }
+    if (canceladosExtras) log(`${canceladosExtras} cancelado(s) recente(s) de pedidos antigos detectado(s).`);
+
+    log(`${pedidos.length} pedido(s) encontrado(s) hoje.`);
+    if (pedidos.length === 0 && todosPedidos.length === 0) { log('Nenhum pedido para processar.'); return { sincronizados: 0, pulados: 0, cancelados: 0, duplicatasRemovidas: 0 }; }
 
     // Atualiza status de pedidos já salvos que foram cancelados
     let cancelados = 0;
