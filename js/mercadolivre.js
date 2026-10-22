@@ -261,6 +261,54 @@ const ML = (() => {
     });
   }
 
+  // Verifica se um pedido já salvo precisa de recálculo (dados antigos/inconsistentes)
+  function _precisaRecalcular(itensAtuais) {
+    if (!Array.isArray(itensAtuais) || itensAtuais.length === 0) return false;
+    const semDetalhes = !itensAtuais[0]?.taxaMLDetalhes;
+    if (semDetalhes) return true;
+    const formatoAntigo = itensAtuais[0]?.taxaMLDetalhes?.tarifaTotal === undefined;
+    if (formatoAntigo) return true;
+    const envioAtual = itensAtuais.reduce((s, i) => s + (Number(i.taxaMLDetalhes?.envio) || 0), 0);
+    if (envioAtual === 0) return true;
+    const inconsistente = itensAtuais.some(i => {
+      const td = i.taxaMLDetalhes || {};
+      const esperado = (Number(td.tarifaTotal) || 0) + (Number(td.envio) || 0);
+      return esperado > 0 && Math.abs((Number(i.taxaML) || 0) - esperado) > 0.02;
+    });
+    return inconsistente;
+  }
+
+  // Recalcula retroativamente pedidos ANTIGOS armazenados (fora da janela de hoje)
+  // Busca cada /orders/{id} individualmente e aplica a nova lógica de taxas.
+  async function _recalcularPedidosAntigos(log) {
+    const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
+    const vendasML = DB.getVendas().filter(isML);
+    let corrigidos = 0, erros = 0;
+    for (const v of vendasML) {
+      if (!v.mlOrderId) continue;
+      const itensAtuais = Array.isArray(v.itens) ? v.itens : [];
+      if (!_precisaRecalcular(itensAtuais)) continue;
+      try {
+        const ped = await _buscarPedidoDetalhado(v.mlOrderId);
+        if (!ped || !ped.order_items || ped.order_items.length === 0) { erros++; continue; }
+        const novosItens = await _montarItens(ped);
+        for (let i = 0; i < novosItens.length; i++) {
+          const antigo = itensAtuais[i];
+          if (antigo?.produtoId && !novosItens[i].produtoId) novosItens[i].produtoId = antigo.produtoId;
+        }
+        await DB._update('vendas', v.id, { itens: novosItens });
+        const idx = DB._cache.vendas.findIndex(x => x.id === v.id);
+        if (idx >= 0) DB._cache.vendas[idx].itens = novosItens;
+        corrigidos++;
+        log(`Pedido #${v.mlOrderId} recalculado retroativamente.`);
+      } catch (e) {
+        erros++;
+        console.warn(`[ML] recalc retroativo #${v.mlOrderId} falhou:`, e.message);
+      }
+    }
+    return { corrigidos, erros };
+  }
+
   async function _limparDuplicatas(log) {
     try {
       const rows = await DB._select('vendas', 'origem=eq.mercadolivre&select=id,ml_order_id,created_at&order=created_at.asc');
@@ -451,12 +499,18 @@ const ML = (() => {
       log(`Pedido #${ped.id} importado.`);
     }
 
-    log(`Concluído: ${sincronizados} importado(s), ${pulados} já existia(m), ${cancelados} cancelado(s)${duplicatasRemovidas ? `, ${duplicatasRemovidas} duplicata(s) removida(s)` : ''}.`);
+    // Recálculo retroativo de pedidos antigos com dados inconsistentes
+    log('Verificando pedidos antigos com taxas inconsistentes...');
+    const { corrigidos: recalculados, erros: errosRecalc } = await _recalcularPedidosAntigos(log);
+    if (recalculados > 0) log(`${recalculados} pedido(s) antigo(s) recalculado(s).`);
+    if (errosRecalc > 0) log(`${errosRecalc} pedido(s) antigo(s) não puderam ser recalculados (verifique logs).`);
+
+    log(`Concluído: ${sincronizados} importado(s), ${pulados} já existia(m), ${cancelados} cancelado(s)${duplicatasRemovidas ? `, ${duplicatasRemovidas} duplicata(s) removida(s)` : ''}${recalculados ? `, ${recalculados} retroativo(s)` : ''}.`);
 
     // Aguarda inserts chegarem ao Supabase antes de liberar o lock
-    if (sincronizados > 0 || cancelados > 0) await new Promise(r => setTimeout(r, 1500));
+    if (sincronizados > 0 || cancelados > 0 || recalculados > 0) await new Promise(r => setTimeout(r, 1500));
 
-    return { sincronizados, pulados, cancelados, duplicatasRemovidas };
+    return { sincronizados, pulados, cancelados, duplicatasRemovidas, recalculados };
   }
 
   async function carregarKpis() {
