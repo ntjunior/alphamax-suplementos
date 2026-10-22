@@ -183,15 +183,27 @@ const ML = (() => {
     try { localStorage.removeItem(_LOCK_KEY); } catch {}
   }
 
-  // Extrai todas as deduções do pedido: tarifa ML, taxa parcelamento (MP), custo de envio pago pelo vendedor
-  // SOMENTE 2 fontes aceitas para envio (ambas são o custo REAL do vendedor):
-  //   1) derivação via net_received_amount (quando pagamento já liquidou)
-  //   2) base_cost do shipment (sempre o custo que o ML cobra do vendedor)
-  // ped.shipping.cost e payments[].shipping_cost retornam list_cost (frete cheio
-  // exibido ao comprador) — NUNCA usar como custo do vendedor.
+  // Extrai deduções reais do pedido: tarifa ML e custo real de envio do vendedor.
+  //
+  // Fontes autoritárias (validadas via /shipments/{id}/costs):
+  //   - Tarifa ML:
+  //       1) soma de payments[].marketplace_fee (quando pagamento já liquidou)
+  //       2) soma de order_items[].sale_fee (sempre populado — fonte autoritária)
+  //   - Envio (custo REAL cobrado do vendedor, já com desconto ML aplicado):
+  //       1) /shipments/{id}/costs → senders[].cost (fonte canônica)
+  //       2) shipping_option.list_cost no shipment (bate com senders.cost)
+  //       3) derivação total - marketplaceFee - net_received (quando liquidou)
+  //   NÃO usar: base_cost (preço cheio sem desconto), ped.shipping.cost, payments.shipping_cost
   async function _calcularTaxas(ped) {
     const payments = ped.payments || [];
-    const marketplaceFee = payments.reduce((s, p) => s + (Number(p.marketplace_fee) || 0), 0);
+    const orderItems = ped.order_items || [];
+    const totalAmount = Number(ped.total_amount) || 0;
+
+    let marketplaceFee = payments.reduce((s, p) => s + (Number(p.marketplace_fee) || 0), 0);
+    // Fallback autoritativo: order_items[].sale_fee sempre existe
+    if (marketplaceFee === 0) {
+      marketplaceFee = orderItems.reduce((s, oi) => s + (Number(oi.sale_fee) || 0), 0);
+    }
     const financingFee = payments.reduce((s, p) => {
       const td = p.transaction_details || {};
       return s + (Number(td.financing_fee) || 0);
@@ -200,30 +212,41 @@ const ML = (() => {
       const td = p.transaction_details || {};
       return s + (Number(td.net_received_amount) || 0);
     }, 0);
-    const totalAmount = Number(ped.total_amount) || 0;
 
     let shippingCost = 0;
     let fonteEnvio = 'none';
 
-    // 1. FONTE PRINCIPAL E AUTORITÁRIA: derivação via net_received_amount.
-    //    É o fato contábil do Mercado Pago (bate 100% com "Total a receber").
-    //    envio_vendedor = total_venda - tarifa_ML - valor_liquido_recebido
-    if (netReceived > 0 && marketplaceFee > 0 && totalAmount > 0) {
+    if (ped.shipping?.id) {
+      // 1. Fonte canônica: /shipments/{id}/costs → senders[].cost
+      try {
+        const costs = await _get(`/shipments/${ped.shipping.id}/costs`);
+        const senders = Array.isArray(costs?.senders) ? costs.senders : [];
+        const sellerCost = senders.reduce((s, sd) => s + (Number(sd?.cost) || 0), 0);
+        if (sellerCost > 0) { shippingCost = sellerCost; fonteEnvio = 'costs_senders'; }
+      } catch(e) {}
+
+      // 2. Fallback: shipping_option.list_cost (= custo real já com desconto ML)
+      if (!shippingCost) {
+        try {
+          const sh = await _get(`/shipments/${ped.shipping.id}`);
+          const lc = Number(sh?.shipping_option?.list_cost) || 0;
+          if (lc > 0) { shippingCost = lc; fonteEnvio = 'shipping_option.list_cost'; }
+          // último recurso: base_cost (pode ser preço cheio, mas melhor do que nada)
+          if (!shippingCost) {
+            const bc = Number(sh?.base_cost) || 0;
+            if (bc > 0) { shippingCost = bc; fonteEnvio = 'base_cost'; }
+          }
+        } catch(e) {}
+      }
+    }
+
+    // 3. Última checagem: derivação via net_received (se liquidado)
+    if (!shippingCost && netReceived > 0 && marketplaceFee > 0 && totalAmount > 0) {
       const calc = totalAmount - marketplaceFee - netReceived;
       if (calc > -0.01 && calc < totalAmount) {
         shippingCost = Math.max(0, calc);
         fonteEnvio = 'net_received';
       }
-    }
-    // 2. Fallback: base_cost do shipment (quando net_received ainda não liquidou).
-    //    NÃO sobrescreve net_received — menos confiável para free shipping,
-    //    onde base_cost pode refletir o preço cheio e não a dedução real do vendedor.
-    if (!shippingCost && ped.shipping?.id) {
-      try {
-        const s = await _get(`/shipments/${ped.shipping.id}`);
-        const bc = Number(s?.base_cost) || Number(s?.shipping_option?.cost) || Number(s?.cost) || 0;
-        if (bc > 0) { shippingCost = bc; fonteEnvio = 'base_cost'; }
-      } catch(e) {}
     }
 
     return { marketplaceFee, financingFee, shippingCost, netReceived, total: marketplaceFee + financingFee + shippingCost, fonteEnvio };
