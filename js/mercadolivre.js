@@ -205,31 +205,25 @@ const ML = (() => {
     let shippingCost = 0;
     let fonteEnvio = 'none';
 
-    // Busca o shipment UMA vez (fonte canônica para base_cost)
-    let shipment = null;
-    if (ped.shipping?.id) {
-      try { shipment = await _get(`/shipments/${ped.shipping.id}`); } catch(e) {}
-    }
-    const baseCost = Number(shipment?.base_cost) || Number(shipment?.shipping_option?.cost) || Number(shipment?.cost) || 0;
-
-    // 1. Derivação via net_received: só confia se o resultado for coerente com base_cost
+    // 1. FONTE PRINCIPAL E AUTORITÁRIA: derivação via net_received_amount.
+    //    É o fato contábil do Mercado Pago (bate 100% com "Total a receber").
+    //    envio_vendedor = total_venda - tarifa_ML - valor_liquido_recebido
     if (netReceived > 0 && marketplaceFee > 0 && totalAmount > 0) {
       const calc = totalAmount - marketplaceFee - netReceived;
       if (calc > -0.01 && calc < totalAmount) {
-        // Se temos base_cost, só aceita derivação se divergir pouco (<R$0,20)
-        if (baseCost > 0 && Math.abs(calc - baseCost) > 0.2) {
-          shippingCost = baseCost;
-          fonteEnvio = 'base_cost';
-        } else {
-          shippingCost = Math.max(0, calc);
-          fonteEnvio = 'net_received';
-        }
+        shippingCost = Math.max(0, calc);
+        fonteEnvio = 'net_received';
       }
     }
-    // 2. Fallback: base_cost do shipment (correto para free shipping)
-    if (!shippingCost && baseCost > 0) {
-      shippingCost = baseCost;
-      fonteEnvio = 'base_cost';
+    // 2. Fallback: base_cost do shipment (quando net_received ainda não liquidou).
+    //    NÃO sobrescreve net_received — menos confiável para free shipping,
+    //    onde base_cost pode refletir o preço cheio e não a dedução real do vendedor.
+    if (!shippingCost && ped.shipping?.id) {
+      try {
+        const s = await _get(`/shipments/${ped.shipping.id}`);
+        const bc = Number(s?.base_cost) || Number(s?.shipping_option?.cost) || Number(s?.cost) || 0;
+        if (bc > 0) { shippingCost = bc; fonteEnvio = 'base_cost'; }
+      } catch(e) {}
     }
 
     return { marketplaceFee, financingFee, shippingCost, netReceived, total: marketplaceFee + financingFee + shippingCost, fonteEnvio };
