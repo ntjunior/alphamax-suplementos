@@ -372,17 +372,13 @@ const ML = (() => {
           const formatoAntigo = !semDetalhes && itensAtuais[0]?.taxaMLDetalhes && itensAtuais[0].taxaMLDetalhes.tarifaTotal === undefined;
           const envioAtual = itensAtuais.reduce((s, i) => s + (Number(i.taxaMLDetalhes?.envio) || 0), 0);
           const envioZerado = envioAtual === 0 && ped.shipping;
-          // Verifica se o líquido calculado bate com o net_received_amount que a API retorna.
-          // Se divergir mais de R$0,05, força recálculo (dado armazenado está errado).
-          let liquidoDivergente = false;
-          try {
-            const netReceived = (ped.payments || []).reduce((s, p) => s + (Number(p.transaction_details?.net_received_amount) || 0), 0);
-            if (netReceived > 0) {
-              const liquidoAtual = (Number(jaExiste.total) || 0) - taxaTotalAtual;
-              if (Math.abs(liquidoAtual - netReceived) > 0.05) liquidoDivergente = true;
-            }
-          } catch(e) {}
-          if ((semDetalhes || taxasZeradas || formatoAntigo || envioZerado || liquidoDivergente) && (ped.order_items || []).length > 0) {
+          // Check de consistência interna: taxaML deve = tarifaTotal + envio
+          const taxaMLInconsistente = !semDetalhes && itensAtuais.some(i => {
+            const td = i.taxaMLDetalhes || {};
+            const esperado = (Number(td.tarifaTotal) || 0) + (Number(td.envio) || 0);
+            return esperado > 0 && Math.abs((Number(i.taxaML) || 0) - esperado) > 0.02;
+          });
+          if ((semDetalhes || taxasZeradas || formatoAntigo || envioZerado || taxaMLInconsistente) && (ped.order_items || []).length > 0) {
             const novosItens = await _montarItens(ped);
             // preserva produtoId existente quando possível
             for (let i = 0; i < novosItens.length; i++) {
