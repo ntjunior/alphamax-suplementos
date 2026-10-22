@@ -193,12 +193,20 @@
             <strong id="ml-fin-bruto">—</strong>
           </div>
           <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
-            <span>(-) Tarifa de venda ML</span>
-            <strong id="ml-fin-taxa-venda">—</strong>
+            <span>(-) Tarifa de venda total (ML + MP + parcelamento)</span>
+            <strong id="ml-fin-tarifa">—</strong>
           </div>
-          <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
-            <span>(-) Taxa de parcelamento (MP)</span>
-            <strong id="ml-fin-taxa-parc">—</strong>
+          <div style="display:flex;justify-content:space-between;padding:4px 16px 2px 32px;font-size:12px;color:var(--text-muted);">
+            <span>↳ Custo por vender no ML</span>
+            <span id="ml-fin-sub-venda">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:2px 16px;font-size:12px;color:var(--text-muted);">
+            <span>↳ Custo por cobrar no Mercado Pago</span>
+            <span id="ml-fin-sub-mp">—</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:2px 16px 12px 32px;font-size:12px;color:var(--text-muted);border-bottom:1px solid var(--border);">
+            <span>↳ Taxa de parcelamento</span>
+            <span id="ml-fin-sub-parc">—</span>
           </div>
           <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
             <span>(-) Custo de envio</span>
@@ -240,8 +248,7 @@
               <th>Itens</th>
               <th>Status</th>
               <th class="text-right">Total</th>
-              <th class="text-right" title="Custo por vender no ML + Mercado Pago">Tarifa ML</th>
-              <th class="text-right" title="Taxa de parcelamento (Mercado Pago)">Parcelamento</th>
+              <th class="text-right" title="Tarifa total ML (venda + cobrança MP + parcelamento)">Tarifa ML</th>
               <th class="text-right" title="Custo de envio pago pelo vendedor">Envio</th>
               <th class="text-right">A Receber</th>
             </tr>
@@ -311,7 +318,7 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
-<script src="../js/mercadolivre.js?v=2.3.0"></script>
+<script src="../js/mercadolivre.js?v=2.4.0"></script>
 <script>
   let periodoAtual = 'mes';
 
@@ -357,14 +364,18 @@
   }
 
   function _taxaDetalhada(v) {
-    const d = { venda: 0, parcelamento: 0, envio: 0 };
+    const d = { venda: 0, cobrancaMP: 0, parcelamento: 0, tarifaTotal: 0, envio: 0 };
     for (const i of (v.itens || [])) {
-      if (i.taxaMLDetalhes) {
-        d.venda += i.taxaMLDetalhes.venda || 0;
-        d.parcelamento += i.taxaMLDetalhes.parcelamento || 0;
-        d.envio += i.taxaMLDetalhes.envio || 0;
+      const td = i.taxaMLDetalhes;
+      if (td) {
+        d.venda += td.venda || 0;
+        d.cobrancaMP += td.cobrancaMP || 0;
+        d.parcelamento += td.parcelamento || 0;
+        d.tarifaTotal += td.tarifaTotal || ((td.venda || 0) + (td.cobrancaMP || 0) + (td.parcelamento || 0));
+        d.envio += td.envio || 0;
       } else {
         d.venda += i.taxaML || 0;
+        d.tarifaTotal += i.taxaML || 0;
       }
     }
     return d;
@@ -399,9 +410,13 @@
     const taxas = ativas.reduce((s, v) => s + _taxaTotal(v), 0);
     const detTaxas = ativas.reduce((acc, v) => {
       const d = _taxaDetalhada(v);
-      acc.venda += d.venda; acc.parcelamento += d.parcelamento; acc.envio += d.envio;
+      acc.venda += d.venda;
+      acc.cobrancaMP += d.cobrancaMP;
+      acc.parcelamento += d.parcelamento;
+      acc.tarifaTotal += d.tarifaTotal;
+      acc.envio += d.envio;
       return acc;
-    }, { venda: 0, parcelamento: 0, envio: 0 });
+    }, { venda: 0, cobrancaMP: 0, parcelamento: 0, tarifaTotal: 0, envio: 0 });
     const liquido = fatBruto - taxas;
     const ticket = ativas.length > 0 ? fatBruto / ativas.length : 0;
     const totalCanc = canceladas.reduce((s, v) => s + (v.total || 0), 0);
@@ -425,8 +440,8 @@
     g('ml-k-fat-bruto').textContent = App.formatCurrency(fatBruto);
     g('ml-k-fat-trend').outerHTML = `<span id="ml-k-fat-trend">${_trendBadge(fatBruto, fatAnt)}</span>`;
     g('ml-k-liquido').textContent = App.formatCurrency(liquido);
-    g('ml-k-taxas').textContent = App.formatCurrency(taxas);
-    g('ml-k-taxas-sub').textContent = `${pctTaxa.toFixed(1)}% do faturamento`;
+    g('ml-k-taxas').textContent = App.formatCurrency(detTaxas.tarifaTotal);
+    g('ml-k-taxas-sub').textContent = `${(fatBruto > 0 ? (detTaxas.tarifaTotal / fatBruto) * 100 : 0).toFixed(1)}% do faturamento`;
     g('ml-k-ticket').textContent = App.formatCurrency(ticket);
     g('ml-k-cancelados').textContent = canceladas.length;
     g('ml-k-cancelados-sub').textContent = `${pctCanc.toFixed(1)}% do total — ${App.formatCurrency(totalCanc)}`;
@@ -434,8 +449,10 @@
 
     // Resumo financeiro
     g('ml-fin-bruto').textContent = App.formatCurrency(fatBruto);
-    g('ml-fin-taxa-venda').textContent = '- ' + App.formatCurrency(detTaxas.venda);
-    g('ml-fin-taxa-parc').textContent = '- ' + App.formatCurrency(detTaxas.parcelamento);
+    g('ml-fin-tarifa').textContent = '- ' + App.formatCurrency(detTaxas.tarifaTotal);
+    g('ml-fin-sub-venda').textContent = App.formatCurrency(detTaxas.venda);
+    g('ml-fin-sub-mp').textContent = App.formatCurrency(detTaxas.cobrancaMP);
+    g('ml-fin-sub-parc').textContent = App.formatCurrency(detTaxas.parcelamento);
     g('ml-fin-envio').textContent = '- ' + App.formatCurrency(detTaxas.envio);
     g('ml-fin-cancel').textContent = '- ' + App.formatCurrency(totalCanc);
     g('ml-fin-liquido').textContent = App.formatCurrency(liquido);
@@ -476,7 +493,7 @@
     const tbodyPed = g('ml-tbody-pedidos');
     g('ml-count').textContent = vendas.length > 0 ? `${vendas.length} pedido(s)` : '';
     if (vendas.length === 0) {
-      tbodyPed.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="padding:24px;">Sem pedidos no período</td></tr>';
+      tbodyPed.innerHTML = '<tr><td colspan="9" class="text-center text-muted" style="padding:24px;">Sem pedidos no período</td></tr>';
     } else {
       tbodyPed.innerHTML = [...vendas]
         .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -488,6 +505,7 @@
           const itensDesc = (v.itens || []).map(i => `${i.quantidade || i.qty || 1}× ${i.nome}`).join(', ');
           const corCusto = 'color:#991b1b;';
           const zero = v => v > 0 ? App.formatCurrency(v) : '—';
+          const tipTarifa = `Venda ML: ${App.formatCurrency(d.venda)}&#10;Cobrança MP: ${App.formatCurrency(d.cobrancaMP)}&#10;Parcelamento: ${App.formatCurrency(d.parcelamento)}`;
           return `
             <tr style="${cancelLine}">
               <td>${App.formatDate(v.createdAt)}</td>
@@ -496,8 +514,7 @@
               <td style="max-width:220px;font-size:12px;" title="${itensDesc}">${itensDesc.length > 60 ? itensDesc.slice(0, 60) + '…' : itensDesc}</td>
               <td>${_statusBadge(v.mlStatus)}</td>
               <td class="text-right text-red font-bold">${App.formatCurrency(v.total || 0)}</td>
-              <td class="text-right" style="${corCusto}">${zero(d.venda)}</td>
-              <td class="text-right" style="${corCusto}">${zero(d.parcelamento)}</td>
+              <td class="text-right" style="${corCusto}cursor:help;" title="${tipTarifa}">${zero(d.tarifaTotal)}</td>
               <td class="text-right" style="${corCusto}">${zero(d.envio)}</td>
               <td class="text-right" style="color:var(--green);font-weight:700;">${App.formatCurrency(liquidoV)}</td>
             </tr>`;

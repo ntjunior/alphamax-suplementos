@@ -214,22 +214,31 @@ const ML = (() => {
     }
     const taxas = await _calcularTaxas(pedCompleto);
     const subtotalItens = (pedCompleto.order_items || []).reduce((s, oi) => s + (oi.quantity * oi.unit_price), 0);
+    // marketplace_fee JÁ é o total da tarifa ML (venda + cobrança MP + parcelamento)
+    // financing_fee é só a parcela informativa — não somar separado
     return (pedCompleto.order_items || []).map(oi => {
       const sub = oi.quantity * oi.unit_price;
       const prop = subtotalItens > 0 ? sub / subtotalItens : 1;
       const prod = _matchProduto(oi.item?.title || '');
-      const vendaFee = Number(oi.sale_fee) > 0 ? Number(oi.sale_fee) : taxas.marketplaceFee * prop;
+      const tarifaTotalML = taxas.marketplaceFee * prop;      // ex: R$7,01
+      const envio = taxas.shippingCost * prop;                 // ex: R$14,45
+      const parcelamento = taxas.financingFee * prop;          // ex: R$0,07 (já incluso em tarifaTotalML)
+      const vendaML = Number(oi.sale_fee) > 0 ? Number(oi.sale_fee) : 0; // ex: R$5,33
+      const cobrancaMP = Math.max(0, tarifaTotalML - vendaML - parcelamento); // ex: R$1,61
       return {
         id: oi.item?.id || '',
         nome: oi.item?.title || 'Produto ML',
         quantidade: oi.quantity,
         precoUnitario: oi.unit_price,
         subtotal: sub,
-        taxaML: vendaFee + (taxas.financingFee * prop) + (taxas.shippingCost * prop),
+        // taxaML = somente deduções reais (tarifa total + envio) — SEM duplicar parcelamento
+        taxaML: tarifaTotalML + envio,
         taxaMLDetalhes: {
-          venda: vendaFee,
-          parcelamento: taxas.financingFee * prop,
-          envio: taxas.shippingCost * prop
+          venda: vendaML,
+          cobrancaMP,
+          parcelamento,
+          tarifaTotal: tarifaTotalML,
+          envio
         },
         produtoId: prod?.id || null,
         mlItemId: oi.item?.id
@@ -339,13 +348,14 @@ const ML = (() => {
           updates.mlStatus = ped.status;
           log(`Pedido #${ped.id} status atualizado: ${ped.status}`);
         }
-        // Recalcula taxas se faltam detalhes OU se taxas estão zeradas (migração de pedidos antigos)
+        // Recalcula taxas se faltam detalhes, zeradas, OU se não tem tarifaTotal (versão antiga do breakdown)
         try {
           const itensAtuais = Array.isArray(jaExiste.itens) ? jaExiste.itens : [];
           const semDetalhes = itensAtuais.length === 0 || !itensAtuais[0]?.taxaMLDetalhes;
           const taxaTotalAtual = itensAtuais.reduce((s, i) => s + (Number(i.taxaML) || 0), 0);
           const taxasZeradas = taxaTotalAtual === 0 && (ped.total_amount || 0) > 0;
-          if ((semDetalhes || taxasZeradas) && (ped.order_items || []).length > 0) {
+          const formatoAntigo = !semDetalhes && itensAtuais[0]?.taxaMLDetalhes && itensAtuais[0].taxaMLDetalhes.tarifaTotal === undefined;
+          if ((semDetalhes || taxasZeradas || formatoAntigo) && (ped.order_items || []).length > 0) {
             const novosItens = await _montarItens(ped);
             // preserva produtoId existente quando possível
             for (let i = 0; i < novosItens.length; i++) {
