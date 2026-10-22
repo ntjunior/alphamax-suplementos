@@ -357,11 +357,18 @@ const ML = (() => {
 
       // Conta do banco (consistente com tabela de vendas)
       const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
-      const vendasML = DB.getVendas().filter(v => isML(v) && App.isToday(v.createdAt));
-      const ativos = vendasML.filter(v => v.mlStatus !== 'cancelled');
-      const cancelados = vendasML.filter(v => v.mlStatus === 'cancelled').length;
-      const total = ativos.reduce((s, v) => s + (v.total || 0), 0);
-      _setKpi(ativos.length, App.formatCurrency(total), cancelados, true);
+      const vendasMLHoje = DB.getVendas().filter(v => isML(v) && App.isToday(v.createdAt));
+      const ativosHoje = vendasMLHoje.filter(v => v.mlStatus !== 'cancelled');
+      const total = ativosHoje.reduce((s, v) => s + (v.total || 0), 0);
+      // Cancelados do mês atual
+      const now = new Date();
+      const ano = now.getFullYear(), mes = now.getMonth();
+      const canceladosMes = DB.getVendas().filter(v => {
+        if (!isML(v) || v.mlStatus !== 'cancelled') return false;
+        const d = new Date(v.createdAt);
+        return d.getFullYear() === ano && d.getMonth() === mes;
+      }).length;
+      _setKpi(ativosHoje.length, App.formatCurrency(total), canceladosMes, true);
     } catch (e) {
       _setKpi('Erro', '—', '—', false);
       console.warn('ML KPI error:', e.message);
