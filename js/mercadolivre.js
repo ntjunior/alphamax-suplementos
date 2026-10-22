@@ -595,52 +595,32 @@ const ML = (() => {
   // Diagnóstico: ML.debug('2000019113522240') despeja tudo que a API retorna
   async function debug(orderId) {
     console.log('%c===== DIAGNÓSTICO ML =====', 'color:#e53935;font-weight:bold;font-size:14px;');
-    console.log('Pedido:', orderId);
     const ped = await _get(`/orders/${orderId}`);
-    console.log('%c--- /orders/{id} ---', 'color:#2563eb;font-weight:bold;');
-    console.log('status:', ped.status);
-    console.log('total_amount:', ped.total_amount);
-    console.log('paid_amount:', ped.paid_amount);
-    console.log('coupon:', ped.coupon);
-    console.log('shipping.cost:', ped.shipping?.cost);
-    console.log('shipping.id:', ped.shipping?.id);
-    (ped.payments || []).forEach((p, i) => {
-      console.log(`%c--- payment[${i}] ---`, 'color:#059669;font-weight:bold;');
-      console.log('status:', p.status);
-      console.log('marketplace_fee:', p.marketplace_fee);
-      console.log('shipping_cost:', p.shipping_cost);
-      console.log('transaction_amount:', p.transaction_amount);
-      console.log('total_paid_amount:', p.total_paid_amount);
-      console.log('coupon_amount:', p.coupon_amount);
-      console.log('transaction_details:', p.transaction_details);
-    });
-    (ped.order_items || []).forEach((oi, i) => {
-      console.log(`%c--- order_items[${i}] ---`, 'color:#7c3aed;font-weight:bold;');
-      console.log('quantity:', oi.quantity);
-      console.log('unit_price:', oi.unit_price);
-      console.log('sale_fee:', oi.sale_fee);
-      console.log('listing_type_id:', oi.listing_type_id);
-    });
-    let shipment = null;
+    let shipment = null, billing = null;
     if (ped.shipping?.id) {
       try { shipment = await _get(`/shipments/${ped.shipping.id}`); } catch(e) {}
-      if (shipment) {
-        console.log('%c--- /shipments/{id} ---', 'color:#ea580c;font-weight:bold;');
-        console.log('status:', shipment.status);
-        console.log('base_cost:', shipment.base_cost);
-        console.log('cost:', shipment.cost);
-        console.log('shipping_option:', shipment.shipping_option);
+      try { billing = await _get(`/shipments/${ped.shipping.id}/costs`); } catch(e) { console.log('(costs 404)'); }
+    }
+    console.log('ORDER JSON:\n' + JSON.stringify(ped, null, 2));
+    console.log('SHIPMENT JSON:\n' + JSON.stringify(shipment, null, 2));
+    console.log('SHIPMENT COSTS JSON:\n' + JSON.stringify(billing, null, 2));
+    // tentativas de encontrar R$14,45 em qualquer campo
+    const alvo = 14.45;
+    function buscar(obj, path='') {
+      if (!obj || typeof obj !== 'object') return;
+      for (const k of Object.keys(obj)) {
+        const v = obj[k];
+        const p = path ? `${path}.${k}` : k;
+        if (typeof v === 'number' && Math.abs(v - alvo) < 0.5) {
+          console.log(`%c🎯 encontrado ~${alvo}: ${p} = ${v}`, 'color:#16a34a;font-weight:bold;');
+        } else if (typeof v === 'object' && v) buscar(v, p);
       }
     }
-    console.log('%c--- CÁLCULO ATUAL ---', 'color:#dc2626;font-weight:bold;');
-    const t = await _calcularTaxas(ped);
-    console.log('marketplaceFee:', t.marketplaceFee);
-    console.log('netReceived:', t.netReceived);
-    console.log('shippingCost (nosso):', t.shippingCost);
-    console.log('fonteEnvio:', t.fonteEnvio);
-    console.log('A RECEBER (nosso) =', (ped.total_amount - t.marketplaceFee - t.shippingCost).toFixed(2));
-    console.log('%c====================', 'color:#e53935;font-weight:bold;');
-    return { ped, shipment, taxas: t };
+    console.log(`%c--- procurando valores próximos a R$${alvo} ---`, 'color:#dc2626;font-weight:bold;');
+    buscar(ped, 'order');
+    buscar(shipment, 'shipment');
+    buscar(billing, 'costs');
+    return { ped, shipment, billing };
   }
 
   return { isOk, getCfg, saveCfg, sincronizar, buscarPedidosHoje, carregarKpis, abrirConfig, salvarConfig, debug };
