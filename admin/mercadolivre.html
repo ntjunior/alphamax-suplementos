@@ -240,7 +240,9 @@
               <th>Itens</th>
               <th>Status</th>
               <th class="text-right">Total</th>
-              <th class="text-right">Taxa ML</th>
+              <th class="text-right" title="Custo por vender no ML + Mercado Pago">Tarifa ML</th>
+              <th class="text-right" title="Taxa de parcelamento (Mercado Pago)">Parcelamento</th>
+              <th class="text-right" title="Custo de envio pago pelo vendedor">Envio</th>
               <th class="text-right">A Receber</th>
             </tr>
           </thead>
@@ -474,7 +476,7 @@
     const tbodyPed = g('ml-tbody-pedidos');
     g('ml-count').textContent = vendas.length > 0 ? `${vendas.length} pedido(s)` : '';
     if (vendas.length === 0) {
-      tbodyPed.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:24px;">Sem pedidos no período</td></tr>';
+      tbodyPed.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="padding:24px;">Sem pedidos no período</td></tr>';
     } else {
       tbodyPed.innerHTML = [...vendas]
         .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
@@ -484,7 +486,8 @@
           const liquidoV = (v.total || 0) - taxaV;
           const cancelLine = v.mlStatus === 'cancelled' ? 'text-decoration:line-through;opacity:.6;' : '';
           const itensDesc = (v.itens || []).map(i => `${i.quantidade || i.qty || 1}× ${i.nome}`).join(', ');
-          const tooltipTaxa = `Venda ML: ${App.formatCurrency(d.venda)}&#10;Parcelamento (MP): ${App.formatCurrency(d.parcelamento)}&#10;Envio: ${App.formatCurrency(d.envio)}`;
+          const corCusto = 'color:#991b1b;';
+          const zero = v => v > 0 ? App.formatCurrency(v) : '—';
           return `
             <tr style="${cancelLine}">
               <td>${App.formatDate(v.createdAt)}</td>
@@ -493,7 +496,9 @@
               <td style="max-width:220px;font-size:12px;" title="${itensDesc}">${itensDesc.length > 60 ? itensDesc.slice(0, 60) + '…' : itensDesc}</td>
               <td>${_statusBadge(v.mlStatus)}</td>
               <td class="text-right text-red font-bold">${App.formatCurrency(v.total || 0)}</td>
-              <td class="text-right" style="color:#991b1b;cursor:help;" title="${tooltipTaxa}">${App.formatCurrency(taxaV)}</td>
+              <td class="text-right" style="${corCusto}">${zero(d.venda)}</td>
+              <td class="text-right" style="${corCusto}">${zero(d.parcelamento)}</td>
+              <td class="text-right" style="${corCusto}">${zero(d.envio)}</td>
               <td class="text-right" style="color:var(--green);font-weight:700;">${App.formatCurrency(liquidoV)}</td>
             </tr>`;
         }).join('');
