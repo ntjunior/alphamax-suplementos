@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="../logo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mercado Livre — Suplementos Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+<script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+<style>
+  .ml-page-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin-bottom:16px; }
+  @media (max-width: 1100px) { .ml-page-kpis { grid-template-columns:repeat(2,1fr); } }
+  .ml-page-kpis .kpi-card { position:relative; }
+  .ml-page-kpis .kpi-trend { font-size:11px; font-weight:700; padding:3px 8px; border-radius:12px; display:inline-block; margin-top:4px; }
+  .ml-page-kpis .kpi-trend.up { background:#dcfce7; color:#166534; }
+  .ml-page-kpis .kpi-trend.down { background:#fee2e2; color:#991b1b; }
+  .ml-page-kpis .kpi-trend.neutral { background:var(--bg-input); color:var(--text-muted); }
+  .ml-brand-icon { width:34px; height:34px; background:#FFE600; border-radius:9px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .status-pill { display:inline-block; font-size:11px; font-weight:700; padding:3px 8px; border-radius:12px; }
+  .status-paid { background:#dcfce7; color:#166534; }
+  .status-confirmed { background:#dbeafe; color:#1e40af; }
+  .status-cancelled { background:#fee2e2; color:#991b1b; }
+  .status-pending { background:#fef9c3; color:#854d0e; }
+  .btn-ml-sync { background:#FFE600; color:#1a1a1a; border:none; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; }
+  .btn-ml-sync:hover { opacity:.88; }
+  .btn-ml-sync:disabled { opacity:.5; cursor:not-allowed; }
+  .ml-status { display:flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:4px 10px; border-radius:20px; background:var(--bg-input); }
+  .ml-status.online { color:#16a34a; background:#dcfce7; }
+  .ml-status.offline { color:var(--text-muted); }
+  .ml-status-dot { width:7px; height:7px; border-radius:50%; background:currentColor; }
+</style>
+<script>
+  (function(){
+    const cfg = {
+      sellerId: '180886575',
+      accessToken: 'APP_USR-384167861810694-102009-ed381a6a455b857fd261d06f8bd17288-180886575',
+      clientId: '384167861810694',
+      clientSecret: 'oRC9Gv9g2cgvWYHydaXOD2fMe5clqR9k',
+      refreshToken: 'TG-6ad77386692d0c0001e65134-180886575',
+      expiresAt: Date.now() + 21600000
+    };
+    if (!localStorage.getItem('ml_config')) localStorage.setItem('ml_config', JSON.stringify(cfg));
+  })();
+</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="../logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item" data-page="dashboard"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="pdv.html" class="nav-item" data-page="pdv"><span class="nav-icon"><i data-lucide="shopping-cart"></i></span><span class="nav-label">PDV</span></a>
+    <a href="produtos.html" class="nav-item" data-page="produtos"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+    <a href="estoque.html" class="nav-item" data-page="estoque"><span class="nav-icon"><i data-lucide="bar-chart-3"></i></span><span class="nav-label">Estoque</span></a>
+    <a href="relatorios.html" class="nav-item" data-page="relatorios"><span class="nav-icon"><i data-lucide="trending-up"></i></span><span class="nav-label">Relatórios</span></a>
+    <a href="financeiro.html" class="nav-item" data-page="financeiro"><span class="nav-icon"><i data-lucide="landmark"></i></span><span class="nav-label">Financeiro</span></a>
+    <a href="clientes.html" class="nav-item" data-page="clientes"><span class="nav-icon"><i data-lucide="users"></i></span><span class="nav-label">Clientes</span></a>
+    <a href="pedidos.html" class="nav-item" data-page="pedidos"><span class="nav-icon"><i data-lucide="clipboard-list"></i></span><span class="nav-label">Pedidos</span></a>
+    <a href="mercadolivre.html" class="nav-item" data-page="mercadolivre"><span class="nav-icon"><i data-lucide="store"></i></span><span class="nav-label">Mercado Livre</span></a>
+    <a href="caixa.html" class="nav-item" data-page="caixa"><span class="nav-icon"><i data-lucide="wallet"></i></span><span class="nav-label">Caixa</span></a>
+    <a href="usuarios.html" class="nav-item" data-page="usuarios"><span class="nav-icon"><i data-lucide="user-cog"></i></span><span class="nav-label">Usuários</span></a>
+    <a href="comissoes.html" class="nav-item" data-page="comissoes"><span class="nav-icon"><i data-lucide="badge-percent"></i></span><span class="nav-label">Comissões</span></a>
+    <a href="mensagens.html" class="nav-item" data-page="mensagens"><span class="nav-icon"><i data-lucide="message-square"></i></span><span class="nav-label">Mensagens</span></a>
+  </div>
+  <div class="sidebar-toggle"><button class="btn-toggle-nav" id="nav-toggle"><i data-lucide="chevron-left"></i></button></div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="ml-brand-icon">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="8" fill="#fff"/><path d="M5 10l3 3 3-3 3 3 1-1" stroke="#333" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <div>
+        <div class="page-title">Mercado Livre</div>
+        <div class="page-subtitle" id="ml-page-sub">Dashboard de vendas e análises</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <div id="ml-status-badge" class="ml-status offline"><span class="ml-status-dot"></span><span>Não configurado</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="ML.abrirConfig()"><i data-lucide="settings"></i> Configurar</button>
+      <button class="btn-ml-sync" id="btn-ml-sync" onclick="mlSincronizar()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Sincronizar</button>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <!-- Filtro de período -->
+    <div class="card mb-16">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span style="font-size:13px;font-weight:600;color:var(--text-muted);">Período:</span>
+        <div class="filter-pills" style="margin:0;gap:6px;">
+          <button class="pill" onclick="setPeriodo('hoje', this)">Hoje</button>
+          <button class="pill" onclick="setPeriodo('semana', this)">7 dias</button>
+          <button class="pill active" onclick="setPeriodo('mes', this)">Mês atual</button>
+          <button class="pill" onclick="setPeriodo('mes-anterior', this)">Mês anterior</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs principais -->
+    <div class="ml-page-kpis">
+      <div class="kpi-card yellow">
+        <div class="kpi-icon"><i data-lucide="shopping-cart"></i></div>
+        <div class="kpi-label">Pedidos no Período</div>
+        <div class="kpi-value" id="ml-k-pedidos">—</div>
+        <div class="kpi-sub"><span id="ml-k-pedidos-trend" class="kpi-trend neutral">—</span></div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-icon"><i data-lucide="banknote"></i></div>
+        <div class="kpi-label">Faturamento Bruto</div>
+        <div class="kpi-value" id="ml-k-fat-bruto">—</div>
+        <div class="kpi-sub"><span id="ml-k-fat-trend" class="kpi-trend neutral">—</span></div>
+      </div>
+      <div class="kpi-card blue">
+        <div class="kpi-icon"><i data-lucide="wallet"></i></div>
+        <div class="kpi-label">Valor Líquido a Receber</div>
+        <div class="kpi-value" id="ml-k-liquido">—</div>
+        <div class="kpi-sub">após taxa ML</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon"><i data-lucide="percent"></i></div>
+        <div class="kpi-label">Taxa ML Paga</div>
+        <div class="kpi-value" id="ml-k-taxas">—</div>
+        <div class="kpi-sub" id="ml-k-taxas-sub">comissões no período</div>
+      </div>
+    </div>
+
+    <div class="ml-page-kpis">
+      <div class="kpi-card blue">
+        <div class="kpi-icon"><i data-lucide="target"></i></div>
+        <div class="kpi-label">Ticket Médio</div>
+        <div class="kpi-value" id="ml-k-ticket">—</div>
+        <div class="kpi-sub">por pedido</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-icon" style="color:#991b1b;background:#fee2e2;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+        </div>
+        <div class="kpi-label">Cancelados</div>
+        <div class="kpi-value" id="ml-k-cancelados">—</div>
+        <div class="kpi-sub" id="ml-k-cancelados-sub">—</div>
+      </div>
+      <div class="kpi-card yellow">
+        <div class="kpi-icon"><i data-lucide="package"></i></div>
+        <div class="kpi-label">Aguardando Envio</div>
+        <div class="kpi-value" id="ml-k-envio">—</div>
+        <div class="kpi-sub">pedidos pagos</div>
+      </div>
+      <div class="kpi-card green">
+        <div class="kpi-icon"><i data-lucide="trophy"></i></div>
+        <div class="kpi-label">Produto Campeão</div>
+        <div class="kpi-value" id="ml-k-top" style="font-size:16px;line-height:1.3;">—</div>
+        <div class="kpi-sub" id="ml-k-top-sub">—</div>
+      </div>
+    </div>
+
+    <!-- Gráfico -->
+    <div class="chart-wrapper mb-24">
+      <div class="chart-title">Faturamento Diário — Mercado Livre</div>
+      <canvas id="ml-grafico" width="900" height="200"></canvas>
+    </div>
+
+    <div class="grid-2 mb-24">
+      <!-- Top produtos ML -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="trophy"></i> Produtos Mais Vendidos</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Produto</th>
+                <th class="text-right">Qtd</th>
+                <th class="text-right">Faturamento</th>
+                <th class="text-right">Taxa ML</th>
+              </tr>
+            </thead>
+            <tbody id="ml-tbody-top"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Resumo financeiro -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title"><i data-lucide="calculator"></i> Resumo Financeiro</span>
+        </div>
+        <div style="padding:8px 0;">
+          <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);">
+            <span style="color:var(--text-muted);">Faturamento Bruto</span>
+            <strong id="ml-fin-bruto">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
+            <span>(-) Taxa Mercado Livre</span>
+            <strong id="ml-fin-taxa">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
+            <span>(-) Pedidos Cancelados</span>
+            <strong id="ml-fin-cancel">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:14px 16px;background:var(--bg-input);">
+            <strong>Valor Líquido a Receber</strong>
+            <strong id="ml-fin-liquido" style="color:var(--green);font-size:16px;">—</strong>
+          </div>
+          <div style="padding:12px 16px;font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;">
+            <span>% Cancelamento no período:</span>
+            <strong id="ml-fin-pct-cancel">—</strong>
+          </div>
+          <div style="padding:0 16px 12px;font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;">
+            <span>Margem média da taxa ML:</span>
+            <strong id="ml-fin-pct-taxa">—</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela de pedidos ML -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title"><i data-lucide="clipboard-list"></i> Pedidos do Período</span>
+        <span id="ml-count" style="font-size:13px;color:var(--text-muted);"></span>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Pedido ML</th>
+              <th>Cliente</th>
+              <th>Itens</th>
+              <th>Status</th>
+              <th class="text-right">Total</th>
+              <th class="text-right">Taxa ML</th>
+              <th class="text-right">A Receber</th>
+            </tr>
+          </thead>
+          <tbody id="ml-tbody-pedidos"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Log de sincronização -->
+    <div class="card mb-24" style="margin-top:24px;">
+      <div class="card-header">
+        <span class="card-title"><i data-lucide="activity"></i> Log de Sincronização</span>
+      </div>
+      <div id="ml-log" style="padding:14px 20px;font-size:12px;color:var(--text-muted);font-family:monospace;line-height:1.7;max-height:160px;overflow-y:auto;">
+        Aguardando sincronização...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Config Mercado Livre -->
+<div class="modal-overlay" id="modal-ml-config" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ Configurar Mercado Livre</span>
+      <button class="modal-close" onclick="document.getElementById('modal-ml-config').classList.remove('show')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg-input);border-radius:8px;padding:12px;font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">
+        <strong style="color:var(--text);">Renovação automática:</strong> preencha Client ID, Client Secret e Refresh Token para o token ser renovado automaticamente a cada 6h.<br>
+        <span style="font-size:11px;">Obtenha em <strong>developers.mercadolibre.com.br</strong> → seu App → OAuth</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Seller ID</label>
+        <input type="text" id="ml-cfg-seller" class="form-input" placeholder="Ex: 123456789">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Access Token</label>
+        <input type="password" id="ml-cfg-token" class="form-input" placeholder="APP_USR-...">
+      </div>
+      <div style="border-top:1px solid var(--border);margin:12px 0 14px;padding-top:14px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;margin-bottom:10px;">RENOVAÇÃO AUTOMÁTICA (opcional)</div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Client ID</label>
+          <input type="text" id="ml-cfg-client-id" class="form-input" placeholder="Ex: 1234567890">
+        </div>
+        <div class="form-group" style="margin-bottom:10px;">
+          <label class="form-label">Client Secret</label>
+          <input type="password" id="ml-cfg-client-secret" class="form-input" placeholder="seu client secret">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label class="form-label">Refresh Token</label>
+          <input type="password" id="ml-cfg-refresh-token" class="form-input" placeholder="TG-...">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-ml-config').classList.remove('show')">Cancelar</button>
+      <button class="btn btn-primary" onclick="ML.salvarConfig()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/mercadolivre.js?v=2.1.0"></script>
+<script>
+  let periodoAtual = 'mes';
+
+  function setPeriodo(p, el) {
+    periodoAtual = p;
+    document.querySelectorAll('.filter-pills .pill').forEach(x => x.classList.remove('active'));
+    if (el) el.classList.add('active');
+    render();
+  }
+
+  function _rangeFromPeriodo(p) {
+    const hoje = new Date();
+    let ini, fim;
+    if (p === 'hoje') {
+      ini = new Date(hoje); ini.setHours(0,0,0,0);
+      fim = new Date(hoje); fim.setHours(23,59,59,999);
+    } else if (p === 'semana') {
+      ini = new Date(hoje); ini.setDate(ini.getDate() - 6); ini.setHours(0,0,0,0);
+      fim = new Date(hoje); fim.setHours(23,59,59,999);
+    } else if (p === 'mes-anterior') {
+      ini = new Date(hoje.getFullYear(), hoje.getMonth() - 1, 1); ini.setHours(0,0,0,0);
+      fim = new Date(hoje.getFullYear(), hoje.getMonth(), 0); fim.setHours(23,59,59,999);
+    } else {
+      // mes
+      ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1); ini.setHours(0,0,0,0);
+      fim = new Date(hoje); fim.setHours(23,59,59,999);
+    }
+    return { ini, fim };
+  }
+
+  function _statusBadge(s) {
+    const map = { paid:'Pago', confirmed:'Confirmado', cancelled:'Cancelado', pending:'Pendente', payment_required:'Aguard. Pgto', payment_in_process:'Processando' };
+    const label = map[s] || s || '—';
+    const cls = s === 'cancelled' ? 'status-cancelled'
+      : s === 'paid' ? 'status-paid'
+      : s === 'confirmed' ? 'status-confirmed'
+      : 'status-pending';
+    return `<span class="status-pill ${cls}">${label}</span>`;
+  }
+
+  function _taxaTotal(v) {
+    return (v.itens || []).reduce((s, i) => s + (i.taxaML || 0), 0);
+  }
+
+  function _isML(v) { return v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre'; }
+
+  function _vendasNoRange(ini, fim) {
+    return DB.getVendas().filter(v => {
+      if (!_isML(v)) return false;
+      const d = new Date(v.createdAt);
+      return d >= ini && d <= fim;
+    });
+  }
+
+  function _trendBadge(atual, anterior) {
+    if (!anterior) return `<span class="kpi-trend neutral">—</span>`;
+    const pct = ((atual - anterior) / anterior) * 100;
+    const sinal = pct >= 0 ? '+' : '';
+    const cls = pct >= 0 ? 'up' : 'down';
+    return `<span class="kpi-trend ${cls}">${sinal}${pct.toFixed(0)}% vs anterior</span>`;
+  }
+
+  function render() {
+    const { ini, fim } = _rangeFromPeriodo(periodoAtual);
+    const vendas = _vendasNoRange(ini, fim);
+    const ativas = vendas.filter(v => v.mlStatus !== 'cancelled');
+    const canceladas = vendas.filter(v => v.mlStatus === 'cancelled');
+
+    // KPIs do período
+    const fatBruto = ativas.reduce((s, v) => s + (v.total || 0), 0);
+    const taxas = ativas.reduce((s, v) => s + _taxaTotal(v), 0);
+    const liquido = fatBruto - taxas;
+    const ticket = ativas.length > 0 ? fatBruto / ativas.length : 0;
+    const totalCanc = canceladas.reduce((s, v) => s + (v.total || 0), 0);
+    const pctCanc = vendas.length > 0 ? (canceladas.length / vendas.length) * 100 : 0;
+    const pctTaxa = fatBruto > 0 ? (taxas / fatBruto) * 100 : 0;
+
+    // Período anterior pra comparação
+    const diasPeriodo = Math.ceil((fim - ini) / 86400000) + 1;
+    const anteriorFim = new Date(ini); anteriorFim.setMilliseconds(anteriorFim.getMilliseconds() - 1);
+    const anteriorIni = new Date(anteriorFim); anteriorIni.setDate(anteriorIni.getDate() - diasPeriodo + 1); anteriorIni.setHours(0,0,0,0);
+    const vendasAnt = _vendasNoRange(anteriorIni, anteriorFim).filter(v => v.mlStatus !== 'cancelled');
+    const fatAnt = vendasAnt.reduce((s, v) => s + (v.total || 0), 0);
+
+    // Aguardando envio (pagos mas sem cancelamento)
+    const aguardandoEnvio = ativas.filter(v => v.mlStatus === 'paid' || v.mlStatus === 'confirmed').length;
+
+    // Preenche KPIs
+    const g = id => document.getElementById(id);
+    g('ml-k-pedidos').textContent = ativas.length;
+    g('ml-k-pedidos-trend').outerHTML = `<span id="ml-k-pedidos-trend">${_trendBadge(ativas.length, vendasAnt.length)}</span>`;
+    g('ml-k-fat-bruto').textContent = App.formatCurrency(fatBruto);
+    g('ml-k-fat-trend').outerHTML = `<span id="ml-k-fat-trend">${_trendBadge(fatBruto, fatAnt)}</span>`;
+    g('ml-k-liquido').textContent = App.formatCurrency(liquido);
+    g('ml-k-taxas').textContent = App.formatCurrency(taxas);
+    g('ml-k-taxas-sub').textContent = `${pctTaxa.toFixed(1)}% do faturamento`;
+    g('ml-k-ticket').textContent = App.formatCurrency(ticket);
+    g('ml-k-cancelados').textContent = canceladas.length;
+    g('ml-k-cancelados-sub').textContent = `${pctCanc.toFixed(1)}% do total — ${App.formatCurrency(totalCanc)}`;
+    g('ml-k-envio').textContent = aguardandoEnvio;
+
+    // Resumo financeiro
+    g('ml-fin-bruto').textContent = App.formatCurrency(fatBruto);
+    g('ml-fin-taxa').textContent = '- ' + App.formatCurrency(taxas);
+    g('ml-fin-cancel').textContent = '- ' + App.formatCurrency(totalCanc);
+    g('ml-fin-liquido').textContent = App.formatCurrency(liquido);
+    g('ml-fin-pct-cancel').textContent = pctCanc.toFixed(1) + '%';
+    g('ml-fin-pct-taxa').textContent = pctTaxa.toFixed(1) + '%';
+
+    // Top produtos
+    const prodMap = {};
+    for (const v of ativas) {
+      for (const i of (v.itens || [])) {
+        const key = i.nome;
+        if (!prodMap[key]) prodMap[key] = { nome: i.nome, qtd: 0, total: 0, taxa: 0 };
+        prodMap[key].qtd += (i.quantidade || i.qty || 0);
+        prodMap[key].total += (i.subtotal || 0);
+        prodMap[key].taxa += (i.taxaML || 0);
+      }
+    }
+    const top = Object.values(prodMap).sort((a,b) => b.qtd - a.qtd);
+    const tbodyTop = g('ml-tbody-top');
+    if (top.length === 0) {
+      tbodyTop.innerHTML = '<tr><td colspan="5" class="text-center text-muted" style="padding:24px;">Sem vendas no período</td></tr>';
+      g('ml-k-top').textContent = '—';
+      g('ml-k-top-sub').textContent = '—';
+    } else {
+      tbodyTop.innerHTML = top.slice(0, 10).map((p, i) => `
+        <tr>
+          <td style="font-weight:700;color:var(--text-muted);">${i + 1}º</td>
+          <td style="font-size:13px;">${p.nome}</td>
+          <td class="text-right font-bold">${p.qtd}</td>
+          <td class="text-right text-red font-bold">${App.formatCurrency(p.total)}</td>
+          <td class="text-right" style="color:#991b1b;">${App.formatCurrency(p.taxa)}</td>
+        </tr>`).join('');
+      g('ml-k-top').textContent = top[0].nome.length > 32 ? top[0].nome.slice(0, 32) + '…' : top[0].nome;
+      g('ml-k-top-sub').textContent = `${top[0].qtd} un · ${App.formatCurrency(top[0].total)}`;
+    }
+
+    // Tabela de pedidos
+    const tbodyPed = g('ml-tbody-pedidos');
+    g('ml-count').textContent = vendas.length > 0 ? `${vendas.length} pedido(s)` : '';
+    if (vendas.length === 0) {
+      tbodyPed.innerHTML = '<tr><td colspan="8" class="text-center text-muted" style="padding:24px;">Sem pedidos no período</td></tr>';
+    } else {
+      tbodyPed.innerHTML = [...vendas]
+        .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .map(v => {
+          const taxaV = _taxaTotal(v);
+          const liquidoV = (v.total || 0) - taxaV;
+          const cancelLine = v.mlStatus === 'cancelled' ? 'text-decoration:line-through;opacity:.6;' : '';
+          const itensDesc = (v.itens || []).map(i => `${i.quantidade || i.qty || 1}× ${i.nome}`).join(', ');
+          return `
+            <tr style="${cancelLine}">
+              <td>${App.formatDate(v.createdAt)}</td>
+              <td style="font-family:monospace;font-size:12px;">#${v.mlOrderId || '—'}</td>
+              <td>${v.clienteNome || 'Comprador ML'}</td>
+              <td style="max-width:220px;font-size:12px;" title="${itensDesc}">${itensDesc.length > 60 ? itensDesc.slice(0, 60) + '…' : itensDesc}</td>
+              <td>${_statusBadge(v.mlStatus)}</td>
+              <td class="text-right text-red font-bold">${App.formatCurrency(v.total || 0)}</td>
+              <td class="text-right" style="color:#991b1b;">${App.formatCurrency(taxaV)}</td>
+              <td class="text-right" style="color:var(--green);font-weight:700;">${App.formatCurrency(liquidoV)}</td>
+            </tr>`;
+        }).join('');
+    }
+
+    // Gráfico diário
+    const labels = [], valores = [];
+    const d = new Date(ini);
+    while (d <= fim) {
+      const dayIni = new Date(d); dayIni.setHours(0,0,0,0);
+      const dayFim = new Date(d); dayFim.setHours(23,59,59,999);
+      const vDia = ativas.filter(v => { const dt = new Date(v.createdAt); return dt >= dayIni && dt <= dayFim; });
+      labels.push(d.getDate() + '/' + (d.getMonth() + 1));
+      valores.push(vDia.reduce((s, v) => s + (v.total || 0), 0));
+      d.setDate(d.getDate() + 1);
+    }
+    App.drawBarChart('ml-grafico', labels, valores);
+
+    // Status badge
+    const badge = g('ml-status-badge');
+    if (badge) {
+      const conectado = ML.isOk();
+      badge.className = 'ml-status ' + (conectado ? 'online' : 'offline');
+      badge.innerHTML = `<span class="ml-status-dot"></span><span>${conectado ? 'Conectado' : 'Não configurado'}</span>`;
+    }
+
+    // Subtitle
+    const diasPeriodoStr = ini.toLocaleDateString('pt-BR') + ' a ' + fim.toLocaleDateString('pt-BR');
+    g('ml-page-sub').textContent = diasPeriodoStr;
+  }
+
+  async function mlSincronizar() {
+    const btn = document.getElementById('btn-ml-sync');
+    const logEl = document.getElementById('ml-log');
+    if (!ML.isOk()) { ML.abrirConfig(); return; }
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" style="width:14px;height:14px;animation:spin 1s linear infinite;"></i> Sincronizando...';
+    lucide.createIcons();
+    logEl.innerHTML = '';
+    try {
+      const res = await ML.sincronizar(msg => { logEl.innerHTML += msg + '<br>'; logEl.scrollTop = logEl.scrollHeight; });
+      App.showToast(`ML: ${res.sincronizados} pedido(s) importado(s)!`, 'success');
+      await atualizarDados();
+    } catch(e) {
+      App.showToast(e.message, 'error');
+      logEl.innerHTML += `<span style="color:var(--red);">${e.message}</span>`;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Sincronizar';
+      lucide.createIcons();
+    }
+  }
+
+  async function atualizarDados() {
+    try {
+      const rows = await DB._select('vendas', 'order=created_at');
+      DB._cache.vendas = rows.map(r => DB._camel(r));
+    } catch(e) {}
+    render();
+  }
+
+  (async () => {
+    await App.initPage('mercadolivre');
+    render();
+    try { if (ML.isOk()) { await ML.sincronizar(); await atualizarDados(); } } catch(e){ console.warn(e); }
+    setInterval(atualizarDados, 2 * 60 * 1000);
+  })();
+
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarDados(); });
+</script>
+</body>
+</html>
