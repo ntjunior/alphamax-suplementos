@@ -142,7 +142,12 @@ const ML = (() => {
     if (!shipmentId) return 0;
     try {
       const s = await _get(`/shipments/${shipmentId}`);
-      return Number(s?.lead_time?.cost) || Number(s?.base_cost) || Number(s?.shipping_option?.cost) || 0;
+      return Number(s?.shipping_option?.list_cost)
+          || Number(s?.shipping_option?.cost)
+          || Number(s?.base_cost)
+          || Number(s?.lead_time?.cost)
+          || Number(s?.cost)
+          || 0;
     } catch(e) { return 0; }
   }
 
@@ -186,20 +191,28 @@ const ML = (() => {
       const td = p.transaction_details || {};
       return s + (Number(td.financing_fee) || 0);
     }, 0);
-    // Custo de envio pago pelo vendedor
+    const netReceived = payments.reduce((s, p) => {
+      const td = p.transaction_details || {};
+      return s + (Number(td.net_received_amount) || 0);
+    }, 0);
+    const totalPago = payments.reduce((s, p) => s + (Number(p.total_paid_amount) || Number(p.transaction_amount) || 0), 0);
+
+    // Custo de envio pago pelo vendedor - tenta vários caminhos
     let shippingCost = payments.reduce((s, p) => s + (Number(p.shipping_cost) || 0), 0);
     if (!shippingCost) shippingCost = Number(ped.shipping?.cost) || 0;
     if (!shippingCost && ped.shipping?.shipping_option?.list_cost) {
       shippingCost = Number(ped.shipping.shipping_option.list_cost) || 0;
     }
-    // Último recurso: busca o shipment direto
     if (!shippingCost && ped.shipping?.id) {
       shippingCost = await _buscarShipmentCost(ped.shipping.id);
     }
-    const netReceived = payments.reduce((s, p) => {
-      const td = p.transaction_details || {};
-      return s + (Number(td.net_received_amount) || 0);
-    }, 0);
+    // Fallback definitivo: derivar do net_received_amount (que é o valor real que o ML paga)
+    // envio = total pago pelo comprador - tarifa ML - valor líquido recebido
+    if (!shippingCost && netReceived > 0 && totalPago > 0 && marketplaceFee > 0) {
+      const calc = totalPago - marketplaceFee - netReceived;
+      if (calc > 0 && calc < totalPago) shippingCost = calc;
+    }
+
     return { marketplaceFee, financingFee, shippingCost, netReceived, total: marketplaceFee + financingFee + shippingCost };
   }
 
@@ -348,14 +361,16 @@ const ML = (() => {
           updates.mlStatus = ped.status;
           log(`Pedido #${ped.id} status atualizado: ${ped.status}`);
         }
-        // Recalcula taxas se faltam detalhes, zeradas, OU se não tem tarifaTotal (versão antiga do breakdown)
+        // Recalcula taxas se faltam detalhes, zeradas, formato antigo, OU envio zerado (API pode ter liberado agora)
         try {
           const itensAtuais = Array.isArray(jaExiste.itens) ? jaExiste.itens : [];
           const semDetalhes = itensAtuais.length === 0 || !itensAtuais[0]?.taxaMLDetalhes;
           const taxaTotalAtual = itensAtuais.reduce((s, i) => s + (Number(i.taxaML) || 0), 0);
           const taxasZeradas = taxaTotalAtual === 0 && (ped.total_amount || 0) > 0;
           const formatoAntigo = !semDetalhes && itensAtuais[0]?.taxaMLDetalhes && itensAtuais[0].taxaMLDetalhes.tarifaTotal === undefined;
-          if ((semDetalhes || taxasZeradas || formatoAntigo) && (ped.order_items || []).length > 0) {
+          const envioAtual = itensAtuais.reduce((s, i) => s + (Number(i.taxaMLDetalhes?.envio) || 0), 0);
+          const envioZerado = envioAtual === 0 && ped.shipping; // existe envio no pedido mas CRM está com 0
+          if ((semDetalhes || taxasZeradas || formatoAntigo || envioZerado) && (ped.order_items || []).length > 0) {
             const novosItens = await _montarItens(ped);
             // preserva produtoId existente quando possível
             for (let i = 0; i < novosItens.length; i++) {
