@@ -134,6 +134,18 @@ const ML = (() => {
     }
   }
 
+  async function _buscarPedidoDetalhado(orderId) {
+    try { return await _get(`/orders/${orderId}`); } catch(e) { return null; }
+  }
+
+  async function _buscarShipmentCost(shipmentId) {
+    if (!shipmentId) return 0;
+    try {
+      const s = await _get(`/shipments/${shipmentId}`);
+      return Number(s?.lead_time?.cost) || Number(s?.base_cost) || Number(s?.shipping_option?.cost) || 0;
+    } catch(e) { return 0; }
+  }
+
   function _matchProduto(nomeML) {
     const produtos = DB.getProdutos();
     const palavrasML = nomeML.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
@@ -167,21 +179,23 @@ const ML = (() => {
   }
 
   // Extrai todas as deduções do pedido: tarifa ML, taxa parcelamento (MP), custo de envio pago pelo vendedor
-  function _calcularTaxas(ped) {
+  async function _calcularTaxas(ped) {
     const payments = ped.payments || [];
     const marketplaceFee = payments.reduce((s, p) => s + (Number(p.marketplace_fee) || 0), 0);
     const financingFee = payments.reduce((s, p) => {
       const td = p.transaction_details || {};
       return s + (Number(td.financing_fee) || 0);
     }, 0);
-    // Custo de envio pago pelo vendedor (vem em payments[].shipping_cost ou shipping.cost)
+    // Custo de envio pago pelo vendedor
     let shippingCost = payments.reduce((s, p) => s + (Number(p.shipping_cost) || 0), 0);
     if (!shippingCost) shippingCost = Number(ped.shipping?.cost) || 0;
-    // Alguns pedidos só expõem list_cost no shipping_option
     if (!shippingCost && ped.shipping?.shipping_option?.list_cost) {
       shippingCost = Number(ped.shipping.shipping_option.list_cost) || 0;
     }
-    // Valor líquido real que o ML calcula (quando disponível)
+    // Último recurso: busca o shipment direto
+    if (!shippingCost && ped.shipping?.id) {
+      shippingCost = await _buscarShipmentCost(ped.shipping.id);
+    }
     const netReceived = payments.reduce((s, p) => {
       const td = p.transaction_details || {};
       return s + (Number(td.net_received_amount) || 0);
@@ -189,22 +203,31 @@ const ML = (() => {
     return { marketplaceFee, financingFee, shippingCost, netReceived, total: marketplaceFee + financingFee + shippingCost };
   }
 
-  function _montarItens(ped) {
-    const taxas = _calcularTaxas(ped);
-    const subtotalItens = (ped.order_items || []).reduce((s, oi) => s + (oi.quantity * oi.unit_price), 0);
-    return (ped.order_items || []).map(oi => {
+  async function _montarItens(ped) {
+    // /orders/search traz dados resumidos — busca detalhes completos
+    let pedCompleto = ped;
+    const payments = ped.payments || [];
+    const temDetalhes = payments.some(p => p.marketplace_fee || p.transaction_details?.net_received_amount);
+    if (!temDetalhes) {
+      const d = await _buscarPedidoDetalhado(ped.id);
+      if (d) pedCompleto = d;
+    }
+    const taxas = await _calcularTaxas(pedCompleto);
+    const subtotalItens = (pedCompleto.order_items || []).reduce((s, oi) => s + (oi.quantity * oi.unit_price), 0);
+    return (pedCompleto.order_items || []).map(oi => {
       const sub = oi.quantity * oi.unit_price;
       const prop = subtotalItens > 0 ? sub / subtotalItens : 1;
       const prod = _matchProduto(oi.item?.title || '');
+      const vendaFee = Number(oi.sale_fee) > 0 ? Number(oi.sale_fee) : taxas.marketplaceFee * prop;
       return {
         id: oi.item?.id || '',
         nome: oi.item?.title || 'Produto ML',
         quantidade: oi.quantity,
         precoUnitario: oi.unit_price,
         subtotal: sub,
-        taxaML: taxas.total * prop,
+        taxaML: vendaFee + (taxas.financingFee * prop) + (taxas.shippingCost * prop),
         taxaMLDetalhes: {
-          venda: (Number(oi.sale_fee) || taxas.marketplaceFee * prop),
+          venda: vendaFee,
           parcelamento: taxas.financingFee * prop,
           envio: taxas.shippingCost * prop
         },
@@ -316,12 +339,14 @@ const ML = (() => {
           updates.mlStatus = ped.status;
           log(`Pedido #${ped.id} status atualizado: ${ped.status}`);
         }
-        // Recalcula taxas se faltam detalhes (migração de pedidos antigos)
+        // Recalcula taxas se faltam detalhes OU se taxas estão zeradas (migração de pedidos antigos)
         try {
           const itensAtuais = Array.isArray(jaExiste.itens) ? jaExiste.itens : [];
           const semDetalhes = itensAtuais.length === 0 || !itensAtuais[0]?.taxaMLDetalhes;
-          if (semDetalhes && (ped.order_items || []).length > 0) {
-            const novosItens = _montarItens(ped);
+          const taxaTotalAtual = itensAtuais.reduce((s, i) => s + (Number(i.taxaML) || 0), 0);
+          const taxasZeradas = taxaTotalAtual === 0 && (ped.total_amount || 0) > 0;
+          if ((semDetalhes || taxasZeradas) && (ped.order_items || []).length > 0) {
+            const novosItens = await _montarItens(ped);
             // preserva produtoId existente quando possível
             for (let i = 0; i < novosItens.length; i++) {
               const antigo = itensAtuais[i];
@@ -339,7 +364,7 @@ const ML = (() => {
         pulados++; continue;
       }
 
-      const itens = _montarItens(ped);
+      const itens = await _montarItens(ped);
 
       const total = ped.total_amount || itens.reduce((s, i) => s + i.subtotal, 0);
 
