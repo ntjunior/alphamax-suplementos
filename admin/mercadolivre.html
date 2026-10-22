@@ -193,11 +193,19 @@
             <strong id="ml-fin-bruto">—</strong>
           </div>
           <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
-            <span>(-) Taxa Mercado Livre</span>
-            <strong id="ml-fin-taxa">—</strong>
+            <span>(-) Tarifa de venda ML</span>
+            <strong id="ml-fin-taxa-venda">—</strong>
           </div>
           <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
-            <span>(-) Pedidos Cancelados</span>
+            <span>(-) Taxa de parcelamento (MP)</span>
+            <strong id="ml-fin-taxa-parc">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
+            <span>(-) Custo de envio</span>
+            <strong id="ml-fin-envio">—</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);color:#991b1b;">
+            <span>(-) Pedidos cancelados (não contabilizados)</span>
             <strong id="ml-fin-cancel">—</strong>
           </div>
           <div style="display:flex;justify-content:space-between;padding:14px 16px;background:var(--bg-input);">
@@ -301,7 +309,7 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
-<script src="../js/mercadolivre.js?v=2.1.0"></script>
+<script src="../js/mercadolivre.js?v=2.2.0"></script>
 <script>
   let periodoAtual = 'mes';
 
@@ -346,6 +354,20 @@
     return (v.itens || []).reduce((s, i) => s + (i.taxaML || 0), 0);
   }
 
+  function _taxaDetalhada(v) {
+    const d = { venda: 0, parcelamento: 0, envio: 0 };
+    for (const i of (v.itens || [])) {
+      if (i.taxaMLDetalhes) {
+        d.venda += i.taxaMLDetalhes.venda || 0;
+        d.parcelamento += i.taxaMLDetalhes.parcelamento || 0;
+        d.envio += i.taxaMLDetalhes.envio || 0;
+      } else {
+        d.venda += i.taxaML || 0;
+      }
+    }
+    return d;
+  }
+
   function _isML(v) { return v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre'; }
 
   function _vendasNoRange(ini, fim) {
@@ -373,6 +395,11 @@
     // KPIs do período
     const fatBruto = ativas.reduce((s, v) => s + (v.total || 0), 0);
     const taxas = ativas.reduce((s, v) => s + _taxaTotal(v), 0);
+    const detTaxas = ativas.reduce((acc, v) => {
+      const d = _taxaDetalhada(v);
+      acc.venda += d.venda; acc.parcelamento += d.parcelamento; acc.envio += d.envio;
+      return acc;
+    }, { venda: 0, parcelamento: 0, envio: 0 });
     const liquido = fatBruto - taxas;
     const ticket = ativas.length > 0 ? fatBruto / ativas.length : 0;
     const totalCanc = canceladas.reduce((s, v) => s + (v.total || 0), 0);
@@ -405,7 +432,9 @@
 
     // Resumo financeiro
     g('ml-fin-bruto').textContent = App.formatCurrency(fatBruto);
-    g('ml-fin-taxa').textContent = '- ' + App.formatCurrency(taxas);
+    g('ml-fin-taxa-venda').textContent = '- ' + App.formatCurrency(detTaxas.venda);
+    g('ml-fin-taxa-parc').textContent = '- ' + App.formatCurrency(detTaxas.parcelamento);
+    g('ml-fin-envio').textContent = '- ' + App.formatCurrency(detTaxas.envio);
     g('ml-fin-cancel').textContent = '- ' + App.formatCurrency(totalCanc);
     g('ml-fin-liquido').textContent = App.formatCurrency(liquido);
     g('ml-fin-pct-cancel').textContent = pctCanc.toFixed(1) + '%';
@@ -451,9 +480,11 @@
         .sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt))
         .map(v => {
           const taxaV = _taxaTotal(v);
+          const d = _taxaDetalhada(v);
           const liquidoV = (v.total || 0) - taxaV;
           const cancelLine = v.mlStatus === 'cancelled' ? 'text-decoration:line-through;opacity:.6;' : '';
           const itensDesc = (v.itens || []).map(i => `${i.quantidade || i.qty || 1}× ${i.nome}`).join(', ');
+          const tooltipTaxa = `Venda ML: ${App.formatCurrency(d.venda)}&#10;Parcelamento (MP): ${App.formatCurrency(d.parcelamento)}&#10;Envio: ${App.formatCurrency(d.envio)}`;
           return `
             <tr style="${cancelLine}">
               <td>${App.formatDate(v.createdAt)}</td>
@@ -462,7 +493,7 @@
               <td style="max-width:220px;font-size:12px;" title="${itensDesc}">${itensDesc.length > 60 ? itensDesc.slice(0, 60) + '…' : itensDesc}</td>
               <td>${_statusBadge(v.mlStatus)}</td>
               <td class="text-right text-red font-bold">${App.formatCurrency(v.total || 0)}</td>
-              <td class="text-right" style="color:#991b1b;">${App.formatCurrency(taxaV)}</td>
+              <td class="text-right" style="color:#991b1b;cursor:help;" title="${tooltipTaxa}">${App.formatCurrency(taxaV)}</td>
               <td class="text-right" style="color:var(--green);font-weight:700;">${App.formatCurrency(liquidoV)}</td>
             </tr>`;
         }).join('');

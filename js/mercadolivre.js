@@ -166,6 +166,54 @@ const ML = (() => {
     try { localStorage.removeItem(_LOCK_KEY); } catch {}
   }
 
+  // Extrai todas as deduções do pedido: tarifa ML, taxa parcelamento (MP), custo de envio pago pelo vendedor
+  function _calcularTaxas(ped) {
+    const payments = ped.payments || [];
+    const marketplaceFee = payments.reduce((s, p) => s + (Number(p.marketplace_fee) || 0), 0);
+    const financingFee = payments.reduce((s, p) => {
+      const td = p.transaction_details || {};
+      return s + (Number(td.financing_fee) || 0);
+    }, 0);
+    // Custo de envio pago pelo vendedor (vem em payments[].shipping_cost ou shipping.cost)
+    let shippingCost = payments.reduce((s, p) => s + (Number(p.shipping_cost) || 0), 0);
+    if (!shippingCost) shippingCost = Number(ped.shipping?.cost) || 0;
+    // Alguns pedidos só expõem list_cost no shipping_option
+    if (!shippingCost && ped.shipping?.shipping_option?.list_cost) {
+      shippingCost = Number(ped.shipping.shipping_option.list_cost) || 0;
+    }
+    // Valor líquido real que o ML calcula (quando disponível)
+    const netReceived = payments.reduce((s, p) => {
+      const td = p.transaction_details || {};
+      return s + (Number(td.net_received_amount) || 0);
+    }, 0);
+    return { marketplaceFee, financingFee, shippingCost, netReceived, total: marketplaceFee + financingFee + shippingCost };
+  }
+
+  function _montarItens(ped) {
+    const taxas = _calcularTaxas(ped);
+    const subtotalItens = (ped.order_items || []).reduce((s, oi) => s + (oi.quantity * oi.unit_price), 0);
+    return (ped.order_items || []).map(oi => {
+      const sub = oi.quantity * oi.unit_price;
+      const prop = subtotalItens > 0 ? sub / subtotalItens : 1;
+      const prod = _matchProduto(oi.item?.title || '');
+      return {
+        id: oi.item?.id || '',
+        nome: oi.item?.title || 'Produto ML',
+        quantidade: oi.quantity,
+        precoUnitario: oi.unit_price,
+        subtotal: sub,
+        taxaML: taxas.total * prop,
+        taxaMLDetalhes: {
+          venda: (Number(oi.sale_fee) || taxas.marketplaceFee * prop),
+          parcelamento: taxas.financingFee * prop,
+          envio: taxas.shippingCost * prop
+        },
+        produtoId: prod?.id || null,
+        mlItemId: oi.item?.id
+      };
+    });
+  }
+
   async function _limparDuplicatas(log) {
     try {
       const rows = await DB._select('vendas', 'origem=eq.mercadolivre&select=id,ml_order_id,created_at&order=created_at.asc');
@@ -262,29 +310,36 @@ const ML = (() => {
       } catch(e) {}
       if (!jaExiste) jaExiste = DB.getVendas().find(v => v.mlOrderId === mlId);
       if (jaExiste) {
+        const updates = {};
         // Atualiza status se mudou
         if (jaExiste.mlStatus !== ped.status) {
-          await DB._update('vendas', jaExiste.id, { mlStatus: ped.status });
-          const idx = DB._cache.vendas.findIndex(v => v.id === jaExiste.id);
-          if (idx >= 0) DB._cache.vendas[idx].mlStatus = ped.status;
+          updates.mlStatus = ped.status;
           log(`Pedido #${ped.id} status atualizado: ${ped.status}`);
+        }
+        // Recalcula taxas se faltam detalhes (migração de pedidos antigos)
+        try {
+          const itensAtuais = Array.isArray(jaExiste.itens) ? jaExiste.itens : [];
+          const semDetalhes = itensAtuais.length === 0 || !itensAtuais[0]?.taxaMLDetalhes;
+          if (semDetalhes && (ped.order_items || []).length > 0) {
+            const novosItens = _montarItens(ped);
+            // preserva produtoId existente quando possível
+            for (let i = 0; i < novosItens.length; i++) {
+              const antigo = itensAtuais[i];
+              if (antigo?.produtoId && !novosItens[i].produtoId) novosItens[i].produtoId = antigo.produtoId;
+            }
+            updates.itens = novosItens;
+            log(`Pedido #${ped.id} taxas recalculadas.`);
+          }
+        } catch(e) { console.warn('[ML] recalc falhou:', e.message); }
+        if (Object.keys(updates).length > 0) {
+          await DB._update('vendas', jaExiste.id, updates);
+          const idx = DB._cache.vendas.findIndex(v => v.id === jaExiste.id);
+          if (idx >= 0) Object.assign(DB._cache.vendas[idx], updates);
         }
         pulados++; continue;
       }
 
-      const itens = (ped.order_items || []).map(oi => {
-        const prod = _matchProduto(oi.item?.title || '');
-        return {
-          id: oi.item?.id || '',
-          nome: oi.item?.title || 'Produto ML',
-          quantidade: oi.quantity,
-          precoUnitario: oi.unit_price,
-          subtotal: oi.quantity * oi.unit_price,
-          taxaML: oi.sale_fee || 0,
-          produtoId: prod?.id || null,
-          mlItemId: oi.item?.id
-        };
-      });
+      const itens = _montarItens(ped);
 
       const total = ped.total_amount || itens.reduce((s, i) => s + i.subtotal, 0);
 
