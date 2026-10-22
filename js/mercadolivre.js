@@ -358,19 +358,21 @@ const ML = (() => {
       // Conta do banco (consistente com tabela de vendas)
       const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
       const vendasML = DB.getVendas().filter(v => isML(v) && App.isToday(v.createdAt));
-      const total = vendasML.reduce((s, v) => s + (v.total || 0), 0);
-      _setKpi(vendasML.length, App.formatCurrency(total), '—', true);
+      const ativos = vendasML.filter(v => v.mlStatus !== 'cancelled');
+      const cancelados = vendasML.filter(v => v.mlStatus === 'cancelled').length;
+      const total = ativos.reduce((s, v) => s + (v.total || 0), 0);
+      _setKpi(ativos.length, App.formatCurrency(total), cancelados, true);
     } catch (e) {
       _setKpi('Erro', '—', '—', false);
       console.warn('ML KPI error:', e.message);
     }
   }
 
-  function _setKpi(pedidos, valor, pendentes, online) {
+  function _setKpi(pedidos, valor, cancelados, online) {
     const s = id => document.getElementById(id);
     if (s('ml-pedidos-hoje')) s('ml-pedidos-hoje').textContent = pedidos;
     if (s('ml-valor-hoje')) s('ml-valor-hoje').textContent = valor;
-    if (s('ml-pendentes')) s('ml-pendentes').textContent = pendentes;
+    if (s('ml-pendentes')) s('ml-pendentes').textContent = cancelados;
     const badge = s('ml-status-badge');
     if (badge) {
       const conectado = isOk() && online;
