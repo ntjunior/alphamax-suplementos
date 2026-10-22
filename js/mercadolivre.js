@@ -184,6 +184,11 @@ const ML = (() => {
   }
 
   // Extrai todas as deduções do pedido: tarifa ML, taxa parcelamento (MP), custo de envio pago pelo vendedor
+  // SOMENTE 2 fontes aceitas para envio (ambas são o custo REAL do vendedor):
+  //   1) derivação via net_received_amount (quando pagamento já liquidou)
+  //   2) base_cost do shipment (sempre o custo que o ML cobra do vendedor)
+  // ped.shipping.cost e payments[].shipping_cost retornam list_cost (frete cheio
+  // exibido ao comprador) — NUNCA usar como custo do vendedor.
   async function _calcularTaxas(ped) {
     const payments = ped.payments || [];
     const marketplaceFee = payments.reduce((s, p) => s + (Number(p.marketplace_fee) || 0), 0);
@@ -198,24 +203,36 @@ const ML = (() => {
     const totalAmount = Number(ped.total_amount) || 0;
 
     let shippingCost = 0;
+    let fonteEnvio = 'none';
 
-    // 1. MAIS CONFIÁVEL: derivar via net_received_amount (bate exatamente com o que o ML mostra)
-    // envio_vendedor = total_da_venda - tarifa_ML_total - valor_liquido_recebido
+    // Busca o shipment UMA vez (fonte canônica para base_cost)
+    let shipment = null;
+    if (ped.shipping?.id) {
+      try { shipment = await _get(`/shipments/${ped.shipping.id}`); } catch(e) {}
+    }
+    const baseCost = Number(shipment?.base_cost) || Number(shipment?.shipping_option?.cost) || Number(shipment?.cost) || 0;
+
+    // 1. Derivação via net_received: só confia se o resultado for coerente com base_cost
     if (netReceived > 0 && marketplaceFee > 0 && totalAmount > 0) {
       const calc = totalAmount - marketplaceFee - netReceived;
-      // tolerância de centavos; sanity: deve ser positivo e menor que o total
-      if (calc > -0.01 && calc < totalAmount) shippingCost = Math.max(0, calc);
+      if (calc > -0.01 && calc < totalAmount) {
+        // Se temos base_cost, só aceita derivação se divergir pouco (<R$0,20)
+        if (baseCost > 0 && Math.abs(calc - baseCost) > 0.2) {
+          shippingCost = baseCost;
+          fonteEnvio = 'base_cost';
+        } else {
+          shippingCost = Math.max(0, calc);
+          fonteEnvio = 'net_received';
+        }
+      }
     }
-    // 2. Fallback: shipping_cost direto nos payments
-    if (!shippingCost) shippingCost = payments.reduce((s, p) => s + (Number(p.shipping_cost) || 0), 0);
-    // 3. Fallback: shipping.cost no pedido
-    if (!shippingCost) shippingCost = Number(ped.shipping?.cost) || 0;
-    // 4. Último recurso: consulta o shipment (CUIDADO: list_cost é frete cheio, não o custo do vendedor)
-    if (!shippingCost && ped.shipping?.id) {
-      shippingCost = await _buscarShipmentCost(ped.shipping.id);
+    // 2. Fallback: base_cost do shipment (correto para free shipping)
+    if (!shippingCost && baseCost > 0) {
+      shippingCost = baseCost;
+      fonteEnvio = 'base_cost';
     }
 
-    return { marketplaceFee, financingFee, shippingCost, netReceived, total: marketplaceFee + financingFee + shippingCost };
+    return { marketplaceFee, financingFee, shippingCost, netReceived, total: marketplaceFee + financingFee + shippingCost, fonteEnvio };
   }
 
   async function _montarItens(ped) {
@@ -261,52 +278,42 @@ const ML = (() => {
     });
   }
 
-  // Verifica se um pedido já salvo precisa de recálculo (dados antigos/inconsistentes)
-  function _precisaRecalcular(itensAtuais) {
-    if (!Array.isArray(itensAtuais) || itensAtuais.length === 0) return false;
-    const semDetalhes = !itensAtuais[0]?.taxaMLDetalhes;
-    if (semDetalhes) return true;
-    const formatoAntigo = itensAtuais[0]?.taxaMLDetalhes?.tarifaTotal === undefined;
-    if (formatoAntigo) return true;
-    const envioAtual = itensAtuais.reduce((s, i) => s + (Number(i.taxaMLDetalhes?.envio) || 0), 0);
-    if (envioAtual === 0) return true;
-    const inconsistente = itensAtuais.some(i => {
-      const td = i.taxaMLDetalhes || {};
-      const esperado = (Number(td.tarifaTotal) || 0) + (Number(td.envio) || 0);
-      return esperado > 0 && Math.abs((Number(i.taxaML) || 0) - esperado) > 0.02;
-    });
-    return inconsistente;
-  }
-
-  // Recalcula retroativamente pedidos ANTIGOS armazenados (fora da janela de hoje)
-  // Busca cada /orders/{id} individualmente e aplica a nova lógica de taxas.
+  // Recalcula TODOS os pedidos ML armazenados: busca /orders/{id} e compara
+  // o resultado da nova lógica contra o salvo. Se divergir >R$0,10, atualiza.
+  // Garante que pedidos salvos com dados errados sejam corrigidos retroativamente.
   async function _recalcularPedidosAntigos(log) {
     const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
     const vendasML = DB.getVendas().filter(isML);
-    let corrigidos = 0, erros = 0;
+    let corrigidos = 0, erros = 0, verificados = 0;
     for (const v of vendasML) {
       if (!v.mlOrderId) continue;
       const itensAtuais = Array.isArray(v.itens) ? v.itens : [];
-      if (!_precisaRecalcular(itensAtuais)) continue;
+      if (itensAtuais.length === 0) continue;
+      verificados++;
       try {
         const ped = await _buscarPedidoDetalhado(v.mlOrderId);
-        if (!ped || !ped.order_items || ped.order_items.length === 0) { erros++; continue; }
+        if (!ped || !(ped.order_items || []).length) { erros++; continue; }
         const novosItens = await _montarItens(ped);
         for (let i = 0; i < novosItens.length; i++) {
           const antigo = itensAtuais[i];
           if (antigo?.produtoId && !novosItens[i].produtoId) novosItens[i].produtoId = antigo.produtoId;
         }
+        const taxaAnt = itensAtuais.reduce((s, i) => s + (Number(i.taxaML) || 0), 0);
+        const taxaNova = novosItens.reduce((s, i) => s + (Number(i.taxaML) || 0), 0);
+        const envioAnt = itensAtuais.reduce((s, i) => s + (Number(i.taxaMLDetalhes?.envio) || 0), 0);
+        const envioNovo = novosItens.reduce((s, i) => s + (Number(i.taxaMLDetalhes?.envio) || 0), 0);
+        if (Math.abs(taxaAnt - taxaNova) < 0.02 && Math.abs(envioAnt - envioNovo) < 0.02) continue;
         await DB._update('vendas', v.id, { itens: novosItens });
         const idx = DB._cache.vendas.findIndex(x => x.id === v.id);
         if (idx >= 0) DB._cache.vendas[idx].itens = novosItens;
         corrigidos++;
-        log(`Pedido #${v.mlOrderId} recalculado retroativamente.`);
+        log(`#${v.mlOrderId} corrigido: taxa R$${taxaAnt.toFixed(2)}→R$${taxaNova.toFixed(2)} / envio R$${envioAnt.toFixed(2)}→R$${envioNovo.toFixed(2)}.`);
       } catch (e) {
         erros++;
-        console.warn(`[ML] recalc retroativo #${v.mlOrderId} falhou:`, e.message);
+        console.warn(`[ML] recalc #${v.mlOrderId} falhou:`, e.message);
       }
     }
-    return { corrigidos, erros };
+    return { corrigidos, erros, verificados };
   }
 
   async function _limparDuplicatas(log) {
