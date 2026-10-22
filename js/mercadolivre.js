@@ -142,10 +142,10 @@ const ML = (() => {
     if (!shipmentId) return 0;
     try {
       const s = await _get(`/shipments/${shipmentId}`);
-      return Number(s?.shipping_option?.list_cost)
+      // Ordem de prioridade: custo real pago pelo vendedor
+      // (list_cost é o frete cheio exibido ao comprador — NÃO usar)
+      return Number(s?.base_cost)
           || Number(s?.shipping_option?.cost)
-          || Number(s?.base_cost)
-          || Number(s?.lead_time?.cost)
           || Number(s?.cost)
           || 0;
     } catch(e) { return 0; }
@@ -195,22 +195,24 @@ const ML = (() => {
       const td = p.transaction_details || {};
       return s + (Number(td.net_received_amount) || 0);
     }, 0);
-    const totalPago = payments.reduce((s, p) => s + (Number(p.total_paid_amount) || Number(p.transaction_amount) || 0), 0);
+    const totalAmount = Number(ped.total_amount) || 0;
 
-    // Custo de envio pago pelo vendedor - tenta vários caminhos
-    let shippingCost = payments.reduce((s, p) => s + (Number(p.shipping_cost) || 0), 0);
-    if (!shippingCost) shippingCost = Number(ped.shipping?.cost) || 0;
-    if (!shippingCost && ped.shipping?.shipping_option?.list_cost) {
-      shippingCost = Number(ped.shipping.shipping_option.list_cost) || 0;
+    let shippingCost = 0;
+
+    // 1. MAIS CONFIÁVEL: derivar via net_received_amount (bate exatamente com o que o ML mostra)
+    // envio_vendedor = total_da_venda - tarifa_ML_total - valor_liquido_recebido
+    if (netReceived > 0 && marketplaceFee > 0 && totalAmount > 0) {
+      const calc = totalAmount - marketplaceFee - netReceived;
+      // tolerância de centavos; sanity: deve ser positivo e menor que o total
+      if (calc > -0.01 && calc < totalAmount) shippingCost = Math.max(0, calc);
     }
+    // 2. Fallback: shipping_cost direto nos payments
+    if (!shippingCost) shippingCost = payments.reduce((s, p) => s + (Number(p.shipping_cost) || 0), 0);
+    // 3. Fallback: shipping.cost no pedido
+    if (!shippingCost) shippingCost = Number(ped.shipping?.cost) || 0;
+    // 4. Último recurso: consulta o shipment (CUIDADO: list_cost é frete cheio, não o custo do vendedor)
     if (!shippingCost && ped.shipping?.id) {
       shippingCost = await _buscarShipmentCost(ped.shipping.id);
-    }
-    // Fallback definitivo: derivar do net_received_amount (que é o valor real que o ML paga)
-    // envio = total pago pelo comprador - tarifa ML - valor líquido recebido
-    if (!shippingCost && netReceived > 0 && totalPago > 0 && marketplaceFee > 0) {
-      const calc = totalPago - marketplaceFee - netReceived;
-      if (calc > 0 && calc < totalPago) shippingCost = calc;
     }
 
     return { marketplaceFee, financingFee, shippingCost, netReceived, total: marketplaceFee + financingFee + shippingCost };
@@ -361,7 +363,7 @@ const ML = (() => {
           updates.mlStatus = ped.status;
           log(`Pedido #${ped.id} status atualizado: ${ped.status}`);
         }
-        // Recalcula taxas se faltam detalhes, zeradas, formato antigo, OU envio zerado (API pode ter liberado agora)
+        // Recalcula taxas em várias condições para garantir correção dos pedidos antigos
         try {
           const itensAtuais = Array.isArray(jaExiste.itens) ? jaExiste.itens : [];
           const semDetalhes = itensAtuais.length === 0 || !itensAtuais[0]?.taxaMLDetalhes;
@@ -369,8 +371,18 @@ const ML = (() => {
           const taxasZeradas = taxaTotalAtual === 0 && (ped.total_amount || 0) > 0;
           const formatoAntigo = !semDetalhes && itensAtuais[0]?.taxaMLDetalhes && itensAtuais[0].taxaMLDetalhes.tarifaTotal === undefined;
           const envioAtual = itensAtuais.reduce((s, i) => s + (Number(i.taxaMLDetalhes?.envio) || 0), 0);
-          const envioZerado = envioAtual === 0 && ped.shipping; // existe envio no pedido mas CRM está com 0
-          if ((semDetalhes || taxasZeradas || formatoAntigo || envioZerado) && (ped.order_items || []).length > 0) {
+          const envioZerado = envioAtual === 0 && ped.shipping;
+          // Verifica se o líquido calculado bate com o net_received_amount que a API retorna.
+          // Se divergir mais de R$0,05, força recálculo (dado armazenado está errado).
+          let liquidoDivergente = false;
+          try {
+            const netReceived = (ped.payments || []).reduce((s, p) => s + (Number(p.transaction_details?.net_received_amount) || 0), 0);
+            if (netReceived > 0) {
+              const liquidoAtual = (Number(jaExiste.total) || 0) - taxaTotalAtual;
+              if (Math.abs(liquidoAtual - netReceived) > 0.05) liquidoDivergente = true;
+            }
+          } catch(e) {}
+          if ((semDetalhes || taxasZeradas || formatoAntigo || envioZerado || liquidoDivergente) && (ped.order_items || []).length > 0) {
             const novosItens = await _montarItens(ped);
             // preserva produtoId existente quando possível
             for (let i = 0; i < novosItens.length; i++) {
