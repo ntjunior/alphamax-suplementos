@@ -93,6 +93,14 @@
           <button class="pill" onclick="setPeriodo('semana', this)">7 dias</button>
           <button class="pill active" onclick="setPeriodo('mes', this)">Mês atual</button>
           <button class="pill" onclick="setPeriodo('mes-anterior', this)">Mês anterior</button>
+          <button class="pill" onclick="setPeriodo('personalizado', this)">Personalizado</button>
+        </div>
+        <div id="ml-range-personalizado" class="hidden" style="display:none;align-items:center;gap:8px;">
+          <span style="font-size:13px;color:var(--text-muted);">De:</span>
+          <input type="date" id="ml-data-ini" class="form-control" style="width:150px;padding:5px 10px;font-size:13px;">
+          <span style="font-size:13px;color:var(--text-muted);">até:</span>
+          <input type="date" id="ml-data-fim" class="form-control" style="width:150px;padding:5px 10px;font-size:13px;">
+          <button class="btn btn-primary btn-sm" onclick="aplicarRange()">Aplicar</button>
         </div>
       </div>
     </div>
@@ -318,21 +326,56 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
-<script src="../js/mercadolivre.js?v=3.0.0"></script>
+<script src="../js/mercadolivre.js?v=3.0.1"></script>
 <script>
   let periodoAtual = 'mes';
+  let rangeCustom = null; // { ini, fim } quando periodoAtual === 'personalizado'
 
   function setPeriodo(p, el) {
     periodoAtual = p;
     document.querySelectorAll('.filter-pills .pill').forEach(x => x.classList.remove('active'));
     if (el) el.classList.add('active');
+    const painel = document.getElementById('ml-range-personalizado');
+    if (p === 'personalizado') {
+      painel.style.display = 'flex';
+      // Pré-preenche inputs com último range custom ou mês atual
+      const iniEl = document.getElementById('ml-data-ini');
+      const fimEl = document.getElementById('ml-data-fim');
+      if (!iniEl.value || !fimEl.value) {
+        const hoje = new Date();
+        const ini = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+        iniEl.value = _toInputDate(ini);
+        fimEl.value = _toInputDate(hoje);
+      }
+      return; // não renderiza até usuário clicar Aplicar
+    }
+    painel.style.display = 'none';
+    rangeCustom = null;
     render();
+  }
+
+  function aplicarRange() {
+    const iniStr = document.getElementById('ml-data-ini').value;
+    const fimStr = document.getElementById('ml-data-fim').value;
+    if (!iniStr || !fimStr) { App.showToast('Preencha as duas datas.', 'warning'); return; }
+    const ini = new Date(iniStr + 'T00:00:00');
+    const fim = new Date(fimStr + 'T23:59:59.999');
+    if (ini > fim) { App.showToast('Data inicial maior que a final.', 'warning'); return; }
+    rangeCustom = { ini, fim };
+    render();
+  }
+
+  function _toInputDate(d) {
+    const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
   }
 
   function _rangeFromPeriodo(p) {
     const hoje = new Date();
     let ini, fim;
-    if (p === 'hoje') {
+    if (p === 'personalizado' && rangeCustom) {
+      return rangeCustom;
+    } else if (p === 'hoje') {
       ini = new Date(hoje); ini.setHours(0,0,0,0);
       fim = new Date(hoje); fim.setHours(23,59,59,999);
     } else if (p === 'semana') {
