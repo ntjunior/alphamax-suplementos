@@ -95,7 +95,7 @@
           <button class="pill" onclick="setPeriodo('mes-anterior', this)">Mês anterior</button>
           <button class="pill" onclick="setPeriodo('personalizado', this)">Personalizado</button>
         </div>
-        <div id="ml-range-personalizado" class="hidden" style="display:none;align-items:center;gap:8px;">
+        <div id="ml-range-personalizado" style="display:none;align-items:center;gap:8px;">
           <span style="font-size:13px;color:var(--text-muted);">De:</span>
           <input type="date" id="ml-data-ini" class="form-control" style="width:150px;padding:5px 10px;font-size:13px;">
           <span style="font-size:13px;color:var(--text-muted);">até:</span>
@@ -326,7 +326,7 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
-<script src="../js/mercadolivre.js?v=3.0.1"></script>
+<script src="../js/mercadolivre.js?v=3.0.2"></script>
 <script>
   let periodoAtual = 'mes';
   let rangeCustom = null; // { ini, fim } quando periodoAtual === 'personalizado'
