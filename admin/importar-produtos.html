@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="../logo.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Importar Produtos (CSV) — Suplementos Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .preview-row img { width:36px;height:36px;object-fit:contain;border-radius:4px;background:#fff;padding:2px; }
+    .preview-row td { font-size:12px; }
+    .badge-inativo { background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600; }
+    .foto-emoji { font-size:22px; }
+  </style>
+  <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
+</head>
+<body>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar-logo"><img src="../logo.png" alt="Suplementos Pro" style="width:100%;height:100%;object-fit:contain;display:block;"></div>
+  <div class="sidebar-nav">
+    <a href="index.html" class="nav-item"><span class="nav-icon"><i data-lucide="layout-dashboard"></i></span><span class="nav-label">Dashboard</span></a>
+    <a href="produtos.html" class="nav-item active"><span class="nav-icon"><i data-lucide="package"></i></span><span class="nav-label">Produtos</span></a>
+  </div>
+</nav>
+
+<div class="main-content" id="main-content">
+  <header class="page-header">
+    <div>
+      <div class="page-title"><i data-lucide="upload"></i> Importar Produtos (CSV)</div>
+      <div class="page-subtitle" id="status-sub">Prévia — todos serão criados como <b>Inativos</b>.</div>
+    </div>
+    <div class="header-actions">
+      <a href="produtos.html" class="btn btn-secondary"><i data-lucide="arrow-left"></i> Voltar</a>
+      <button class="btn btn-primary" id="btn-importar" onclick="importar()"><i data-lucide="database"></i> Importar como Inativos</button>
+    </div>
+  </header>
+
+  <div class="page-body">
+    <div class="card mb-16" style="padding:16px 20px;">
+      <div style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div><strong id="qt-total">0</strong> <span style="color:var(--text-muted);">produto(s) na prévia</span></div>
+        <div><strong id="qt-novos" style="color:var(--green);">0</strong> <span style="color:var(--text-muted);">novo(s)</span></div>
+        <div><strong id="qt-dup" style="color:#eab308;">0</strong> <span style="color:var(--text-muted);">duplicado(s) por nome (serão pulados)</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:52px;">Foto</th>
+              <th>Nome</th>
+              <th>Marca</th>
+              <th>Categoria</th>
+              <th>Sabor</th>
+              <th class="text-right">Custo</th>
+              <th class="text-right">Venda</th>
+              <th class="text-right">Markup</th>
+              <th class="text-right">Estoque</th>
+              <th class="text-right">Mín.</th>
+              <th>Status</th>
+              <th>Observação</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-preview"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<script src="../js/db.js"></script>
+<script src="../js/app.js"></script>
+<script>
+  // Dados do CSV alphamax_importacao_claude.csv (13 produtos)
+  const PRODUTOS_CSV = [
+    { nome:'Vitamina C + Zinco Nitromax 60 cápsulas', marca:'Nitromax', categoria:'Vitaminas e Minerais', emoji:'🌟', precoCusto:14.98, precoVenda:29.90, sabor:'', estoque:5, estoqueMin:2, descricao:'Suplemento de vitamina C com zinco em cápsulas. Consulte o rótulo para composição e recomendação de uso.', imagemUrl:'https://cdn.awsli.com.br/800x800/2832/2832839/produto/354103452/vitamina-c-nitromax-8b6go36aes.png' },
+    { nome:'BCAA Dark Lab 3:1:1 60 cápsulas', marca:'Dark Lab', categoria:'Aminoácidos', emoji:'🧬', precoCusto:36.57, precoVenda:54.90, sabor:'', estoque:6, estoqueMin:2, descricao:'Suplemento de aminoácidos de cadeia ramificada BCAA 3:1:1 em cápsulas.', imagemUrl:'https://product-data.raiadrogasil.io/images/5302422.webp' },
+    { nome:'BCAA Integralmédica 2044mg 90 cápsulas', marca:'Integralmédica', categoria:'Aminoácidos', emoji:'🧬', precoCusto:35.90, precoVenda:54.90, sabor:'', estoque:6, estoqueMin:2, descricao:'BCAA em cápsulas da Integralmédica. Confirme composição e porção no rótulo.', imagemUrl:'https://product-data.raiadrogasil.io/images/4524183.webp' },
+    { nome:'Ripped 400 Fisionutri', marca:'Fisionutri', categoria:'Outros Suplementos', emoji:'🌡️', precoCusto:15.78, precoVenda:32.90, sabor:'', estoque:5, estoqueMin:2, descricao:'Suplemento Ripped 400. Consulte os ingredientes e orientações no rótulo.', imagemUrl:'' },
+    { nome:'BCAA Nitro 1200 Nitromax 60 tabletes', marca:'Nitromax', categoria:'Aminoácidos', emoji:'🧬', precoCusto:10.64, precoVenda:22.90, sabor:'', estoque:24, estoqueMin:5, descricao:'BCAA Nitro 1200 em tabletes. Confira os dados nutricionais na embalagem.', imagemUrl:'https://down-br.img.susercontent.com/file/eb792c64280c3975ba7b5b72ee273b4a' },
+    { nome:'Colágeno Feme Nitromax 60 tabletes', marca:'Nitromax', categoria:'Outros Suplementos', emoji:'📦', precoCusto:18.97, precoVenda:39.90, sabor:'', estoque:7, estoqueMin:2, descricao:'Suplemento de colágeno em tabletes. Consulte informações e modo de uso no rótulo.', imagemUrl:'https://cdn.awsli.com.br/600x1000/2832/2832839/produto/354135467/colageno-for-feme-fg0pzrz1ok.jpg' },
+    { nome:'Energel Black Bodyaction sachê 30g', marca:'Bodyaction', categoria:'Carboidratos', emoji:'🌽', precoCusto:2.6335, precoVenda:5.90, sabor:'', estoque:60, estoqueMin:10, descricao:'Gel energético Bodyaction, comercializado por sachê individual de 30g. Sabores conforme disponibilidade.', imagemUrl:'' },
+    { nome:'Cafeína Fisionutri', marca:'Fisionutri', categoria:'Cafeína', emoji:'🌡️', precoCusto:10.28, precoVenda:27.90, sabor:'', estoque:12, estoqueMin:3, descricao:'Suplemento de cafeína em cápsulas. Verifique a dosagem e advertências no rótulo.', imagemUrl:'' },
+    { nome:'Thermo Flame Black Skull 60 tabletes', marca:'Black Skull', categoria:'Outros Suplementos', emoji:'🌡️', precoCusto:21.99, precoVenda:39.90, sabor:'', estoque:10, estoqueMin:3, descricao:'Suplemento Thermo Flame em tabletes. Consulte composição e orientações do fabricante.', imagemUrl:'https://cdn.awsli.com.br/26/26926/produto/70811609/46f9a2b39b.jpg' },
+    { nome:'V9 Pump Shark Pro 150g', marca:'Shark Pro', categoria:'Pré-Treino', emoji:'🔥', precoCusto:36.03, precoVenda:69.90, sabor:'Limão', estoque:3, estoqueMin:1, descricao:'Pré-treino V9 Pump Shark Pro de 150g, sabor limão.', imagemUrl:'' },
+    { nome:'Beta Alanina 100% Pure Profit 120g', marca:'Profit', categoria:'Aminoácidos', emoji:'🧬', precoCusto:33.50, precoVenda:69.90, sabor:'', estoque:3, estoqueMin:1, descricao:'Suplemento de beta-alanina 120g. Utilize conforme as orientações do rótulo.', imagemUrl:'https://cdn.awsli.com.br/2500x2500/1049/1049095/produto/223446878/beta_alanina_100_pure_120g_profit-cl90qc7eoe.jpg' },
+    { nome:'Carbogel Shark Up sachê 30g', marca:'Shark Up', categoria:'Carboidratos', emoji:'🌽', precoCusto:2.528, precoVenda:5.90, sabor:'Tutti Frutti (confirmar)', estoque:30, estoqueMin:10, descricao:'Gel de carboidratos Shark Up vendido por sachê individual de 30g.', imagemUrl:'' },
+    { nome:'Maca Peruana 120 cápsulas', marca:'A confirmar', categoria:'Suplementos Naturais', emoji:'📦', precoCusto:16.92, precoVenda:39.90, sabor:'', estoque:10, estoqueMin:3, descricao:'Suplemento de maca peruana em cápsulas. Confirmar marca e composição antes de publicar.', imagemUrl:'' }
+  ];
+
+  function _markup(custo, venda) {
+    if (!custo || custo <= 0) return 0;
+    return ((venda - custo) / custo) * 100;
+  }
+
+  function _normalizar(s) { return (s || '').toLowerCase().replace(/\s+/g,' ').trim(); }
+
+  async function montarPreview() {
+    await DB.init();
+    const existentes = DB.getProdutos().map(p => _normalizar(p.nome));
+    const dupSet = new Set(existentes);
+    const linhas = PRODUTOS_CSV.map(p => {
+      const dup = dupSet.has(_normalizar(p.nome));
+      return { ...p, _duplicado: dup };
+    });
+    let qtDup = linhas.filter(l => l._duplicado).length;
+    let qtNovos = linhas.length - qtDup;
+    document.getElementById('qt-total').textContent = linhas.length;
+    document.getElementById('qt-novos').textContent = qtNovos;
+    document.getElementById('qt-dup').textContent = qtDup;
+
+    const tb = document.getElementById('tbody-preview');
+    tb.innerHTML = linhas.map(p => {
+      const mk = _markup(p.precoCusto, p.precoVenda);
+      const foto = p.imagemUrl
+        ? `<img src="${p.imagemUrl}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'foto-emoji',textContent:'${p.emoji||'📦'}'}))" />`
+        : `<span class="foto-emoji">${p.emoji||'📦'}</span>`;
+      const obs = p._duplicado
+        ? '<span style="color:#eab308;font-weight:600;">⚠️ já existe (nome)</span>'
+        : '<span style="color:var(--green);">pronto p/ importar</span>';
+      return `
+        <tr class="preview-row">
+          <td style="text-align:center;">${foto}</td>
+          <td style="font-weight:600;">${p.nome}</td>
+          <td>${p.marca}</td>
+          <td>${p.categoria}</td>
+          <td>${p.sabor || '—'}</td>
+          <td class="text-right">${App.formatCurrency(p.precoCusto)}</td>
+          <td class="text-right text-red font-bold">${App.formatCurrency(p.precoVenda)}</td>
+          <td class="text-right">${mk.toFixed(1)}%</td>
+          <td class="text-right">${p.estoque}</td>
+          <td class="text-right">${p.estoqueMin}</td>
+          <td><span class="badge-inativo">INATIVO</span></td>
+          <td>${obs}</td>
+        </tr>`;
+    }).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  async function importar() {
+    const btn = document.getElementById('btn-importar');
+    const confirmar = confirm(`Importar ${PRODUTOS_CSV.length} produtos como INATIVOS?\n\nEles aparecerão na página Produtos marcados como Inativo. Você poderá editar e ativar manualmente depois.`);
+    if (!confirmar) return;
+    btn.disabled = true; btn.textContent = 'Importando...';
+    const existentes = DB.getProdutos().map(p => _normalizar(p.nome));
+    const dupSet = new Set(existentes);
+    let novos = 0, pulados = 0;
+    for (const p of PRODUTOS_CSV) {
+      if (dupSet.has(_normalizar(p.nome))) { pulados++; continue; }
+      const prod = {
+        nome: p.nome,
+        marca: p.marca,
+        categoria: p.categoria,
+        codigoBarras: '',
+        emoji: p.emoji || '📦',
+        precoCusto: Number(p.precoCusto) || 0,
+        precoVenda: Number(p.precoVenda) || 0,
+        sabor: p.sabor || '',
+        estoque: Number(p.estoque) || 0,
+        estoqueMin: Number(p.estoqueMin) || 0,
+        descricao: p.descricao || '',
+        imagemUrl: p.imagemUrl || '',
+        ativo: false   // IMPORTANTE: todos entram inativos
+      };
+      try { DB.addProduto(prod); novos++; }
+      catch(e) { console.error('Falha ao importar', p.nome, e); }
+    }
+    App.showToast(`${novos} importado(s), ${pulados} pulado(s).`, 'success');
+    btn.textContent = 'Concluído';
+    setTimeout(() => { window.location.href = 'produtos.html'; }, 1500);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    montarPreview();
+    if (window.lucide) lucide.createIcons();
+  });
+</script>
+</body>
+</html>
