@@ -208,7 +208,7 @@
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarDados(); });
 
-  setInterval(atualizarDados, 2 * 60 * 1000);
+  setInterval(() => { if (document.visibilityState === 'visible') atualizarDados(); }, 2 * 60 * 1000);
 </script>
 </body>
 </html>

@@ -440,9 +440,9 @@
     document.getElementById('data-hoje').textContent = hoje.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     carregarDashboard();
     ML.carregarKpis();
-    // Sincroniza na abertura e depois a cada 5 minutos
+    // Sincroniza na abertura e depois a cada 5 minutos, mas SÓ se a aba estiver visível
     await mlAutoSync();
-    setInterval(mlAutoSync, 5 * 60 * 1000);
+    setInterval(() => { if (document.visibilityState === 'visible') mlAutoSync(); }, 5 * 60 * 1000);
   })();
 
   document.addEventListener('visibilitychange', () => {

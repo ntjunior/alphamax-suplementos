@@ -624,7 +624,7 @@
     await App.initPage('mercadolivre');
     render();
     try { if (ML.isOk()) { await ML.sincronizar(); await atualizarDados(); } } catch(e){ console.warn(e); }
-    setInterval(atualizarDados, 2 * 60 * 1000);
+    setInterval(() => { if (document.visibilityState === 'visible') atualizarDados(); }, 2 * 60 * 1000);
   })();
 
   document.addEventListener('visibilitychange', () => { if (!document.hidden) atualizarDados(); });

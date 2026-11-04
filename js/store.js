@@ -40,18 +40,16 @@ let produtoModalId = null;
 
 // ===== SUPABASE =====
 async function fetchProdutos() {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/produtos?order=nome.asc`, {
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/produtos?ativo=eq.true&order=nome.asc`, {
     headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
   });
   if (!r.ok) throw new Error('Erro ao carregar produtos');
   const data = await r.json();
-  return data
-    .filter(p => p.ativo === true || p.ativo === 1 || p.ativo === 'true')
-    .map(p => ({
-      id: p.id, nome: p.nome, marca: p.marca, categoria: p.categoria,
-      sabor: p.sabor, precoVenda: p.preco_venda, estoque: p.estoque,
-      descricao: p.descricao, imagemUrl: p.imagem_url, emoji: p.emoji
-    }));
+  return data.map(p => ({
+    id: p.id, nome: p.nome, marca: p.marca, categoria: p.categoria,
+    sabor: p.sabor, precoVenda: p.preco_venda, estoque: p.estoque,
+    descricao: p.descricao, imagemUrl: p.imagem_url, emoji: p.emoji
+  }));
 }
 
 // ===== ÍCONES SVG POR CATEGORIA =====

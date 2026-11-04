@@ -104,7 +104,20 @@ const DB = {
   },
 
   // ===================== INIT =====================
+  INIT_TTL_MS: 30 * 1000, // reusa snapshot se foi atualizado nos últimos 30s (reduz egress em navegações)
+
   async init() {
+    // Fast-path: snapshot recente entre navegações admin — evita 8 SELECTs
+    const snapPrevio = this._loadSnapshot();
+    if (snapPrevio?.cache && snapPrevio?.at) {
+      const idade = Date.now() - new Date(snapPrevio.at).getTime();
+      if (idade < this.INIT_TTL_MS) {
+        this._cache = Object.assign(this._cache, snapPrevio.cache);
+        this.offlineMode = false;
+        this._agendarSnapshots();
+        return;
+      }
+    }
     try {
       const [produtos, vendas, clientes, caixas, movs, usuarios, cupons, lancamentos] = await Promise.all([
         this._select('produtos', 'order=created_at'),
