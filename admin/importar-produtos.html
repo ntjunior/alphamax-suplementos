@@ -12,6 +12,18 @@
     .badge-inativo { background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600; }
     .foto-emoji { font-size:22px; }
     .summary-pill { background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:10px 16px;display:flex;align-items:center;gap:8px; }
+    .td-acao { white-space:nowrap; }
+    .td-acao button { padding:5px 8px; font-size:11px; margin:0 2px; }
+    .modal-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:9998; }
+    .modal-backdrop.open { display:flex; }
+    .modal-edit { background:var(--bg-card); border:1px solid var(--border); border-radius:10px; width:min(680px, 94vw); max-height:90vh; overflow:auto; padding:20px; }
+    .modal-edit h3 { margin:0 0 16px 0; font-size:16px; display:flex; align-items:center; gap:8px; }
+    .modal-edit .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px 14px; }
+    .modal-edit .full { grid-column:1/-1; }
+    .modal-edit label { font-size:11px; color:var(--text-muted); display:block; margin-bottom:3px; font-weight:600; }
+    .modal-edit input, .modal-edit textarea, .modal-edit select { width:100%; padding:7px 9px; font-size:13px; background:var(--bg-main); border:1px solid var(--border); border-radius:6px; color:var(--text-main); }
+    .modal-edit textarea { min-height:70px; resize:vertical; }
+    .modal-edit .actions { display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
   </style>
   <script>document.documentElement.setAttribute("data-theme",localStorage.getItem("pdv_theme")||"dark")</script>
 </head>
@@ -87,13 +99,36 @@
   </div>
 </div>
 
+<div id="modal-edit" class="modal-backdrop" onclick="if(event.target===this)fecharEdit()">
+  <div class="modal-edit">
+    <h3><i data-lucide="pencil"></i> Editar produto antes de importar</h3>
+    <div class="form-grid">
+      <div class="full"><label>Nome *</label><input id="edit-nome" type="text"></div>
+      <div><label>Marca</label><input id="edit-marca" type="text"></div>
+      <div><label>Categoria</label><input id="edit-categoria" type="text"></div>
+      <div><label>Sabor / Variação</label><input id="edit-sabor" type="text"></div>
+      <div><label>Emoji</label><input id="edit-emoji" type="text" maxlength="4"></div>
+      <div><label>Preço de Custo (R$)</label><input id="edit-custo" type="number" step="0.01" min="0"></div>
+      <div><label>Preço de Venda (R$) *</label><input id="edit-venda" type="number" step="0.01" min="0"></div>
+      <div><label>Estoque Atual *</label><input id="edit-estoque" type="number" min="0"></div>
+      <div><label>Estoque Mínimo</label><input id="edit-estoque-min" type="number" min="0"></div>
+      <div class="full"><label>URL da Foto</label><input id="edit-imagem" type="text" placeholder="https://..."></div>
+      <div class="full"><label>Descrição</label><textarea id="edit-descricao"></textarea></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="fecharEdit()">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarEdit()"><i data-lucide="check"></i> Salvar alterações</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container" class="toast-container"></div>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
 <script>
-  const PRODUTOS_CSV = [
+  let PRODUTOS_CSV = [
     { nome:'Vitamina C + Zinco Nitromax 60 cápsulas', marca:'Nitromax', categoria:'Vitaminas e Minerais', emoji:'🌟', precoCusto:14.98, precoVenda:29.90, sabor:'', estoque:5, estoqueMin:2, descricao:'Suplemento de vitamina C com zinco em cápsulas. Consulte o rótulo para composição e recomendação de uso.', imagemUrl:'https://cdn.awsli.com.br/800x800/2832/2832839/produto/354103452/vitamina-c-nitromax-8b6go36aes.png' },
     { nome:'BCAA Dark Lab 3:1:1 60 cápsulas', marca:'Dark Lab', categoria:'Aminoácidos', emoji:'🧬', precoCusto:36.57, precoVenda:54.90, sabor:'', estoque:6, estoqueMin:2, descricao:'Suplemento de aminoácidos de cadeia ramificada BCAA 3:1:1 em cápsulas.', imagemUrl:'https://product-data.raiadrogasil.io/images/5302422.webp' },
     { nome:'BCAA Integralmédica 2044mg 90 cápsulas', marca:'Integralmédica', categoria:'Aminoácidos', emoji:'🧬', precoCusto:35.90, precoVenda:54.90, sabor:'', estoque:6, estoqueMin:2, descricao:'BCAA em cápsulas da Integralmédica. Confirme composição e porção no rótulo.', imagemUrl:'https://product-data.raiadrogasil.io/images/4524183.webp' },
@@ -140,9 +175,13 @@
       const obs = p._duplicado
         ? '<span style="color:#eab308;font-weight:600;">⚠️ já existe (nome)</span>'
         : '<span style="color:var(--green);">pronto p/ importar</span>';
-      const acao = p._duplicado
-        ? `<button class="btn btn-secondary" disabled style="padding:6px 10px;font-size:11px;">já existe</button>`
-        : `<button class="btn btn-primary" onclick="importarUm(${idx}, this)" style="padding:6px 10px;font-size:11px;"><i data-lucide="plus"></i> Importar</button>`;
+      const btnImportar = p._duplicado
+        ? `<button class="btn btn-secondary" disabled title="já existe">já existe</button>`
+        : `<button class="btn btn-primary" onclick="importarUm(${idx}, this)" title="Importar"><i data-lucide="plus"></i></button>`;
+      const acao = `
+        ${btnImportar}
+        <button class="btn btn-secondary" onclick="abrirEdit(${idx})" title="Editar"><i data-lucide="pencil"></i></button>
+        <button class="btn btn-secondary" style="background:#dc2626;color:#fff;border-color:#dc2626;" onclick="apagarLinha(${idx})" title="Remover da prévia"><i data-lucide="trash-2"></i></button>`;
       return `
         <tr class="preview-row" data-idx="${idx}">
           <td style="text-align:center;">${foto}</td>
@@ -210,8 +249,70 @@
     const obs = row.querySelector('.td-obs');
     const acao = row.querySelector('.td-acao');
     if (obs) obs.innerHTML = '<span style="color:var(--green);font-weight:600;">✓ importado</span>';
-    if (acao) acao.innerHTML = '<button class="btn btn-secondary" disabled style="padding:6px 10px;font-size:11px;">importado</button>';
+    if (acao) acao.innerHTML = `
+      <button class="btn btn-secondary" disabled title="já importado"><i data-lucide="check"></i></button>
+      <button class="btn btn-secondary" style="background:#dc2626;color:#fff;border-color:#dc2626;" onclick="apagarLinha(${idx})" title="Remover da prévia"><i data-lucide="trash-2"></i></button>`;
     row.style.opacity = '0.6';
+    if (window.lucide) lucide.createIcons();
+  }
+
+  let _editIdx = null;
+  function abrirEdit(idx) {
+    const p = PRODUTOS_CSV[idx];
+    if (!p) return;
+    _editIdx = idx;
+    document.getElementById('edit-nome').value = p.nome || '';
+    document.getElementById('edit-marca').value = p.marca || '';
+    document.getElementById('edit-categoria').value = p.categoria || '';
+    document.getElementById('edit-sabor').value = p.sabor || '';
+    document.getElementById('edit-emoji').value = p.emoji || '';
+    document.getElementById('edit-custo').value = p.precoCusto ?? '';
+    document.getElementById('edit-venda').value = p.precoVenda ?? '';
+    document.getElementById('edit-estoque').value = p.estoque ?? '';
+    document.getElementById('edit-estoque-min').value = p.estoqueMin ?? '';
+    document.getElementById('edit-imagem').value = p.imagemUrl || '';
+    document.getElementById('edit-descricao').value = p.descricao || '';
+    document.getElementById('modal-edit').classList.add('open');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function fecharEdit() {
+    document.getElementById('modal-edit').classList.remove('open');
+    _editIdx = null;
+  }
+
+  function salvarEdit() {
+    if (_editIdx === null) return fecharEdit();
+    const p = PRODUTOS_CSV[_editIdx];
+    const nome = document.getElementById('edit-nome').value.trim();
+    const venda = Number(document.getElementById('edit-venda').value);
+    const estoque = Number(document.getElementById('edit-estoque').value);
+    if (!nome) { App.showToast('Nome é obrigatório.', 'warning'); return; }
+    if (!(venda > 0)) { App.showToast('Preço de venda deve ser maior que zero.', 'warning'); return; }
+    if (isNaN(estoque) || estoque < 0) { App.showToast('Estoque inválido.', 'warning'); return; }
+    p.nome = nome;
+    p.marca = document.getElementById('edit-marca').value.trim();
+    p.categoria = document.getElementById('edit-categoria').value.trim();
+    p.sabor = document.getElementById('edit-sabor').value.trim();
+    p.emoji = document.getElementById('edit-emoji').value.trim() || '📦';
+    p.precoCusto = Number(document.getElementById('edit-custo').value) || 0;
+    p.precoVenda = venda;
+    p.estoque = estoque;
+    p.estoqueMin = Number(document.getElementById('edit-estoque-min').value) || 0;
+    p.imagemUrl = document.getElementById('edit-imagem').value.trim();
+    p.descricao = document.getElementById('edit-descricao').value.trim();
+    fecharEdit();
+    montarPreview();
+    App.showToast('Alterações salvas na prévia.', 'success');
+  }
+
+  function apagarLinha(idx) {
+    const p = PRODUTOS_CSV[idx];
+    if (!p) return;
+    if (!confirm(`Remover "${p.nome}" da prévia?\n\nIsso só tira da lista — nada é apagado do banco.`)) return;
+    PRODUTOS_CSV.splice(idx, 1);
+    montarPreview();
+    App.showToast('Removido da prévia.', 'info');
   }
 
   function _marcarLinhaDuplicado(idx) {
@@ -220,7 +321,11 @@
     const obs = row.querySelector('.td-obs');
     const acao = row.querySelector('.td-acao');
     if (obs) obs.innerHTML = '<span style="color:#eab308;font-weight:600;">⚠️ já existe (nome)</span>';
-    if (acao) acao.innerHTML = '<button class="btn btn-secondary" disabled style="padding:6px 10px;font-size:11px;">já existe</button>';
+    if (acao) acao.innerHTML = `
+      <button class="btn btn-secondary" disabled title="já existe">já existe</button>
+      <button class="btn btn-secondary" onclick="abrirEdit(${idx})" title="Editar"><i data-lucide="pencil"></i></button>
+      <button class="btn btn-secondary" style="background:#dc2626;color:#fff;border-color:#dc2626;" onclick="apagarLinha(${idx})" title="Remover da prévia"><i data-lucide="trash-2"></i></button>`;
+    if (window.lucide) lucide.createIcons();
   }
 
   async function importar() {
