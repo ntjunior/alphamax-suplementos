@@ -85,11 +85,14 @@ const DB = {
   // ===================== SNAPSHOT LOCAL (fallback quando Supabase está indisponível) =====================
   _SNAP_KEY: 'db_snapshot_v1',
   offlineMode: false,
+  _fetchedAt: null, // timestamp do último fetch bem-sucedido do Supabase (NÃO do snapshot)
 
   _saveSnapshot() {
     try {
+      const prev = this._loadSnapshot();
       localStorage.setItem(this._SNAP_KEY, JSON.stringify({
         at: new Date().toISOString(),
+        fetchedAt: this._fetchedAt || prev?.fetchedAt || null,
         cache: this._cache
       }));
     } catch(e) { /* localStorage cheio ou indisponível - ignora */ }
@@ -104,15 +107,16 @@ const DB = {
   },
 
   // ===================== INIT =====================
-  INIT_TTL_MS: 30 * 1000, // reusa snapshot se foi atualizado nos últimos 30s (reduz egress em navegações)
+  INIT_TTL_MS: 30 * 1000, // reusa snapshot se o ÚLTIMO FETCH SUPABASE foi há menos de 30s
 
   async init() {
-    // Fast-path: snapshot recente entre navegações admin — evita 8 SELECTs
+    // Fast-path: snapshot com fetch recente do Supabase — evita 8 SELECTs em navegações rápidas
     const snapPrevio = this._loadSnapshot();
-    if (snapPrevio?.cache && snapPrevio?.at) {
-      const idade = Date.now() - new Date(snapPrevio.at).getTime();
+    if (snapPrevio?.cache && snapPrevio?.fetchedAt) {
+      const idade = Date.now() - new Date(snapPrevio.fetchedAt).getTime();
       if (idade < this.INIT_TTL_MS) {
         this._cache = Object.assign(this._cache, snapPrevio.cache);
+        this._fetchedAt = snapPrevio.fetchedAt;
         this.offlineMode = false;
         this._agendarSnapshots();
         return;
@@ -151,6 +155,7 @@ const DB = {
 
       if (this._cache.produtos.length === 0) await this.initDemoData();
 
+      this._fetchedAt = new Date().toISOString();
       this._saveSnapshot();
       this._agendarSnapshots();
     } catch(err) {
