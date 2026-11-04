@@ -75,10 +75,11 @@
               <th class="text-right">Mín.</th>
               <th>Status</th>
               <th>Observação</th>
+              <th style="width:120px;text-align:center;">Ação</th>
             </tr>
           </thead>
           <tbody id="tbody-preview">
-            <tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:24px;">Carregando prévia...</td></tr>
+            <tr><td colspan="13" style="text-align:center;color:var(--text-muted);padding:24px;">Carregando prévia...</td></tr>
           </tbody>
         </table>
       </div>
@@ -131,7 +132,7 @@
     document.getElementById('qt-dup').textContent = qtDup;
 
     const tb = document.getElementById('tbody-preview');
-    tb.innerHTML = linhas.map(p => {
+    tb.innerHTML = linhas.map((p, idx) => {
       const mk = _markup(p.precoCusto, p.precoVenda);
       const foto = p.imagemUrl
         ? `<img src="${p.imagemUrl}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'foto-emoji',textContent:'${p.emoji||'📦'}'}))" />`
@@ -139,8 +140,11 @@
       const obs = p._duplicado
         ? '<span style="color:#eab308;font-weight:600;">⚠️ já existe (nome)</span>'
         : '<span style="color:var(--green);">pronto p/ importar</span>';
+      const acao = p._duplicado
+        ? `<button class="btn btn-secondary" disabled style="padding:6px 10px;font-size:11px;">já existe</button>`
+        : `<button class="btn btn-primary" onclick="importarUm(${idx}, this)" style="padding:6px 10px;font-size:11px;"><i data-lucide="plus"></i> Importar</button>`;
       return `
-        <tr class="preview-row">
+        <tr class="preview-row" data-idx="${idx}">
           <td style="text-align:center;">${foto}</td>
           <td style="font-weight:600;">${p.nome}</td>
           <td>${p.marca}</td>
@@ -152,11 +156,71 @@
           <td class="text-right">${p.estoque}</td>
           <td class="text-right">${p.estoqueMin}</td>
           <td><span class="badge-inativo">INATIVO</span></td>
-          <td>${obs}</td>
+          <td class="td-obs">${obs}</td>
+          <td style="text-align:center;" class="td-acao">${acao}</td>
         </tr>`;
     }).join('');
 
     if (window.lucide) lucide.createIcons();
+  }
+
+  function importarUm(idx, btn) {
+    const p = PRODUTOS_CSV[idx];
+    if (!p) return;
+    const existentes = DB.getProdutos().map(x => _normalizar(x.nome));
+    if (existentes.includes(_normalizar(p.nome))) {
+      App.showToast(`"${p.nome}" já existe — pulado.`, 'warning');
+      _marcarLinhaDuplicado(idx);
+      return;
+    }
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader"></i> ...';
+    if (window.lucide) lucide.createIcons();
+    const prod = {
+      nome: p.nome,
+      marca: p.marca,
+      categoria: p.categoria,
+      codigoBarras: '',
+      emoji: p.emoji || '📦',
+      precoCusto: Number(p.precoCusto) || 0,
+      precoVenda: Number(p.precoVenda) || 0,
+      sabor: p.sabor || '',
+      estoque: Number(p.estoque) || 0,
+      estoqueMin: Number(p.estoqueMin) || 0,
+      descricao: p.descricao || '',
+      imagemUrl: p.imagemUrl || '',
+      ativo: false
+    };
+    try {
+      DB.addProduto(prod);
+      _marcarLinhaImportado(idx);
+      App.showToast(`"${p.nome}" importado (INATIVO).`, 'success');
+    } catch(e) {
+      console.error(e);
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="plus"></i> Importar';
+      if (window.lucide) lucide.createIcons();
+      App.showToast(`Erro ao importar "${p.nome}".`, 'error');
+    }
+  }
+
+  function _marcarLinhaImportado(idx) {
+    const row = document.querySelector(`tr[data-idx="${idx}"]`);
+    if (!row) return;
+    const obs = row.querySelector('.td-obs');
+    const acao = row.querySelector('.td-acao');
+    if (obs) obs.innerHTML = '<span style="color:var(--green);font-weight:600;">✓ importado</span>';
+    if (acao) acao.innerHTML = '<button class="btn btn-secondary" disabled style="padding:6px 10px;font-size:11px;">importado</button>';
+    row.style.opacity = '0.6';
+  }
+
+  function _marcarLinhaDuplicado(idx) {
+    const row = document.querySelector(`tr[data-idx="${idx}"]`);
+    if (!row) return;
+    const obs = row.querySelector('.td-obs');
+    const acao = row.querySelector('.td-acao');
+    if (obs) obs.innerHTML = '<span style="color:#eab308;font-weight:600;">⚠️ já existe (nome)</span>';
+    if (acao) acao.innerHTML = '<button class="btn btn-secondary" disabled style="padding:6px 10px;font-size:11px;">já existe</button>';
   }
 
   async function importar() {
@@ -203,7 +267,7 @@
     } catch(e) {
       console.error('Erro ao inicializar importar-produtos:', e);
       const tb = document.getElementById('tbody-preview');
-      if (tb) tb.innerHTML = `<tr><td colspan="12" style="color:#dc2626;padding:24px;text-align:center;">Erro ao carregar: ${e.message||e}</td></tr>`;
+      if (tb) tb.innerHTML = `<tr><td colspan="13" style="color:#dc2626;padding:24px;text-align:center;">Erro ao carregar: ${e.message||e}</td></tr>`;
     }
   });
 </script>
