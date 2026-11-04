@@ -68,6 +68,7 @@ const App = {
     this._initNavToggle();
     this._initTheme();
     this._initUserInfo();
+    this._mostrarBannerOffline();
     this._hideLoading();
     setTimeout(() => this.refreshIcons(), 0);
     this._iniciarPollingPedidos();
@@ -147,8 +148,25 @@ const App = {
     const el = document.getElementById('app-loading') || document.createElement('div');
     el.id = 'app-loading';
     el.style.cssText = 'position:fixed;inset:0;z-index:99999;background:var(--bg-main);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
-    el.innerHTML = '<div style="color:var(--red);font-size:48px;line-height:1;">⚠</div><div style="font-size:18px;font-weight:700;">Erro de conexão</div><div style="font-size:13px;color:var(--text-muted);text-align:center;max-width:300px;">Não foi possível conectar ao banco de dados. Verifique sua internet.</div><button onclick="location.reload()" style="padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">Tentar novamente</button>';
+    el.innerHTML = '<div style="color:var(--red);font-size:48px;line-height:1;">⚠</div><div style="font-size:18px;font-weight:700;">Erro de conexão</div><div style="font-size:13px;color:var(--text-muted);text-align:center;max-width:380px;">Não foi possível conectar ao banco de dados e não há cópia local para carregar. Verifique sua internet ou o status do Supabase.</div><button onclick="location.reload()" style="padding:10px 24px;background:var(--red);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600;">Tentar novamente</button>';
     if (!el.parentNode) document.body.appendChild(el);
+  },
+
+  _mostrarBannerOffline() {
+    if (!window.DB || !DB.offlineMode) return;
+    if (document.getElementById('banner-offline')) return;
+    const snap = DB._loadSnapshot();
+    const quando = snap?.at ? new Date(snap.at).toLocaleString('pt-BR') : '—';
+    const banner = document.createElement('div');
+    banner.id = 'banner-offline';
+    banner.style.cssText = 'position:sticky;top:0;z-index:9999;background:#f59e0b;color:#1f2937;padding:8px 16px;font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,0.1);';
+    banner.innerHTML = `
+      <span>⚠ MODO OFFLINE — Supabase indisponível. Dados carregados do cache local (${quando}). Alterações só persistem neste navegador até a reconexão.</span>
+      <button onclick="location.reload()" style="background:#1f2937;color:#fff;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;">Reconectar</button>
+    `;
+    const main = document.getElementById('main-content');
+    if (main) main.insertBefore(banner, main.firstChild);
+    else document.body.insertBefore(banner, document.body.firstChild);
   },
 
   _initUserInfo() {

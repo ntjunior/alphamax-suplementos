@@ -20,6 +20,7 @@ const DB = {
   },
 
   async _insert(table, data) {
+    if (this.offlineMode) { this._saveSnapshot(); return Array.isArray(data) ? data : data; }
     const body = Array.isArray(data) ? data.map(d => this._snake(d)) : this._snake(data);
     const r = await fetch(`${this.URL}/rest/v1/${table}`, {
       method: 'POST', headers: this._h(), body: JSON.stringify(body)
@@ -31,6 +32,7 @@ const DB = {
   },
 
   async _update(table, id, data) {
+    if (this.offlineMode) { this._saveSnapshot(); return data; }
     const { id: _, createdAt, created_at, ...fields } = data;
     const r = await fetch(`${this.URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
       method: 'PATCH', headers: this._h(), body: JSON.stringify(this._snake(fields))
@@ -41,6 +43,7 @@ const DB = {
   },
 
   async _delete(table, id) {
+    if (this.offlineMode) { this._saveSnapshot(); return; }
     const r = await fetch(`${this.URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
       method: 'DELETE', headers: this._h()
     });
@@ -79,38 +82,93 @@ const DB = {
   },
   initUsuarios() { /* handled in init() */ },
 
+  // ===================== SNAPSHOT LOCAL (fallback quando Supabase está indisponível) =====================
+  _SNAP_KEY: 'db_snapshot_v1',
+  offlineMode: false,
+
+  _saveSnapshot() {
+    try {
+      localStorage.setItem(this._SNAP_KEY, JSON.stringify({
+        at: new Date().toISOString(),
+        cache: this._cache
+      }));
+    } catch(e) { /* localStorage cheio ou indisponível - ignora */ }
+  },
+
+  _loadSnapshot() {
+    try {
+      const raw = localStorage.getItem(this._SNAP_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch(e) { return null; }
+  },
+
   // ===================== INIT =====================
   async init() {
-    const [produtos, vendas, clientes, caixas, movs, usuarios, cupons, lancamentos] = await Promise.all([
-      this._select('produtos', 'order=created_at'),
-      this._select('vendas', 'order=created_at'),
-      this._select('clientes', 'order=created_at'),
-      this._select('caixas', 'order=aberto_em'),
-      this._select('movimentacoes', 'order=created_at'),
-      this._select('usuarios', 'order=created_at'),
-      this._select('cupons', 'order=created_at'),
-      this._select('lancamentos', 'order=created_at').catch(() => []),
-    ]);
-    this._cache.produtos      = produtos.map(p => this._camel(p));
-    this._cache.vendas        = vendas.map(v => this._camel(v));
-    this._cache.clientes      = clientes.map(c => this._camel(c));
-    this._cache.caixas        = caixas.map(c => this._camel(c));
-    this._cache.movimentacoes = movs.map(m => this._camel(m));
-    this._cache.usuarios      = usuarios.map(u => this._camel(u));
-    this._cache.cupons        = cupons.map(c => this._camel(c));
-    this._cache.lancamentos   = lancamentos.map(l => this._camel(l));
+    try {
+      const [produtos, vendas, clientes, caixas, movs, usuarios, cupons, lancamentos] = await Promise.all([
+        this._select('produtos', 'order=created_at'),
+        this._select('vendas', 'order=created_at'),
+        this._select('clientes', 'order=created_at'),
+        this._select('caixas', 'order=aberto_em'),
+        this._select('movimentacoes', 'order=created_at'),
+        this._select('usuarios', 'order=created_at'),
+        this._select('cupons', 'order=created_at'),
+        this._select('lancamentos', 'order=created_at').catch(() => []),
+      ]);
+      this._cache.produtos      = produtos.map(p => this._camel(p));
+      this._cache.vendas        = vendas.map(v => this._camel(v));
+      this._cache.clientes      = clientes.map(c => this._camel(c));
+      this._cache.caixas        = caixas.map(c => this._camel(c));
+      this._cache.movimentacoes = movs.map(m => this._camel(m));
+      this._cache.usuarios      = usuarios.map(u => this._camel(u));
+      this._cache.cupons        = cupons.map(c => this._camel(c));
+      this._cache.lancamentos   = lancamentos.map(l => this._camel(l));
+      this.offlineMode = false;
 
-    if (this._cache.usuarios.length === 0) {
-      const admin = {
-        id: 'admin_default', nome: 'Administrador', login: 'admin',
-        senha: btoa('1234'), perfil: 'admin', ativo: true,
-        createdAt: new Date().toISOString()
-      };
-      await this._insert('usuarios', admin);
-      this._cache.usuarios.push(admin);
+      if (this._cache.usuarios.length === 0) {
+        const admin = {
+          id: 'admin_default', nome: 'Administrador', login: 'admin',
+          senha: btoa('1234'), perfil: 'admin', ativo: true,
+          createdAt: new Date().toISOString()
+        };
+        await this._insert('usuarios', admin);
+        this._cache.usuarios.push(admin);
+      }
+
+      if (this._cache.produtos.length === 0) await this.initDemoData();
+
+      this._saveSnapshot();
+      this._agendarSnapshots();
+    } catch(err) {
+      console.warn('[DB] Supabase falhou ao inicializar:', err?.message || err);
+      const snap = this._loadSnapshot();
+      this.offlineMode = true;
+      if (snap && snap.cache) {
+        this._cache = Object.assign(this._cache, snap.cache);
+        console.warn('[DB] MODO OFFLINE — carregado snapshot de', snap.at);
+      } else {
+        this._cache = { produtos: [], vendas: [], clientes: [], caixas: [], movimentacoes: [], usuarios: [], cupons: [], lancamentos: [] };
+        console.warn('[DB] MODO OFFLINE — sem snapshot, iniciando cache vazio.');
+      }
+      if (!this._cache.usuarios || this._cache.usuarios.length === 0) {
+        this._cache.usuarios = [{
+          id: 'admin_default', nome: 'Administrador', login: 'admin',
+          senha: btoa('1234'), perfil: 'admin', ativo: true,
+          createdAt: new Date().toISOString()
+        }];
+      }
+      this._saveSnapshot();
+      this._agendarSnapshots();
     }
+  },
 
-    if (this._cache.produtos.length === 0) await this.initDemoData();
+  _snapshotAgendado: false,
+  _agendarSnapshots() {
+    if (this._snapshotAgendado) return;
+    this._snapshotAgendado = true;
+    setInterval(() => this._saveSnapshot(), 5000);
+    window.addEventListener('beforeunload', () => this._saveSnapshot());
   },
 
   // ===================== PRODUTOS =====================
