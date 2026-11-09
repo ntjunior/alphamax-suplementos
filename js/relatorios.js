@@ -54,6 +54,7 @@ function renderRelatorio() {
   renderMaisVendidos(vendas);
   renderPagamentos(vendas);
   renderTabelaVendas(vendas);
+  if (window.lucide) lucide.createIcons();
 }
 
 function renderGrafico(vendas) {
@@ -150,7 +151,7 @@ function renderTabelaVendas(vendas) {
   const tbody = document.getElementById('tbody-vendas-relatorio');
 
   if (sorted.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted" style="padding:24px;">Nenhuma venda no período selecionado</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="text-center text-muted" style="padding:24px;">Nenhuma venda no período selecionado</td></tr>';
     return;
   }
 
@@ -188,6 +189,7 @@ function renderTabelaVendas(vendas) {
       <td class="text-right text-green">${v.desconto > 0 ? '- ' + App.formatCurrency(v.desconto) : '—'}</td>
       <td class="text-right font-bold text-red">${App.formatCurrency(v.total)}</td>
       <td class="text-right" style="font-size:12px;">${liq ? `<span style="color:#10b981;font-weight:600;">${App.formatCurrency(liq.valor)}</span><br><span style="color:var(--text-muted);font-size:10px;">taxa: ${App.formatCurrency(liq.taxa)}</span>` : '—'}</td>
+      <td class="text-center"><button class="btn-icon btn-danger" title="Excluir venda e restaurar estoque" onclick="excluirVenda('${v.id}')" style="background:#ef4444;color:#fff;border:none;padding:6px 10px;border-radius:6px;cursor:pointer;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button></td>
     </tr>`;
   }).join('');
 }
@@ -216,6 +218,37 @@ function aplicarFiltro() {
 
 function exportar() {
   App.showToast('Exportação em desenvolvimento. Em breve disponível em PDF e Excel!', 'info');
+}
+
+async function excluirVenda(vendaId) {
+  const venda = (DB._cache.vendas || []).find(v => v.id === vendaId);
+  if (!venda) { App.showToast('Venda não encontrada', 'error'); return; }
+
+  const itensResumo = (venda.itens || []).map(i => `• ${i.quantidade ?? i.qty ?? 1}x ${i.nome}`).join('\n');
+  const msg = `Excluir venda definitivamente?\n\nTotal: ${App.formatCurrency(venda.total)}\nPagamento: ${(venda.pagamentoNome || venda.pagamento || '').toUpperCase()}\n\nItens (estoque será restaurado):\n${itensResumo}\n\nEsta ação não pode ser desfeita.`;
+  if (!confirm(msg)) return;
+
+  try {
+    for (const item of (venda.itens || [])) {
+      const pid = item.produtoId;
+      if (!pid) continue;
+      const prod = (DB._cache.produtos || []).find(p => p.id === pid);
+      if (!prod) continue;
+      const qty = Number(item.quantidade ?? item.qty ?? 1) || 1;
+      const novoEstoque = (Number(prod.estoque) || 0) + qty;
+      await DB._update('produtos', pid, { estoque: novoEstoque });
+      prod.estoque = novoEstoque;
+    }
+
+    await DB._delete('vendas', vendaId);
+    DB._cache.vendas = (DB._cache.vendas || []).filter(v => v.id !== vendaId);
+
+    App.showToast('Venda excluída e estoque restaurado', 'success');
+    renderRelatorio();
+  } catch (e) {
+    console.error(e);
+    App.showToast('Erro ao excluir venda: ' + (e.message || e), 'error');
+  }
 }
 
 const hoje = new Date();
