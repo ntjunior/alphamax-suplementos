@@ -289,6 +289,40 @@ document.querySelectorAll('.modal-overlay').forEach(m => {
   m.addEventListener('click', e => { if (e.target === m) m.classList.remove('show'); });
 });
 
+function exportarProdutosCSV() {
+  const produtos = DB.getProdutos();
+  if (!produtos.length) { App.showToast('Nenhum produto para exportar', 'warning'); return; }
+
+  const cols = ['nome','marca','categoria','codigoBarras','emoji','sabor','precoCusto','precoVenda','estoque','estoqueMin','ativo','descricao','imagemUrl'];
+  const esc = v => {
+    const s = v === null || v === undefined ? '' : String(v);
+    return '"' + s.replace(/"/g, '""').replace(/\r?\n/g, ' ') + '"';
+  };
+  const linhas = [cols.join(';')];
+  produtos.forEach(p => {
+    linhas.push(cols.map(c => {
+      const v = p[c];
+      if (c === 'precoCusto' || c === 'precoVenda') return esc(Number(v || 0).toFixed(2).replace('.', ','));
+      if (c === 'ativo') return esc(v === false ? 'nao' : 'sim');
+      return esc(v);
+    }).join(';'));
+  });
+
+  const csv = '\uFEFF' + linhas.join('\r\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const hoje = new Date().toISOString().split('T')[0];
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `produtos-${hoje}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  App.showToast(`${produtos.length} produtos exportados`, 'success');
+}
+
 (async () => {
   await App.initPage('produtos');
   carregarCategorias();
