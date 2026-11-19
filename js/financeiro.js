@@ -103,12 +103,19 @@ function renderFinanceiro() {
            <button class="btn btn-ghost btn-sm" onclick="editarLancamento('${m.id}')"><i data-lucide="pencil"></i></button>
            <button class="btn btn-ghost btn-sm" style="color:var(--red);" onclick="confirmarExcluirLanc('${m.id}')"><i data-lucide="trash-2"></i></button>
          </div>`;
+    const tags = [];
+    if (m.parcelas && m.parcelas > 1) {
+      tags.push(`<span style="display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(59,130,246,.15);color:#60a5fa;font-size:10px;font-weight:600;margin-left:4px;">${m.parcelas}x</span>`);
+    }
+    if (m.recorrente) {
+      tags.push(`<span style="display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(168,85,247,.15);color:#c084fc;font-size:10px;font-weight:600;margin-left:4px;" title="Conta recorrente"><i data-lucide="repeat" style="width:10px;height:10px;vertical-align:middle;"></i></span>`);
+    }
     return `
       <tr>
         <td style="white-space:nowrap;">${App.formatDate(m.createdAt)}</td>
         <td>${badge}</td>
         <td>${m.categoria || '—'}</td>
-        <td style="max-width:220px;">${m.descricaoDisplay || '—'}${m.obs ? `<div style="font-size:11px;color:var(--text-muted);">${m.obs}</div>` : ''}</td>
+        <td style="max-width:220px;">${m.descricaoDisplay || '—'}${tags.join('')}${m.obs ? `<div style="font-size:11px;color:var(--text-muted);">${m.obs}</div>` : ''}</td>
         <td class="text-right font-bold" style="color:${valorColor};">${sinal} ${App.formatCurrency(m.valor)}</td>
         <td>${acoes}</td>
       </tr>`;
@@ -140,6 +147,8 @@ function abrirModalLancamento() {
   document.getElementById('lanc-descricao').value = '';
   document.getElementById('lanc-obs').value = '';
   document.getElementById('lanc-data').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('lanc-parcelas').value = 1;
+  document.getElementById('lanc-recorrente').checked = false;
   tipoModal = 'saida';
   document.getElementById('btn-tipo-entrada').classList.remove('active');
   document.getElementById('btn-tipo-saida').classList.add('active');
@@ -159,6 +168,8 @@ function editarLancamento(id) {
   document.getElementById('lanc-descricao').value = m.descricao || '';
   document.getElementById('lanc-obs').value = m.obs || '';
   document.getElementById('lanc-data').value = m.createdAt ? m.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10);
+  document.getElementById('lanc-parcelas').value = m.parcelas || 1;
+  document.getElementById('lanc-recorrente').checked = !!m.recorrente;
   tipoModal = m.tipo || 'saida';
   document.getElementById('btn-tipo-entrada').classList.toggle('active', tipoModal === 'entrada');
   document.getElementById('btn-tipo-saida').classList.toggle('active', tipoModal === 'saida');
@@ -177,6 +188,8 @@ function salvarLancamento() {
   const obs = document.getElementById('lanc-obs').value.trim();
   const categoria = document.getElementById('lanc-categoria').value;
   const dataVal = document.getElementById('lanc-data').value;
+  const parcelas = parseInt(document.getElementById('lanc-parcelas').value) || 1;
+  const recorrente = document.getElementById('lanc-recorrente').checked;
 
   const errValor = document.getElementById('err-lanc-valor');
   errValor.classList.toggle('show', !valor || valor <= 0);
@@ -185,10 +198,10 @@ function salvarLancamento() {
   const createdAt = dataVal ? new Date(dataVal + 'T12:00:00').toISOString() : new Date().toISOString();
 
   if (id) {
-    DB.updateLancamento(id, { tipo: tipoModal, valor, descricao, obs, categoria, createdAt });
+    DB.updateLancamento(id, { tipo: tipoModal, valor, descricao, obs, categoria, createdAt, parcelas, recorrente });
     App.showToast('Lançamento atualizado!', 'success');
   } else {
-    DB.addLancamento({ tipo: tipoModal, valor, descricao, obs, categoria, createdAt });
+    DB.addLancamento({ tipo: tipoModal, valor, descricao, obs, categoria, createdAt, parcelas, recorrente });
     App.showToast('Lançamento registrado!', 'success');
   }
 
