@@ -326,19 +326,18 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
-<script src="../js/mercadolivre.js?v=3.0.2"></script>
+<script src="../js/mercadolivre.js?v=3.1.0"></script>
 <script>
   let periodoAtual = 'mes';
   let rangeCustom = null; // { ini, fim } quando periodoAtual === 'personalizado'
 
-  function setPeriodo(p, el) {
+  async function setPeriodo(p, el) {
     periodoAtual = p;
     document.querySelectorAll('.filter-pills .pill').forEach(x => x.classList.remove('active'));
     if (el) el.classList.add('active');
     const painel = document.getElementById('ml-range-personalizado');
     if (p === 'personalizado') {
       painel.style.display = 'flex';
-      // Pré-preenche inputs com último range custom ou mês atual
       const iniEl = document.getElementById('ml-data-ini');
       const fimEl = document.getElementById('ml-data-fim');
       if (!iniEl.value || !fimEl.value) {
@@ -347,14 +346,15 @@
         iniEl.value = _toInputDate(ini);
         fimEl.value = _toInputDate(hoje);
       }
-      return; // não renderiza até usuário clicar Aplicar
+      return;
     }
     painel.style.display = 'none';
     rangeCustom = null;
     render();
+    await _sincronizarPeriodoAtual();
   }
 
-  function aplicarRange() {
+  async function aplicarRange() {
     const iniStr = document.getElementById('ml-data-ini').value;
     const fimStr = document.getElementById('ml-data-fim').value;
     if (!iniStr || !fimStr) { App.showToast('Preencha as duas datas.', 'warning'); return; }
@@ -363,6 +363,31 @@
     if (ini > fim) { App.showToast('Data inicial maior que a final.', 'warning'); return; }
     rangeCustom = { ini, fim };
     render();
+    await _sincronizarPeriodoAtual();
+  }
+
+  // Sync em memória — evita refazer a mesma importação se o usuário trocar de filtro ida e volta
+  const _rangesImportados = new Set();
+  async function _sincronizarPeriodoAtual() {
+    if (!ML.isOk()) return;
+    const { ini, fim } = _rangeFromPeriodo(periodoAtual);
+    const chave = `${ini.getTime()}_${fim.getTime()}`;
+    if (_rangesImportados.has(chave)) return;
+    _rangesImportados.add(chave);
+    try {
+      App.showToast('Buscando pedidos do período...', 'info');
+      const r = await ML.importarRange(ini, fim, msg => console.log('[ML]', msg));
+      if (r.sincronizados > 0 || r.cancelados > 0) {
+        App.showToast(`${r.sincronizados} novo(s), ${r.cancelados} cancelado(s).`, 'success');
+        render();
+      } else {
+        App.showToast('Período atualizado.', 'info');
+      }
+    } catch (e) {
+      console.warn('[ML] import range falhou:', e.message);
+      App.showToast('Falha ao buscar período: ' + e.message, 'error');
+      _rangesImportados.delete(chave);
+    }
   }
 
   function _toInputDate(d) {
@@ -623,7 +648,13 @@
   (async () => {
     await App.initPage('mercadolivre');
     render();
-    try { if (ML.isOk()) { await ML.sincronizar(); await atualizarDados(); } } catch(e){ console.warn(e); }
+    try {
+      if (ML.isOk()) {
+        await ML.sincronizar();
+        await _sincronizarPeriodoAtual();
+        await atualizarDados();
+      }
+    } catch(e){ console.warn(e); }
     setInterval(() => { if (document.visibilityState === 'visible') atualizarDados(); }, 2 * 60 * 1000);
   })();
 

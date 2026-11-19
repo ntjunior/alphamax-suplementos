@@ -134,8 +134,113 @@ const ML = (() => {
     }
   }
 
+  async function buscarPedidosRange(ini, fim) {
+    const cfg = getCfg();
+    if (!isOk()) return [];
+    const mapa = {};
+    for (const extra of ['', '&order.status=cancelled']) {
+      let offset = 0;
+      for (let safety = 0; safety < 40; safety++) {
+        const url = `/orders/search?seller=${cfg.sellerId}` +
+          `&order.date_created.from=${ini.toISOString()}` +
+          `&order.date_created.to=${fim.toISOString()}` +
+          `&sort=date_desc&limit=50&offset=${offset}${extra}`;
+        let r;
+        try { r = await _get(url); } catch (e) { break; }
+        const results = r?.results || [];
+        for (const p of results) mapa[p.id] = p;
+        if (results.length < 50) break;
+        offset += 50;
+      }
+    }
+    return Object.values(mapa);
+  }
+
+  async function importarRange(ini, fim, onLog) {
+    if (!isOk()) throw new Error('Configure o Mercado Livre primeiro.');
+    if (_syncLock) return { sincronizados: 0, pulados: 0, cancelados: 0 };
+    if (!_acquireCrossTabLock()) return { sincronizados: 0, pulados: 0, cancelados: 0 };
+    _syncLock = true;
+    const log = onLog || (() => {});
+    try {
+      log(`Buscando pedidos de ${ini.toLocaleDateString('pt-BR')} a ${fim.toLocaleDateString('pt-BR')}...`);
+      const todosPedidos = await buscarPedidosRange(ini, fim);
+      log(`${todosPedidos.length} pedido(s) encontrado(s) no período.`);
+      const pedidosAtivos = todosPedidos.filter(p => p.status !== 'cancelled');
+
+      let cancelados = 0;
+      for (const ped of todosPedidos) {
+        if (ped.status !== 'cancelled') continue;
+        const existente = DB.getVendas().find(v => v.mlOrderId === String(ped.id));
+        if (existente && existente.mlStatus !== 'cancelled') {
+          await DB._update('vendas', existente.id, { mlStatus: 'cancelled' });
+          const idx = DB._cache.vendas.findIndex(v => v.id === existente.id);
+          if (idx >= 0) DB._cache.vendas[idx].mlStatus = 'cancelled';
+          for (const item of existente.itens || []) {
+            if (item.produtoId) {
+              const prod = DB.getProdutos().find(p => p.id === item.produtoId);
+              if (prod) DB.updateProduto(item.produtoId, { estoque: (prod.estoque || 0) + item.quantidade });
+            }
+          }
+          cancelados++;
+        }
+      }
+
+      let sincronizados = 0, pulados = 0;
+      for (const ped of pedidosAtivos) {
+        const mlId = String(ped.id);
+        let jaExiste = null;
+        try {
+          const rows = await DB._select('vendas', `ml_order_id=eq.${mlId}&select=id,ml_order_id`);
+          if (rows && rows.length > 0) jaExiste = DB._camel(rows[0]);
+        } catch(e) {}
+        if (!jaExiste) jaExiste = DB.getVendas().find(v => v.mlOrderId === mlId);
+        if (jaExiste) { pulados++; continue; }
+
+        const itens = await _montarItens(ped);
+        const total = ped.total_amount || itens.reduce((s, i) => s + i.subtotal, 0);
+        const vendaId = DB._id();
+        const venda = {
+          id: vendaId, itens, total, subtotal: total, desconto: 0,
+          pagamento: 'mercadolivre',
+          clienteNome: ped.buyer?.nickname || 'Comprador ML',
+          mlOrderId: mlId, mlStatus: ped.status,
+          origem: 'mercadolivre',
+          createdAt: ped.date_created || new Date().toISOString()
+        };
+        try { await DB._insert('vendas', venda); DB._cache.vendas.push(venda); }
+        catch (e) { log(`Falha ao inserir #${mlId}: ${e.message}`); continue; }
+
+        for (const item of itens) {
+          if (item.produtoId) {
+            const prod = DB.getProdutos().find(p => p.id === item.produtoId);
+            if (prod) DB.updateProduto(item.produtoId, { estoque: Math.max(0, (prod.estoque || 0) - item.quantidade) });
+          }
+        }
+        sincronizados++;
+      }
+
+      log(`Concluído: ${sincronizados} importado(s), ${pulados} já existia(m), ${cancelados} cancelado(s).`);
+      if (sincronizados > 0 || cancelados > 0) await new Promise(r => setTimeout(r, 1200));
+      return { sincronizados, pulados, cancelados, total: todosPedidos.length };
+    } finally {
+      _syncLock = false;
+      _releaseCrossTabLock();
+    }
+  }
+
+  async function importarHistorico(diasAtras = 30, onLog) {
+    const fim = new Date(); fim.setHours(23, 59, 59, 999);
+    const ini = new Date(fim); ini.setDate(ini.getDate() - diasAtras + 1); ini.setHours(0, 0, 0, 0);
+    return importarRange(ini, fim, onLog);
+  }
+
   async function _buscarPedidoDetalhado(orderId) {
-    try { return await _get(`/orders/${orderId}`); } catch(e) { return null; }
+    try { return await _get(`/orders/${orderId}`); }
+    catch(e) {
+      if (/\b403\b/.test(e.message || '')) throw e;
+      return null;
+    }
   }
 
   async function _buscarShipmentCost(shipmentId) {
@@ -181,6 +286,19 @@ const ML = (() => {
   }
   function _releaseCrossTabLock() {
     try { localStorage.removeItem(_LOCK_KEY); } catch {}
+  }
+
+  const _SKIP_KEY = 'ml_skip_recalc';
+  function _getSkipSet() {
+    try { return new Set(JSON.parse(localStorage.getItem(_SKIP_KEY)) || []); }
+    catch { return new Set(); }
+  }
+  function _addSkip(id) {
+    try {
+      const s = _getSkipSet();
+      s.add(String(id));
+      localStorage.setItem(_SKIP_KEY, JSON.stringify([...s]));
+    } catch {}
   }
 
   // Extrai deduções reais do pedido: tarifa ML e custo real de envio do vendedor.
@@ -301,9 +419,11 @@ const ML = (() => {
   async function _recalcularPedidosAntigos(log) {
     const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
     const vendasML = DB.getVendas().filter(isML);
-    let corrigidos = 0, erros = 0, verificados = 0;
+    const skipSet = _getSkipSet();
+    let corrigidos = 0, erros = 0, verificados = 0, pulados = 0;
     for (const v of vendasML) {
       if (!v.mlOrderId) continue;
+      if (skipSet.has(String(v.mlOrderId))) { pulados++; continue; }
       const itensAtuais = Array.isArray(v.itens) ? v.itens : [];
       if (itensAtuais.length === 0) continue;
       verificados++;
@@ -326,11 +446,16 @@ const ML = (() => {
         corrigidos++;
         log(`#${v.mlOrderId} corrigido: taxa R$${taxaAnt.toFixed(2)}→R$${taxaNova.toFixed(2)} / envio R$${envioAnt.toFixed(2)}→R$${envioNovo.toFixed(2)}.`);
       } catch (e) {
-        erros++;
-        console.warn(`[ML] recalc #${v.mlOrderId} falhou:`, e.message);
+        if (/\b403\b/.test(e.message || '')) {
+          _addSkip(v.mlOrderId);
+          pulados++;
+        } else {
+          erros++;
+          console.warn(`[ML] recalc #${v.mlOrderId} falhou:`, e.message);
+        }
       }
     }
-    return { corrigidos, erros, verificados };
+    return { corrigidos, erros, verificados, pulados };
   }
 
   async function _limparDuplicatas(log) {
@@ -646,5 +771,5 @@ const ML = (() => {
     return { ped, shipment, billing };
   }
 
-  return { isOk, getCfg, saveCfg, sincronizar, buscarPedidosHoje, carregarKpis, abrirConfig, salvarConfig, debug };
+  return { isOk, getCfg, saveCfg, sincronizar, buscarPedidosHoje, buscarPedidosRange, importarRange, importarHistorico, carregarKpis, abrirConfig, salvarConfig, debug };
 })();
