@@ -31,15 +31,28 @@
 </style>
 <script>
   (function(){
-    const cfg = {
-      sellerId: '180886575',
-      accessToken: 'APP_USR-384167861810694-102009-ed381a6a455b857fd261d06f8bd17288-180886575',
-      clientId: '384167861810694',
-      clientSecret: 'oRC9Gv9g2cgvWYHydaXOD2fMe5clqR9k',
-      refreshToken: 'TG-6ad77386692d0c0001e65134-180886575',
+    const defaults = {
+      sellerId: '3621251937',
+      accessToken: 'APP_USR-6174328100124114-111913-0a6913e7e435aad15663edea9796847c-3621251937',
+      clientId: '6174328100124114',
+      clientSecret: '0DAhT1ABllYkEcu3xKOeUKXsfMWQ1PJs',
+      refreshToken: 'TG-6aff302a546a3b0001adc8f9-3621251937',
       expiresAt: Date.now() + 21600000
     };
-    if (!localStorage.getItem('ml_config')) localStorage.setItem('ml_config', JSON.stringify(cfg));
+    let saved = {};
+    try { saved = JSON.parse(localStorage.getItem('ml_config')) || {}; } catch {}
+    // Se o clientId salvo é de outro app (conta antiga), substitui tudo pelos
+    // defaults. Caso contrário, preserva o accessToken/refreshToken já renovados.
+    const mesmoApp = saved.clientId === defaults.clientId;
+    const merged = mesmoApp ? {
+      sellerId: defaults.sellerId,
+      clientId: defaults.clientId,
+      clientSecret: defaults.clientSecret,
+      refreshToken: saved.refreshToken || defaults.refreshToken,
+      accessToken: saved.accessToken || defaults.accessToken,
+      expiresAt: saved.expiresAt || defaults.expiresAt
+    } : defaults;
+    localStorage.setItem('ml_config', JSON.stringify(merged));
   })();
 </script>
 </head>
@@ -141,9 +154,7 @@
         <div class="kpi-sub">por pedido</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-icon" style="color:#991b1b;background:#fee2e2;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
-        </div>
+        <div class="kpi-icon"><i data-lucide="ban"></i></div>
         <div class="kpi-label">Cancelados</div>
         <div class="kpi-value" id="ml-k-cancelados">—</div>
         <div class="kpi-sub" id="ml-k-cancelados-sub">—</div>
@@ -326,7 +337,7 @@
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
-<script src="../js/mercadolivre.js?v=3.1.0"></script>
+<script src="../js/mercadolivre.js?v=3.2.0"></script>
 <script>
   let periodoAtual = 'mes';
   let rangeCustom = null; // { ini, fim } quando periodoAtual === 'personalizado'

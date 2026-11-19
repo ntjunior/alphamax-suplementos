@@ -59,9 +59,19 @@ const ML = (() => {
     return data.access_token;
   }
 
+  // Controle de refresh concorrente: várias chamadas 401/403 ao mesmo tempo
+  // devem compartilhar o MESMO refresh (evita rate-limit no /oauth/token).
+  let _refreshPromise = null;
+  async function _refreshTokenShared() {
+    if (!_refreshPromise) {
+      _refreshPromise = _refreshToken().finally(() => { _refreshPromise = null; });
+    }
+    return _refreshPromise;
+  }
+
   async function _ensureToken() {
     if (_tokenExpirado()) {
-      try { await _refreshToken(); } catch (e) { console.warn('[ML] Renovação automática falhou:', e.message); }
+      try { await _refreshTokenShared(); } catch (e) { console.warn('[ML] Renovação automática falhou:', e.message); }
     }
   }
 
@@ -72,20 +82,23 @@ const ML = (() => {
       headers: { 'Authorization': `Bearer ${cfg.accessToken}` }
     });
 
-    if (res.status === 401) {
-      // Tenta renovar uma vez e repetir
+    // 401 = token inválido/expirado · 403 = ML também devolve isso para token
+    // expirado em /orders/{id} e /shipments/{id}. Tenta renovar e repetir uma vez.
+    if (res.status === 401 || res.status === 403) {
       try {
-        await _refreshToken();
+        await _refreshTokenShared();
         const newCfg = getCfg();
         res = await fetch(`${API}${path}`, {
           headers: { 'Authorization': `Bearer ${newCfg.accessToken}` }
         });
       } catch (e) {
-        throw new Error('Token ML expirado. Atualize nas configurações.');
+        // refresh falhou: propaga o status original
+        throw new Error(`Erro ML ${res.status} (refresh falhou: ${e.message})`);
       }
     }
 
     if (res.status === 401) throw new Error('Token ML expirado. Atualize nas configurações.');
+    if (res.status === 403) throw new Error(`Erro ML 403: sem permissão para ${path}`);
     if (!res.ok) throw new Error(`Erro ML ${res.status}`);
     return res.json();
   }
