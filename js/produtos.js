@@ -1,5 +1,5 @@
 const SUPABASE_URL_STORE = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
-const SUPABASE_KEY_STORE = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
+const SUPABASE_KEY_STORE = 'sb_publishable_qK54D1PwYmmb-P5kjgZp_g__Soy0kls';
 const STORAGE_BUCKET = 'produtos';
 
 let produtoParaExcluir = null;

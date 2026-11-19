@@ -1,5 +1,5 @@
 const SB_URL_CLI = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
-const SB_KEY_CLI = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
+const SB_KEY_CLI = 'sb_publishable_qK54D1PwYmmb-P5kjgZp_g__Soy0kls';
 
 let clienteParaExcluir = null;
 

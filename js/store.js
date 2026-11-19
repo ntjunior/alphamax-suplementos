@@ -1,5 +1,5 @@
 const SUPABASE_URL = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
+const SUPABASE_KEY = 'sb_publishable_qK54D1PwYmmb-P5kjgZp_g__Soy0kls';
 const WHATSAPP_NUMBER = '5511911176899';
 
 const MULTIZAP_URL    = 'https://multizape.com.br';
