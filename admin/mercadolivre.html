@@ -559,8 +559,8 @@
     g('ml-k-ticket').textContent = App.formatCurrency(ticket);
     g('ml-k-cancelados').textContent = canceladas.length;
     g('ml-k-cancelados-sub').textContent = `${pctCanc.toFixed(1)}% do total — ${App.formatCurrency(totalCanc)}`;
-    g('ml-k-envio').textContent = aguardandoEnvio;
-    g('ml-k-envio-sub').textContent = `${unidadesEnvio} un em pedidos pagos`;
+    g('ml-k-envio').textContent = unidadesEnvio;
+    g('ml-k-envio-sub').textContent = `unidades a enviar`;
 
     // Resumo financeiro
     g('ml-fin-bruto').textContent = App.formatCurrency(fatBruto);
