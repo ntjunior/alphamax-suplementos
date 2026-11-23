@@ -91,6 +91,7 @@
     </div>
     <div class="header-actions">
       <div id="ml-status-badge" class="ml-status offline"><span class="ml-status-dot"></span><span>Não configurado</span></div>
+      <button class="btn btn-secondary btn-sm" onclick="ML.abrirVinculos()"><i data-lucide="link"></i> Vincular Anúncios</button>
       <button class="btn btn-secondary btn-sm" onclick="ML.abrirConfig()"><i data-lucide="settings"></i> Configurar</button>
       <button class="btn-ml-sync" id="btn-ml-sync" onclick="mlSincronizar()"><i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Sincronizar</button>
     </div>
@@ -332,12 +333,44 @@
   </div>
 </div>
 
+<!-- Modal Vincular Anúncios ML -->
+<div class="modal-overlay" id="modal-ml-vinculos" onclick="if(event.target===this)this.classList.remove('show')">
+  <div class="modal" style="max-width:900px;width:95%;">
+    <div class="modal-header">
+      <span class="modal-title"><i data-lucide="link"></i> Vincular anúncios ML aos produtos</span>
+      <button class="modal-close" onclick="document.getElementById('modal-ml-vinculos').classList.remove('show')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--bg-input);border-radius:8px;padding:12px;font-size:12px;color:var(--text-muted);margin-bottom:16px;line-height:1.6;">
+        Cada anúncio do ML aqui embaixo tem um <strong>ID único</strong>. Escolha o produto do seu estoque que corresponde. A partir do próximo sync, a baixa de estoque vai direto pro produto certo (ignora o nome do anúncio).
+      </div>
+      <div class="table-wrapper" style="max-height:60vh;overflow-y:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>ID ML</th>
+              <th>Título do anúncio</th>
+              <th style="text-align:center;">Vendas</th>
+              <th>Produto local</th>
+            </tr>
+          </thead>
+          <tbody id="ml-vinc-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('modal-ml-vinculos').classList.remove('show')">Cancelar</button>
+      <button class="btn btn-primary" onclick="ML.salvarVinculos()"><i data-lucide="save"></i> Salvar Vínculos</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast-container" class="toast-container"></div>
 
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 <script src="../js/db.js"></script>
 <script src="../js/app.js"></script>
-<script src="../js/mercadolivre.js?v=3.3.0"></script>
+<script src="../js/mercadolivre.js?v=3.4.0"></script>
 <script>
   let periodoAtual = 'mes';
   let rangeCustom = null; // { ini, fim } quando periodoAtual === 'personalizado'

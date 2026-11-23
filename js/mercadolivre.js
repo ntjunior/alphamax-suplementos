@@ -269,12 +269,18 @@ const ML = (() => {
     } catch(e) { return 0; }
   }
 
-  function _matchProduto(nomeML) {
+  function _matchProduto(nomeML, mlItemId) {
     const produtos = DB.getProdutos();
-    const palavrasML = nomeML.toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
+    // 1º: match determinístico por ML item ID (vinculado manualmente pelo usuário)
+    if (mlItemId) {
+      const vinc = produtos.find(p => Array.isArray(p.mlItemIds) && p.mlItemIds.includes(String(mlItemId)));
+      if (vinc) return vinc;
+    }
+    // 2º: fallback fuzzy por nome (mínimo 2 palavras em comum)
+    const palavrasML = (nomeML || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').split(/\s+/).filter(w => w.length > 2);
     let melhor = null, melhorScore = 0;
     for (const p of produtos) {
-      const nome = p.nome.toLowerCase().replace(/[^a-z0-9\s]/g, '');
+      const nome = (p.nome || '').toLowerCase().replace(/[^a-z0-9\s]/g, '');
       const score = palavrasML.filter(w => nome.includes(w)).length;
       if (score > melhorScore && score >= 2) { melhorScore = score; melhor = p; }
     }
@@ -400,7 +406,7 @@ const ML = (() => {
     return (pedCompleto.order_items || []).map(oi => {
       const sub = oi.quantity * oi.unit_price;
       const prop = subtotalItens > 0 ? sub / subtotalItens : 1;
-      const prod = _matchProduto(oi.item?.title || '');
+      const prod = _matchProduto(oi.item?.title || '', oi.item?.id);
       const tarifaTotalML = taxas.marketplaceFee * prop;      // ex: R$7,01
       const envio = taxas.shippingCost * prop;                 // ex: R$14,45
       const parcelamento = taxas.financingFee * prop;          // ex: R$0,07 (já incluso em tarifaTotalML)
@@ -794,5 +800,86 @@ const ML = (() => {
     return { ped, shipment, billing };
   }
 
-  return { isOk, getCfg, saveCfg, sincronizar, buscarPedidosHoje, buscarPedidosRange, importarRange, importarHistorico, carregarKpis, abrirConfig, salvarConfig, debug };
+  // ========= Vínculos ML item ↔ produto local =========
+  // Coleta anúncios ML únicos vistos em vendas, mostra em modal e deixa o usuário
+  // vincular cada um a um produto do estoque. Sobrescreve o fuzzy name match.
+  function _coletarAnunciosML() {
+    const vistos = new Map(); // mlItemId → { titulo, qtdVendas, produtoAtual }
+    for (const v of DB.getVendas()) {
+      if (!v.mlOrderId || !Array.isArray(v.itens)) continue;
+      for (const it of v.itens) {
+        if (!it.mlItemId) continue;
+        const k = String(it.mlItemId);
+        if (!vistos.has(k)) vistos.set(k, { titulo: it.nome || '—', qtdVendas: 0, produtoAtual: it.produtoId || null });
+        vistos.get(k).qtdVendas++;
+      }
+    }
+    return Array.from(vistos.entries()).map(([mlItemId, info]) => ({ mlItemId, ...info }));
+  }
+
+  function _produtoComAnuncio(mlItemId) {
+    return DB.getProdutos().find(p => Array.isArray(p.mlItemIds) && p.mlItemIds.includes(String(mlItemId))) || null;
+  }
+
+  function abrirVinculos() {
+    const anuncios = _coletarAnunciosML().sort((a, b) => b.qtdVendas - a.qtdVendas);
+    const produtos = DB.getProdutos().slice().sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+    const tbody = document.getElementById('ml-vinc-tbody');
+    if (!tbody) return;
+    if (anuncios.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--text-muted);">Nenhum anúncio ML registrado. Sincronize primeiro.</td></tr>';
+    } else {
+      tbody.innerHTML = anuncios.map(a => {
+        const vinculado = _produtoComAnuncio(a.mlItemId);
+        const opts = produtos.map(p => `<option value="${p.id}" ${vinculado?.id === p.id ? 'selected' : ''}>${p.nome}</option>`).join('');
+        return `
+          <tr>
+            <td style="font-family:monospace;font-size:12px;">${a.mlItemId}</td>
+            <td style="max-width:280px;">${a.titulo}</td>
+            <td style="text-align:center;">${a.qtdVendas}</td>
+            <td>
+              <select class="form-control" data-ml-item="${a.mlItemId}" style="font-size:13px;">
+                <option value="">— não vincular —</option>
+                ${opts}
+              </select>
+            </td>
+          </tr>`;
+      }).join('');
+    }
+    document.getElementById('modal-ml-vinculos').classList.add('show');
+  }
+
+  async function salvarVinculos() {
+    const selects = document.querySelectorAll('#ml-vinc-tbody select[data-ml-item]');
+    // Monta mapa produtoId → [mlItemIds] desejado
+    const novoMapa = new Map();
+    for (const sel of selects) {
+      const mlItemId = String(sel.dataset.mlItem);
+      const produtoId = sel.value;
+      if (!produtoId) continue;
+      if (!novoMapa.has(produtoId)) novoMapa.set(produtoId, []);
+      novoMapa.get(produtoId).push(mlItemId);
+    }
+    // Para cada produto: remove IDs antigos que não estão mais nele, adiciona os novos.
+    // Simples: reconstrói mlItemIds dos produtos afetados.
+    const produtos = DB.getProdutos();
+    const idsNaUI = new Set(Array.from(selects).map(s => String(s.dataset.mlItem)));
+    let alterados = 0;
+    for (const p of produtos) {
+      const atual = Array.isArray(p.mlItemIds) ? p.mlItemIds.map(String) : [];
+      const novo = novoMapa.get(p.id) || [];
+      // Mantém IDs que não estão sendo editados nesta UI (vieram de produtos sem venda recente)
+      const preservados = atual.filter(id => !idsNaUI.has(id));
+      const merged = Array.from(new Set([...preservados, ...novo]));
+      // Só atualiza se mudou
+      if (merged.length !== atual.length || merged.some(id => !atual.includes(id))) {
+        DB.updateProduto(p.id, { mlItemIds: merged });
+        alterados++;
+      }
+    }
+    if (window.App) App.showToast(`${alterados} produto(s) atualizado(s). A partir do próximo sync o match será por anúncio.`, 'success');
+    document.getElementById('modal-ml-vinculos').classList.remove('show');
+  }
+
+  return { isOk, getCfg, saveCfg, sincronizar, buscarPedidosHoje, buscarPedidosRange, importarRange, importarHistorico, carregarKpis, abrirConfig, salvarConfig, abrirVinculos, salvarVinculos, debug };
 })();
