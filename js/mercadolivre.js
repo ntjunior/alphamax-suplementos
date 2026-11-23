@@ -331,9 +331,10 @@ const ML = (() => {
     const totalAmount = Number(ped.total_amount) || 0;
 
     let marketplaceFee = payments.reduce((s, p) => s + (Number(p.marketplace_fee) || 0), 0);
-    // Fallback autoritativo: order_items[].sale_fee sempre existe
+    // Fallback autoritativo: order_items[].sale_fee sempre existe.
+    // sale_fee é POR UNIDADE — multiplicar por quantity pra obter o total do item.
     if (marketplaceFee === 0) {
-      marketplaceFee = orderItems.reduce((s, oi) => s + (Number(oi.sale_fee) || 0), 0);
+      marketplaceFee = orderItems.reduce((s, oi) => s + (Number(oi.sale_fee) || 0) * (Number(oi.quantity) || 1), 0);
     }
     const financingFee = payments.reduce((s, p) => {
       const td = p.transaction_details || {};
@@ -403,7 +404,7 @@ const ML = (() => {
       const tarifaTotalML = taxas.marketplaceFee * prop;      // ex: R$7,01
       const envio = taxas.shippingCost * prop;                 // ex: R$14,45
       const parcelamento = taxas.financingFee * prop;          // ex: R$0,07 (já incluso em tarifaTotalML)
-      const vendaML = Number(oi.sale_fee) > 0 ? Number(oi.sale_fee) : 0; // ex: R$5,33
+      const vendaML = Number(oi.sale_fee) > 0 ? Number(oi.sale_fee) * (Number(oi.quantity) || 1) : 0; // sale_fee é por unidade
       const cobrancaMP = Math.max(0, tarifaTotalML - vendaML - parcelamento); // ex: R$1,61
       return {
         id: oi.item?.id || '',
@@ -588,7 +589,16 @@ const ML = (() => {
             const esperado = (Number(td.tarifaTotal) || 0) + (Number(td.envio) || 0);
             return esperado > 0 && Math.abs((Number(i.taxaML) || 0) - esperado) > 0.02;
           });
-          if ((semDetalhes || taxasZeradas || formatoAntigo || envioZerado || taxaMLInconsistente) && (ped.order_items || []).length > 0) {
+          // Bug corrigido: fallback sale_fee somava por-unidade em vez de * quantity.
+          // Detecta pedidos multi-unit com tarifa < 5% do subtotal (ML cobra 11-17%).
+          const tarifaPorUnidadeBug = itensAtuais.some(i => {
+            const qtd = Number(i.quantidade) || 1;
+            if (qtd <= 1) return false;
+            const subtotal = (Number(i.precoUnitario) || 0) * qtd;
+            const tarifa = Number(i.taxaMLDetalhes?.tarifaTotal) || 0;
+            return subtotal > 0 && tarifa > 0 && (tarifa / subtotal) < 0.05;
+          });
+          if ((semDetalhes || taxasZeradas || formatoAntigo || envioZerado || taxaMLInconsistente || tarifaPorUnidadeBug) && (ped.order_items || []).length > 0) {
             const novosItens = await _montarItens(ped);
             // preserva produtoId existente quando possível
             for (let i = 0; i < novosItens.length; i++) {
