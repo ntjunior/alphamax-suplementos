@@ -125,7 +125,7 @@
         <div class="kpi-icon"><i data-lucide="shopping-cart"></i></div>
         <div class="kpi-label">Pedidos no Período</div>
         <div class="kpi-value" id="ml-k-pedidos">—</div>
-        <div class="kpi-sub"><span id="ml-k-pedidos-trend" class="kpi-trend neutral">—</span></div>
+        <div class="kpi-sub"><span id="ml-k-pedidos-un">—</span> <span id="ml-k-pedidos-trend" class="kpi-trend neutral">—</span></div>
       </div>
       <div class="kpi-card green">
         <div class="kpi-icon"><i data-lucide="banknote"></i></div>
@@ -550,6 +550,8 @@
     // Preenche KPIs
     const g = id => document.getElementById(id);
     g('ml-k-pedidos').textContent = ativas.length;
+    const unidadesVendidas = ativas.reduce((s, v) => s + (v.itens || []).reduce((ss, i) => ss + (Number(i.quantidade) || 0), 0), 0);
+    g('ml-k-pedidos-un').textContent = `${unidadesVendidas} un vendidas ·`;
     g('ml-k-pedidos-trend').outerHTML = `<span id="ml-k-pedidos-trend">${_trendBadge(ativas.length, vendasAnt.length)}</span>`;
     g('ml-k-fat-bruto').textContent = App.formatCurrency(fatBruto);
     g('ml-k-fat-trend').outerHTML = `<span id="ml-k-fat-trend">${_trendBadge(fatBruto, fatAnt)}</span>`;
