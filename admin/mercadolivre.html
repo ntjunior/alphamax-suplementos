@@ -164,7 +164,7 @@
         <div class="kpi-icon"><i data-lucide="package"></i></div>
         <div class="kpi-label">Aguardando Envio</div>
         <div class="kpi-value" id="ml-k-envio">—</div>
-        <div class="kpi-sub">pedidos pagos</div>
+        <div class="kpi-sub" id="ml-k-envio-sub">pedidos pagos</div>
       </div>
       <div class="kpi-card green">
         <div class="kpi-icon"><i data-lucide="trophy"></i></div>
@@ -543,7 +543,9 @@
     const fatAnt = vendasAnt.reduce((s, v) => s + (v.total || 0), 0);
 
     // Aguardando envio (pagos mas sem cancelamento)
-    const aguardandoEnvio = ativas.filter(v => v.mlStatus === 'paid' || v.mlStatus === 'confirmed').length;
+    const pedidosEnvio = ativas.filter(v => v.mlStatus === 'paid' || v.mlStatus === 'confirmed');
+    const aguardandoEnvio = pedidosEnvio.length;
+    const unidadesEnvio = pedidosEnvio.reduce((s, v) => s + (v.itens || []).reduce((ss, i) => ss + (Number(i.quantidade) || 0), 0), 0);
 
     // Preenche KPIs
     const g = id => document.getElementById(id);
@@ -558,6 +560,7 @@
     g('ml-k-cancelados').textContent = canceladas.length;
     g('ml-k-cancelados-sub').textContent = `${pctCanc.toFixed(1)}% do total — ${App.formatCurrency(totalCanc)}`;
     g('ml-k-envio').textContent = aguardandoEnvio;
+    g('ml-k-envio-sub').textContent = `${unidadesEnvio} un em pedidos pagos`;
 
     // Resumo financeiro
     g('ml-fin-bruto').textContent = App.formatCurrency(fatBruto);
