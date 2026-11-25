@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#e53935">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="index,follow">
+  <title id="seo-title">Produto — Alpha Max Suplementos</title>
+  <meta id="seo-desc" name="description" content="Suplementos com os melhores preços. Whey, creatina, pré-treino e muito mais na Alpha Max.">
+  <link id="seo-canonical" rel="canonical" href="https://alphamaxsuplemento.com.br/produto.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/store.css">
+  <style>
+    .prod-page { max-width:1100px; margin:0 auto; padding:24px 20px; }
+    .prod-breadcrumb { font-size:13px; color:#888; margin-bottom:18px; }
+    .prod-breadcrumb a { color:#888; text-decoration:none; }
+    .prod-breadcrumb a:hover { color:#e53935; }
+    .prod-grid { display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:start; }
+    @media (max-width:800px){ .prod-grid { grid-template-columns:1fr; gap:24px; } }
+    .prod-img-box { background:#fff; border-radius:12px; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; box-shadow:0 2px 10px rgba(0,0,0,.08); }
+    .prod-img-box img { max-width:92%; max-height:92%; object-fit:contain; }
+    .prod-img-box .emoji-fb { font-size:100px; }
+    .prod-info h1 { font-size:26px; font-weight:800; margin:0 0 4px; line-height:1.2; }
+    .prod-info .marca { font-size:13px; color:#888; text-transform:uppercase; letter-spacing:.5px; margin-bottom:6px; font-weight:600; }
+    .prod-info .sabor { font-size:14px; color:#666; margin:8px 0; }
+    .prod-preco { font-size:34px; font-weight:800; color:#e53935; margin:16px 0 6px; }
+    .prod-estoque { font-size:14px; margin-bottom:16px; font-weight:600; }
+    .prod-estoque.em { color:#16a34a; }
+    .prod-estoque.sem { color:#e53935; }
+    .prod-btn { background:#e53935; color:#fff; border:none; padding:14px 28px; font-size:16px; font-weight:700; border-radius:8px; cursor:pointer; width:100%; max-width:320px; }
+    .prod-btn:disabled { background:#999; cursor:not-allowed; }
+    .prod-btn:hover:not(:disabled) { background:#c62828; }
+    .prod-desc { margin-top:28px; padding-top:20px; border-top:1px solid #eee; }
+    .prod-desc h2 { font-size:17px; font-weight:700; margin:0 0 10px; }
+    .prod-desc p { font-size:15px; line-height:1.6; color:#333; margin:0 0 10px; }
+    [data-theme="dark"] .prod-img-box { background:#1a1a1a; }
+    [data-theme="dark"] .prod-desc p { color:#ccc; }
+    [data-theme="dark"] .prod-desc { border-color:#333; }
+    [data-theme="dark"] .prod-breadcrumb a { color:#aaa; }
+    .prod-loading { text-align:center; padding:60px 20px; color:#888; }
+  </style>
+</head>
+<body>
+
+<header class="store-header">
+  <div class="store-header-inner">
+    <a href="index.html" class="store-logo"><img src="logo-loja.png" alt="Alpha Max Suplementos"></a>
+    <div style="flex:1;"></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn-cart" onclick="abrirCarrinho()" title="Carrinho">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Carrinho
+        <span class="cart-count" id="cart-count" style="display:none;">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="prod-page">
+  <nav class="prod-breadcrumb" aria-label="Breadcrumb">
+    <a href="index.html">Loja</a> <span>›</span> <span id="bc-cat">Produto</span>
+  </nav>
+
+  <div id="prod-loading" class="prod-loading">Carregando produto...</div>
+
+  <article id="prod-content" style="display:none;">
+    <div class="prod-grid">
+      <div class="prod-img-box">
+        <img id="prod-img" alt="" style="display:none;">
+        <span id="prod-emoji" class="emoji-fb">📦</span>
+      </div>
+      <div class="prod-info">
+        <div class="marca" id="prod-marca"></div>
+        <h1 id="prod-nome">—</h1>
+        <div class="sabor" id="prod-sabor" style="display:none;"></div>
+        <div class="prod-preco" id="prod-preco">—</div>
+        <div class="prod-estoque" id="prod-estoque">—</div>
+        <button id="prod-btn" class="prod-btn" onclick="adicionarAoCarrinho()">COMPRAR</button>
+
+        <div class="prod-desc">
+          <h2>Descrição</h2>
+          <div id="prod-desc-text"></div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <div id="prod-nao-encontrado" style="display:none;text-align:center;padding:60px 20px;">
+    <h1 style="font-size:22px;margin-bottom:12px;">Produto não encontrado</h1>
+    <p style="color:#888;margin-bottom:24px;">O produto que você procura não está disponível.</p>
+    <a href="index.html" class="prod-btn" style="display:inline-block;text-decoration:none;max-width:260px;">Voltar à loja</a>
+  </div>
+</main>
+
+<div id="modal-carrinho" class="modal-store"></div>
+
+<script>
+const SB_URL = 'https://kefhuzwqfzkjcpavcamq.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtlZmh1endxZnpramNwYXZjYW1xIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzODA4NDcsImV4cCI6MjEwMTk1Njg0N30.cRsgIVcLfgfaeJQseWMqwrEuIgF7SydSEMsaYjcJROY';
+
+const EMOJI_CAT = {
+  'Proteínas':'💪','Creatina':'🧪','Pré-Treino':'🔥','Pré-treino':'🔥','Aminoácidos':'🧬',
+  'Vitaminas e Minerais':'🌟','Carboidratos':'🌽','Cafeína':'☕','Suplementos Naturais':'🌿',
+  'Outros':'📦','Outros Suplementos':'📦'
+};
+
+function slugify(s) {
+  return (s || '').toString().toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+}
+
+function formatPreco(v) {
+  return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
+}
+
+function escapeHTML(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+async function carregarProduto() {
+  const params = new URLSearchParams(location.search);
+  const id = params.get('id');
+  if (!id) { mostrarNaoEncontrado(); return; }
+
+  try {
+    const r = await fetch(`${SB_URL}/rest/v1/produtos?id=eq.${encodeURIComponent(id)}&select=*`, {
+      headers: { apikey: SB_KEY, Authorization: 'Bearer ' + SB_KEY }
+    });
+    const rows = await r.json();
+    const row = rows && rows[0];
+    if (!row || row.ativo === false) { mostrarNaoEncontrado(); return; }
+
+    const p = {
+      id: row.id, nome: row.nome, marca: row.marca, categoria: row.categoria,
+      sabor: row.sabor, emoji: row.emoji, precoVenda: row.preco_venda,
+      estoque: row.estoque, descricao: row.descricao, imagemUrl: row.imagem_url
+    };
+
+    renderizar(p);
+  } catch (e) {
+    console.error(e);
+    mostrarNaoEncontrado();
+  }
+}
+
+function renderizar(p) {
+  const semEstoque = (p.estoque || 0) <= 0;
+  const preco = p.precoVenda || 0;
+  const emoji = p.emoji || EMOJI_CAT[p.categoria] || '📦';
+  const descCurta = (p.descricao || '').substring(0, 160).replace(/\s+/g, ' ').trim();
+  const slug = slugify(p.nome);
+  const canonical = `https://alphamaxsuplemento.com.br/produto.html?id=${encodeURIComponent(p.id)}&slug=${slug}`;
+
+  document.title = `${p.nome}${p.marca ? ' — ' + p.marca : ''} | Alpha Max Suplementos`;
+  document.getElementById('seo-title').textContent = document.title;
+  document.getElementById('seo-desc').setAttribute('content', descCurta || `${p.nome} na Alpha Max Suplementos. Compre com segurança e receba rápido.`);
+  document.getElementById('seo-canonical').setAttribute('href', canonical);
+
+  document.getElementById('bc-cat').textContent = p.categoria || p.nome;
+
+  const img = document.getElementById('prod-img');
+  if (p.imagemUrl) {
+    img.src = p.imagemUrl;
+    img.alt = p.nome;
+    img.style.display = 'block';
+    document.getElementById('prod-emoji').style.display = 'none';
+    img.onerror = () => { img.style.display = 'none'; document.getElementById('prod-emoji').style.display = 'block'; };
+  } else {
+    document.getElementById('prod-emoji').textContent = emoji;
+  }
+
+  document.getElementById('prod-marca').textContent = p.marca || '';
+  document.getElementById('prod-nome').textContent = p.nome;
+  if (p.sabor) {
+    const s = document.getElementById('prod-sabor');
+    s.textContent = 'Sabor: ' + p.sabor;
+    s.style.display = 'block';
+  }
+  document.getElementById('prod-preco').textContent = formatPreco(preco);
+  const est = document.getElementById('prod-estoque');
+  est.textContent = semEstoque ? 'Sem estoque' : `${p.estoque} em estoque`;
+  est.className = 'prod-estoque ' + (semEstoque ? 'sem' : 'em');
+
+  const btn = document.getElementById('prod-btn');
+  btn.textContent = semEstoque ? 'SEM ESTOQUE' : 'ADICIONAR AO CARRINHO';
+  btn.disabled = semEstoque;
+
+  const descEl = document.getElementById('prod-desc-text');
+  const paragrafos = (p.descricao || 'Sem descrição disponível.').split(/\n+/).filter(Boolean);
+  descEl.innerHTML = paragrafos.map(para => `<p>${escapeHTML(para)}</p>`).join('');
+
+  window._prodAtual = p;
+
+  document.getElementById('prod-loading').style.display = 'none';
+  document.getElementById('prod-content').style.display = 'block';
+}
+
+function mostrarNaoEncontrado() {
+  document.getElementById('prod-loading').style.display = 'none';
+  document.getElementById('prod-nao-encontrado').style.display = 'block';
+  document.title = 'Produto não encontrado — Alpha Max Suplementos';
+}
+
+function adicionarAoCarrinho() {
+  const p = window._prodAtual;
+  if (!p || (p.estoque || 0) <= 0) return;
+
+  let carrinho = [];
+  try { carrinho = JSON.parse(localStorage.getItem('carrinho_alphamax')) || []; } catch(e) {}
+
+  const existente = carrinho.find(it => it.id === p.id);
+  if (existente) {
+    if (existente.quantidade < p.estoque) existente.quantidade += 1;
+  } else {
+    carrinho.push({
+      id: p.id, nome: p.nome, preco: p.precoVenda || 0,
+      imagemUrl: p.imagemUrl, emoji: p.emoji, quantidade: 1, estoque: p.estoque
+    });
+  }
+
+  localStorage.setItem('carrinho_alphamax', JSON.stringify(carrinho));
+  atualizarCartCount();
+
+  const btn = document.getElementById('prod-btn');
+  const txtOrig = btn.textContent;
+  btn.textContent = '✓ ADICIONADO';
+  btn.style.background = '#16a34a';
+  setTimeout(() => {
+    btn.textContent = txtOrig;
+    btn.style.background = '';
+  }, 1500);
+}
+
+function atualizarCartCount() {
+  let carrinho = [];
+  try { carrinho = JSON.parse(localStorage.getItem('carrinho_alphamax')) || []; } catch(e) {}
+  const qtd = carrinho.reduce((s, it) => s + (it.quantidade || 0), 0);
+  const el = document.getElementById('cart-count');
+  if (qtd > 0) { el.textContent = qtd; el.style.display = 'inline-flex'; }
+  else { el.style.display = 'none'; }
+}
+
+function abrirCarrinho() {
+  location.href = 'index.html?abrir=carrinho';
+}
+
+atualizarCartCount();
+carregarProduto();
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+</script>
+</body>
+</html>

@@ -112,6 +112,9 @@ function cardHTML(p) {
        <span class="card-emoji-fallback" style="display:none;">${emoji}</span>`
     : `<span class="card-emoji-fallback">${emoji}</span>`;
 
+  const slugProd = (p.nome || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  const hrefProd = `produto.html?id=${encodeURIComponent(p.id)}&slug=${slugProd}`;
+
   return `
     <div class="produto-card-store ${semEstoque ? 'produto-sem-estoque' : ''}" onclick="abrirProduto('${p.id}')" style="cursor:pointer;">
       <div class="produto-img">
@@ -120,6 +123,7 @@ function cardHTML(p) {
         <button class="btn-compartilhar" onclick="event.stopPropagation();compartilharProduto('${p.id}','${p.nome.replace(/'/g,"\\'")}',${preco})" title="Compartilhar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
         </button>
+        <a href="${hrefProd}" style="position:absolute;inset:0;z-index:-1;" aria-label="${p.nome.replace(/"/g,'&quot;')}" tabindex="-1"></a>
       </div>
       <div class="produto-info">
         ${p.marca ? `<div class="produto-marca-store">${p.marca}</div>` : ''}

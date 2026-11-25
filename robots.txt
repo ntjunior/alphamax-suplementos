@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /pdv.html
+Disallow: /caixa.html
+Disallow: /clientes.html
+Disallow: /comissoes.html
+Disallow: /estoque.html
+Disallow: /pedidos.html
+Disallow: /relatorios.html
+Disallow: /mercadolivre.html
+Disallow: /mensagens.html
+Disallow: /usuarios.html
+Disallow: /financeiro.html
+Disallow: /login.html
