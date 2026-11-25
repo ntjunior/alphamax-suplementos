@@ -38,13 +38,24 @@ function renderKpis() {
   const saidas = todas.filter(m => m.tipo === 'saida').reduce((s, m) => s + (m.valor || 0), 0);
 
   const vendasPeriodo = filtrarPorPeriodoFin(DB.getVendas(), periodoFin);
-  const totalVendas = vendasPeriodo.reduce((s, v) => s + (v.total || 0), 0);
+  const liquidoVenda = v => {
+    const isML = v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
+    const taxa = isML ? (v.taxaML ?? (v.itens || []).reduce((s, i) => s + (Number(i.taxaML) || 0), 0)) : 0;
+    return (v.total || 0) - (taxa || 0);
+  };
+  const totalVendas = vendasPeriodo.reduce((s, v) => s + liquidoVenda(v), 0);
+  const vendasPDV = vendasPeriodo.filter(v => !(v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre'));
+  const vendasML  = vendasPeriodo.filter(v =>  (v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre'));
+  const totalPDV = vendasPDV.reduce((s, v) => s + (v.total || 0), 0);
+  const totalMLLiquido = vendasML.reduce((s, v) => s + liquidoVenda(v), 0);
 
   const totalEntradas = entradasLanc + totalVendas;
   const saldo = totalEntradas - saidas;
 
   document.getElementById('kpi-entradas').textContent = App.formatCurrency(totalEntradas);
-  document.getElementById('kpi-entradas-sub').textContent = `${App.formatCurrency(totalVendas)} em vendas PDV`;
+  document.getElementById('kpi-entradas-sub').textContent = vendasML.length
+    ? `PDV ${App.formatCurrency(totalPDV)} · ML líq. ${App.formatCurrency(totalMLLiquido)}`
+    : `${App.formatCurrency(totalPDV)} em vendas PDV`;
   document.getElementById('kpi-saidas').textContent = App.formatCurrency(saidas);
   document.getElementById('kpi-saldo').textContent = App.formatCurrency(saldo);
   document.getElementById('kpi-saldo').style.color = saldo >= 0 ? 'var(--green)' : 'var(--red)';
@@ -59,15 +70,24 @@ function renderFinanceiro() {
   const nomesPag = { dinheiro: 'Dinheiro', pix: 'PIX', credito: 'Crédito', debito: 'Débito' };
 
   const vendasLinhas = (tipoFiltro === 'todos' || tipoFiltro === 'entrada')
-    ? filtrarPorPeriodoFin(DB.getVendas(), periodoFin).map(v => ({
-        _isVenda: true,
-        createdAt: v.createdAt,
-        tipo: 'entrada',
-        categoria: 'Venda PDV',
-        descricaoDisplay: `${v.clienteNome || 'Consumidor Final'} — ${nomesPag[v.pagamento] || v.pagamento || ''}`,
-        obs: '',
-        valor: v.total || 0
-      }))
+    ? filtrarPorPeriodoFin(DB.getVendas(), periodoFin).map(v => {
+        const isML = v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
+        const taxaML = isML ? (v.taxaML ?? (v.itens || []).reduce((s, i) => s + (Number(i.taxaML) || 0), 0)) : 0;
+        const valorLiquido = (v.total || 0) - (taxaML || 0);
+        return {
+          _isVenda: true,
+          createdAt: v.createdAt,
+          tipo: 'entrada',
+          categoria: isML ? 'Venda Mercado Livre' : 'Venda PDV',
+          descricaoDisplay: isML
+            ? `${v.clienteNome || 'Mercado Livre'} — líquido após taxas ML`
+            : `${v.clienteNome || 'Consumidor Final'} — ${nomesPag[v.pagamento] || v.pagamento || ''}`,
+          obs: isML && taxaML > 0
+            ? `Bruto: ${App.formatCurrency(v.total || 0)} · Taxa ML: -${App.formatCurrency(taxaML)}`
+            : '',
+          valor: valorLiquido
+        };
+      })
     : [];
 
   const linhasLanc = lancs.map(m => ({
@@ -93,7 +113,7 @@ function renderFinanceiro() {
   tbody.innerHTML = todas.map(m => {
     const isEntrada = m.tipo === 'entrada';
     const badge = isEntrada
-      ? `<span class="badge badge-entrada">${m._isVenda ? 'Venda PDV' : 'Entrada'}</span>`
+      ? `<span class="badge badge-entrada">${m._isVenda ? (m.categoria === 'Venda Mercado Livre' ? 'Venda ML' : 'Venda PDV') : 'Entrada'}</span>`
       : '<span class="badge badge-saida">Saída</span>';
     const valorColor = isEntrada ? 'var(--green)' : 'var(--red)';
     const sinal = isEntrada ? '+' : '−';
