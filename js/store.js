@@ -130,8 +130,6 @@ function cardHTML(p) {
   const slugProd = (p.nome || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   const hrefProd = `produto.html?id=${encodeURIComponent(p.id)}&slug=${slugProd}`;
 
-  const parcelaValor = preco / 6;
-
   const precoHtml = bf
     ? `<div class="produto-preco-wrap">
          <div class="produto-preco-de">R$ ${precoOriginal.toFixed(2).replace('.', ',')}</div>
@@ -139,11 +137,9 @@ function cardHTML(p) {
            <span class="produto-preco-por">R$ ${preco.toFixed(2).replace('.', ',')}</span>
            <span class="produto-desc-label">${BLACK_FRIDAY.pct}% de desconto</span>
          </div>
-         <div class="produto-parcelas-store">R$ ${parcelaValor.toFixed(2).replace('.', ',')} em até <strong>6x sem juros</strong></div>
        </div>`
     : `<div class="produto-preco-wrap">
          <div class="produto-preco-por">R$ ${preco.toFixed(2).replace('.', ',')}</div>
-         <div class="produto-parcelas-store">R$ ${parcelaValor.toFixed(2).replace('.', ',')} em até <strong>6x sem juros</strong></div>
        </div>`;
 
   const badgeBF = bf && !semEstoque ? `<div class="produto-badge-desc">-${BLACK_FRIDAY.pct}%</div>` : '';
