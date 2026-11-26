@@ -38,6 +38,19 @@ let cupomAplicado = null;
 let descontoCupom = 0;
 let produtoModalId = null;
 
+const BLACK_FRIDAY = {
+  inicio: new Date('2026-11-27T00:00:00-03:00').getTime(),
+  fim:    new Date('2026-11-30T23:59:59-03:00').getTime(),
+  pct:    20
+};
+function isBlackFriday() {
+  const n = Date.now();
+  return n >= BLACK_FRIDAY.inicio && n <= BLACK_FRIDAY.fim;
+}
+function precoBF(preco) {
+  return isBlackFriday() ? +(preco * (1 - BLACK_FRIDAY.pct / 100)).toFixed(2) : preco;
+}
+
 // ===== SUPABASE =====
 async function fetchProdutos() {
   const r = await fetch(`${SUPABASE_URL}/rest/v1/produtos?ativo=eq.true&order=nome.asc`, {
@@ -106,7 +119,9 @@ function emojiCategoria(cat) {
 function cardHTML(p) {
   const semEstoque = p.estoque <= 0;
   const emoji = p.emoji || emojiCategoria(p.categoria);
-  const preco = p.precoVenda || 0;
+  const precoOriginal = p.precoVenda || 0;
+  const bf = isBlackFriday();
+  const preco = bf ? precoBF(precoOriginal) : precoOriginal;
   const imgContent = p.imagemUrl
     ? `<img src="${p.imagemUrl}" alt="${p.nome}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
        <span class="card-emoji-fallback" style="display:none;">${emoji}</span>`
@@ -115,10 +130,20 @@ function cardHTML(p) {
   const slugProd = (p.nome || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   const hrefProd = `produto.html?id=${encodeURIComponent(p.id)}&slug=${slugProd}`;
 
+  const precoHtml = bf
+    ? `<div class="produto-preco-store" style="line-height:1.1;">
+         <span style="display:block;font-size:12px;color:#888;text-decoration:line-through;font-weight:500;">R$ ${precoOriginal.toFixed(2).replace('.', ',')}</span>
+         <span style="color:#e53935;">R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong></span>
+       </div>`
+    : `<div class="produto-preco-store">R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong></div>`;
+
+  const badgeBF = bf && !semEstoque ? `<div style="position:absolute;top:8px;left:8px;background:#000;color:#fff;font-size:11px;font-weight:800;padding:4px 8px;border-radius:4px;letter-spacing:.5px;z-index:2;">-${BLACK_FRIDAY.pct}% BLACK FRIDAY</div>` : '';
+
   return `
     <div class="produto-card-store ${semEstoque ? 'produto-sem-estoque' : ''}" onclick="abrirProduto('${p.id}')" style="cursor:pointer;">
       <div class="produto-img">
         ${imgContent}
+        ${badgeBF}
         ${semEstoque ? '<div class="sem-estoque-overlay">SEM ESTOQUE</div>' : ''}
         <button class="btn-compartilhar" onclick="event.stopPropagation();compartilharProduto('${p.id}','${p.nome.replace(/'/g,"\\'")}',${preco})" title="Compartilhar">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
@@ -132,9 +157,7 @@ function cardHTML(p) {
           <span class="stars">★★★★★</span>
         </div>
         <div class="produto-preco-btn">
-          <div class="produto-preco-store">
-            R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong>
-          </div>
+          ${precoHtml}
           <button class="btn-adicionar ${semEstoque ? 'btn-sem-estoque' : ''}" onclick="event.stopPropagation();${semEstoque ? '' : `adicionarCarrinho('${p.id}')`}" ${semEstoque ? 'disabled' : ''}>
             ${semEstoque ? 'Sem Estoque' : 'COMPRAR'}
           </button>
@@ -294,7 +317,9 @@ function abrirProduto(id) {
   if (!p) return;
   produtoModalId = id;
   const semEstoque = p.estoque <= 0;
-  const preco = p.precoVenda || 0;
+  const precoOriginal = p.precoVenda || 0;
+  const bf = isBlackFriday();
+  const preco = bf ? precoBF(precoOriginal) : precoOriginal;
   const emoji = p.emoji || emojiCategoria(p.categoria);
 
   const imgWrap = document.getElementById('mp-img-wrap');
@@ -306,7 +331,12 @@ function abrirProduto(id) {
   document.getElementById('mp-nome').textContent = p.nome;
   document.getElementById('mp-sabor').textContent = p.sabor ? `Sabor: ${p.sabor}` : '';
   document.getElementById('mp-desc').innerHTML = formatarDescricao(p.descricao || 'Sem descrição disponível.');
-  document.getElementById('mp-preco').textContent = `R$ ${preco.toFixed(2).replace('.', ',')}`;
+  const mpPreco = document.getElementById('mp-preco');
+  if (bf) {
+    mpPreco.innerHTML = `<span style="font-size:14px;color:#888;text-decoration:line-through;font-weight:500;display:block;">R$ ${precoOriginal.toFixed(2).replace('.', ',')}</span><span style="color:#e53935;">R$ ${preco.toFixed(2).replace('.', ',')}</span> <span style="background:#000;color:#fff;font-size:11px;font-weight:800;padding:3px 7px;border-radius:4px;margin-left:6px;vertical-align:middle;">-${BLACK_FRIDAY.pct}% BLACK FRIDAY</span>`;
+  } else {
+    mpPreco.textContent = `R$ ${preco.toFixed(2).replace('.', ',')}`;
+  }
   document.getElementById('mp-parcelas').textContent = '';
   document.getElementById('mp-estoque-info').innerHTML = semEstoque
     ? '<span style="color:#e53935;font-weight:700;">Sem estoque</span>'
@@ -382,7 +412,7 @@ async function aplicarCupom() {
 function adicionarCarrinho(id, precoPromo) {
   const p = produtos.find(x => x.id === id);
   if (!p || p.estoque <= 0) return;
-  const preco = precoPromo || p.precoVenda;
+  const preco = precoPromo || precoBF(p.precoVenda);
   const exist = carrinho.find(i => i.id === id);
   if (exist) {
     if (exist.qty >= p.estoque) { showToast('Quantidade máxima atingida!'); return; }
@@ -409,6 +439,11 @@ function totalCarrinho() { return carrinho.reduce((s, i) => s + i.preco * i.qty,
 function qtdCarrinho() { return carrinho.reduce((s, i) => s + i.qty, 0); }
 
 function atualizarCarrinho() {
+  // re-sincroniza preços com estado atual (ex.: BF iniciou com itens no carrinho)
+  carrinho.forEach(it => {
+    const p = produtos.find(x => x.id === it.id);
+    if (p) it.preco = precoBF(p.precoVenda);
+  });
   const qtd = qtdCarrinho();
   const total = totalCarrinho();
 

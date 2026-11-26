@@ -22,8 +22,8 @@
 
 <!-- Topo fixo: anúncio + header + categorias -->
 <div class="sticky-top">
-<div class="announce-bar">
-  <div class="announce-track">
+<div class="announce-bar" id="announce-bar">
+  <div class="announce-track" id="announce-track">
     <span>FRETE GRÁTIS — Consulte região*</span>
     <span>Pague via PIX ou Cartão</span>
     <span>Retirada na loja disponível</span>
@@ -68,6 +68,59 @@
 </div><!-- /sticky-top -->
 
 <div id="header-spacer"></div>
+
+<!-- Black Friday Hero Banner (auto-visível 27/11 a 30/11) -->
+<div id="bf-banner" style="display:none;background:linear-gradient(135deg,#000 0%,#1a1a1a 50%,#e53935 100%);color:#fff;padding:28px 20px;text-align:center;position:relative;overflow:hidden;">
+  <div style="max-width:1100px;margin:0 auto;position:relative;z-index:2;">
+    <div style="font-size:12px;font-weight:700;letter-spacing:3px;color:#ffd700;margin-bottom:6px;">★ OFERTA LIMITADA ★</div>
+    <div style="font-size:clamp(28px,6vw,46px);font-weight:900;letter-spacing:2px;line-height:1;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,.3);">
+      BLACK FRIDAY
+    </div>
+    <div style="font-size:clamp(18px,4vw,28px);font-weight:800;color:#ffd700;margin-bottom:10px;">
+      20% OFF EM TODA A LOJA
+    </div>
+    <div style="font-size:14px;font-weight:500;opacity:.95;margin-bottom:4px;">
+      Desconto aplicado automaticamente no carrinho
+    </div>
+    <div id="bf-countdown" style="font-size:13px;font-weight:600;opacity:.9;margin-top:6px;"></div>
+  </div>
+  <div style="position:absolute;top:-30px;right:-30px;width:150px;height:150px;background:radial-gradient(circle,rgba(255,215,0,.25),transparent 70%);"></div>
+  <div style="position:absolute;bottom:-30px;left:-30px;width:150px;height:150px;background:radial-gradient(circle,rgba(229,57,53,.3),transparent 70%);"></div>
+</div>
+
+<script>
+(function(){
+  var INICIO = new Date('2026-11-27T00:00:00-03:00').getTime();
+  var FIM    = new Date('2026-11-30T23:59:59-03:00').getTime();
+  var n = Date.now();
+  if (n < INICIO || n > FIM) return;
+
+  var banner = document.getElementById('bf-banner');
+  if (banner) banner.style.display = 'block';
+
+  var track = document.getElementById('announce-track');
+  if (track) {
+    track.innerHTML = Array(4).fill(0).map(function(){
+      return '<span style="color:#ffd700;font-weight:800;">🔥 BLACK FRIDAY — 20% OFF em toda a loja</span>'
+           + '<span>Desconto automático no carrinho</span>'
+           + '<span>FRETE GRÁTIS — Consulte região*</span>';
+    }).join('');
+    var bar = document.getElementById('announce-bar');
+    if (bar) bar.style.background = '#000';
+  }
+
+  var cd = document.getElementById('bf-countdown');
+  function tick(){
+    var ms = FIM - Date.now();
+    if (ms <= 0) { if (banner) banner.style.display = 'none'; return; }
+    var d = Math.floor(ms / 86400000);
+    var h = Math.floor((ms % 86400000) / 3600000);
+    var m = Math.floor((ms % 3600000) / 60000);
+    if (cd) cd.textContent = '⏰ Termina em ' + d + 'd ' + h + 'h ' + m + 'min';
+  }
+  tick(); setInterval(tick, 60000);
+})();
+</script>
 
 <div class="benefits-bar">
   <div class="benefits-inner">

@@ -46,6 +46,21 @@
 </head>
 <body>
 
+<div id="bf-strip" style="display:none;background:#000;color:#fff;padding:10px 20px;text-align:center;font-size:14px;font-weight:700;letter-spacing:.5px;">
+  <span style="color:#ffd700;">🔥 BLACK FRIDAY</span> — 20% OFF em toda a loja · Desconto automático no carrinho
+</div>
+<script>
+(function(){
+  var ini = new Date('2026-11-27T00:00:00-03:00').getTime();
+  var fim = new Date('2026-11-30T23:59:59-03:00').getTime();
+  var n = Date.now();
+  if (n >= ini && n <= fim) {
+    var el = document.getElementById('bf-strip');
+    if (el) el.style.display = 'block';
+  }
+})();
+</script>
+
 <header class="store-header">
   <div class="store-header-inner">
     <a href="index.html" class="store-logo"><img src="logo-loja.png" alt="Alpha Max Suplementos"></a>
@@ -118,6 +133,19 @@ function formatPreco(v) {
   return 'R$ ' + Number(v || 0).toFixed(2).replace('.', ',');
 }
 
+const BLACK_FRIDAY = {
+  inicio: new Date('2026-11-27T00:00:00-03:00').getTime(),
+  fim:    new Date('2026-11-30T23:59:59-03:00').getTime(),
+  pct:    20
+};
+function isBlackFriday() {
+  const n = Date.now();
+  return n >= BLACK_FRIDAY.inicio && n <= BLACK_FRIDAY.fim;
+}
+function precoBF(preco) {
+  return isBlackFriday() ? +(preco * (1 - BLACK_FRIDAY.pct / 100)).toFixed(2) : preco;
+}
+
 function escapeHTML(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
@@ -181,7 +209,14 @@ function renderizar(p) {
     s.textContent = 'Sabor: ' + p.sabor;
     s.style.display = 'block';
   }
-  document.getElementById('prod-preco').textContent = formatPreco(preco);
+  const bf = isBlackFriday();
+  const precoFinal = bf ? precoBF(preco) : preco;
+  const precoEl = document.getElementById('prod-preco');
+  if (bf) {
+    precoEl.innerHTML = `<span style="font-size:16px;color:#888;text-decoration:line-through;font-weight:500;display:block;line-height:1;">${formatPreco(preco)}</span><span>${formatPreco(precoFinal)}</span> <span style="background:#000;color:#fff;font-size:12px;font-weight:800;padding:4px 8px;border-radius:4px;letter-spacing:.5px;vertical-align:middle;margin-left:4px;">-${BLACK_FRIDAY.pct}% BLACK FRIDAY</span>`;
+  } else {
+    precoEl.textContent = formatPreco(preco);
+  }
   const est = document.getElementById('prod-estoque');
   est.textContent = semEstoque ? 'Sem estoque' : `${p.estoque} em estoque`;
   est.className = 'prod-estoque ' + (semEstoque ? 'sem' : 'em');
@@ -218,7 +253,7 @@ function adicionarAoCarrinho() {
     if (existente.quantidade < p.estoque) existente.quantidade += 1;
   } else {
     carrinho.push({
-      id: p.id, nome: p.nome, preco: p.precoVenda || 0,
+      id: p.id, nome: p.nome, preco: precoBF(p.precoVenda || 0),
       imagemUrl: p.imagemUrl, emoji: p.emoji, quantidade: 1, estoque: p.estoque
     });
   }
