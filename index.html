@@ -58,13 +58,38 @@
   </div>
 </header>
 
-<div class="cat-nav-wrap">
-  <nav class="cat-nav">
+<div class="cat-nav-wrap" id="cat-nav-wrap">
+  <button class="cat-nav-arrow left" onclick="scrollCatNav(-1)" aria-label="Rolar para esquerda">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  </button>
+  <button class="cat-nav-arrow right" onclick="scrollCatNav(1)" aria-label="Rolar para direita">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+  </button>
+  <nav class="cat-nav" id="cat-nav">
     <div class="cat-nav-inner" id="store-cats">
       <button class="cat-nav-btn active" onclick="filtrarCat('', this)">🛍️ Todos</button>
     </div>
   </nav>
 </div>
+<script>
+(function(){
+  var wrap = document.getElementById('cat-nav-wrap');
+  var nav  = document.getElementById('cat-nav');
+  if (!wrap || !nav) return;
+  function update(){
+    var left  = nav.scrollLeft;
+    var max   = nav.scrollWidth - nav.clientWidth;
+    wrap.classList.toggle('has-left-overflow',  left > 4);
+    wrap.classList.toggle('has-right-overflow', left < max - 4);
+  }
+  window.scrollCatNav = function(dir){ nav.scrollBy({ left: dir * 260, behavior: 'smooth' }); };
+  nav.addEventListener('scroll', update);
+  window.addEventListener('resize', update);
+  // Observe when category buttons are added dynamically
+  new MutationObserver(update).observe(document.getElementById('store-cats'), { childList: true });
+  setTimeout(update, 100);
+})();
+</script>
 </div><!-- /sticky-top -->
 
 <div id="header-spacer"></div>

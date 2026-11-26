@@ -104,17 +104,33 @@ a { text-decoration: none; color: inherit; }
 
 /* ===== CATEGORY NAV ===== */
 .cat-nav-wrap { position: relative; background: var(--navy-2); border-bottom: 1px solid rgba(255,255,255,0.07); }
-.cat-nav-wrap::after { content:''; position:absolute; right:0; top:0; bottom:0; width:48px; background:linear-gradient(to left, var(--navy-2), transparent); pointer-events:none; z-index:1; }
+.cat-nav-wrap.has-left-overflow::before { content:''; position:absolute; left:40px; top:0; bottom:0; width:40px; background:linear-gradient(to right, var(--navy-2), transparent); pointer-events:none; z-index:1; }
+.cat-nav-wrap.has-right-overflow::after { content:''; position:absolute; right:40px; top:0; bottom:0; width:40px; background:linear-gradient(to left, var(--navy-2), transparent); pointer-events:none; z-index:1; }
+.cat-nav-arrow {
+  position: absolute; top: 50%; transform: translateY(-50%);
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #fff; color: var(--navy); border: none;
+  display: none; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 2;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  transition: transform 0.15s, background 0.15s;
+}
+.cat-nav-arrow:hover { background: var(--red); color: #fff; transform: translateY(-50%) scale(1.08); }
+.cat-nav-arrow.left { left: 8px; }
+.cat-nav-arrow.right { right: 8px; }
+.cat-nav-wrap.has-left-overflow .cat-nav-arrow.left { display: flex; }
+.cat-nav-wrap.has-right-overflow .cat-nav-arrow.right { display: flex; }
 .cat-nav {
   overflow-x: auto; white-space: nowrap; scrollbar-width: none;
+  scroll-behavior: smooth;
 }
 .cat-nav::-webkit-scrollbar { display: none; }
 .cat-nav-inner {
-  display: inline-flex; gap: 4px; padding: 10px 16px;
+  display: inline-flex; gap: 3px; padding: 10px 16px;
 }
 .cat-nav-btn {
-  display: inline-flex; align-items: center; gap: 7px;
-  padding: 9px 16px; color: rgba(255,255,255,0.65); font-size: 12.5px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; color: rgba(255,255,255,0.65); font-size: 12.5px;
   font-weight: 600; background: transparent; border: 1px solid transparent;
   border-radius: 999px; cursor: pointer;
   transition: color 0.18s, background 0.18s, border-color 0.18s;
