@@ -21,8 +21,10 @@ function getVendasPeriodo() {
 }
 
 function renderRelatorio() {
-  const vendas = getVendasPeriodo();
+  const todas = getVendasPeriodo();
   const isML = v => v.origem === 'mercadolivre' || v.pagamento === 'mercadolivre';
+  const isCancelada = v => v.mlStatus === 'cancelled';
+  const vendas = todas.filter(v => !isCancelada(v));
   const vendasPDV = vendas.filter(v => !isML(v));
   const vendasML  = vendas.filter(isML);
 
@@ -53,7 +55,7 @@ function renderRelatorio() {
   renderGrafico(vendas);
   renderMaisVendidos(vendas);
   renderPagamentos(vendas);
-  renderTabelaVendas(vendas);
+  renderTabelaVendas(todas);
   if (window.lucide) lucide.createIcons();
 }
 
