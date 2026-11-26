@@ -130,14 +130,23 @@ function cardHTML(p) {
   const slugProd = (p.nome || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
   const hrefProd = `produto.html?id=${encodeURIComponent(p.id)}&slug=${slugProd}`;
 
-  const precoHtml = bf
-    ? `<div class="produto-preco-store" style="line-height:1.1;">
-         <span style="display:block;font-size:12px;color:#888;text-decoration:line-through;font-weight:500;">R$ ${precoOriginal.toFixed(2).replace('.', ',')}</span>
-         <span style="color:#e53935;">R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong></span>
-       </div>`
-    : `<div class="produto-preco-store">R$ <strong>${preco.toFixed(2).replace('.', ',')}</strong></div>`;
+  const parcelaValor = preco / 6;
 
-  const badgeBF = bf && !semEstoque ? `<div style="position:absolute;top:8px;left:8px;background:#000;color:#fff;font-size:11px;font-weight:800;padding:4px 8px;border-radius:4px;letter-spacing:.5px;z-index:2;">-${BLACK_FRIDAY.pct}% BLACK FRIDAY</div>` : '';
+  const precoHtml = bf
+    ? `<div class="produto-preco-wrap">
+         <div class="produto-preco-de">R$ ${precoOriginal.toFixed(2).replace('.', ',')}</div>
+         <div class="produto-preco-linha">
+           <span class="produto-preco-por">R$ ${preco.toFixed(2).replace('.', ',')}</span>
+           <span class="produto-desc-label">${BLACK_FRIDAY.pct}% de desconto</span>
+         </div>
+         <div class="produto-parcelas-store">R$ ${parcelaValor.toFixed(2).replace('.', ',')} em até <strong>6x sem juros</strong></div>
+       </div>`
+    : `<div class="produto-preco-wrap">
+         <div class="produto-preco-por">R$ ${preco.toFixed(2).replace('.', ',')}</div>
+         <div class="produto-parcelas-store">R$ ${parcelaValor.toFixed(2).replace('.', ',')} em até <strong>6x sem juros</strong></div>
+       </div>`;
+
+  const badgeBF = bf && !semEstoque ? `<div class="produto-badge-desc">-${BLACK_FRIDAY.pct}%</div>` : '';
 
   return `
     <div class="produto-card-store ${semEstoque ? 'produto-sem-estoque' : ''}" onclick="abrirProduto('${p.id}')" style="cursor:pointer;">
@@ -155,11 +164,12 @@ function cardHTML(p) {
         <div class="produto-nome-store">${p.nome}${p.sabor ? ` <span class="produto-sabor-inline">${p.sabor}</span>` : ''}</div>
         <div class="produto-stars">
           <span class="stars">★★★★★</span>
+          <span class="produto-stars-count">(${Math.max(50, (p.id || '').toString().charCodeAt(0) * 7 % 400 + 50)})</span>
         </div>
         <div class="produto-preco-btn">
           ${precoHtml}
           <button class="btn-adicionar ${semEstoque ? 'btn-sem-estoque' : ''}" onclick="event.stopPropagation();${semEstoque ? '' : `adicionarCarrinho('${p.id}')`}" ${semEstoque ? 'disabled' : ''}>
-            ${semEstoque ? 'Sem Estoque' : 'COMPRAR'}
+            ${semEstoque ? 'SEM ESTOQUE' : 'COMPRAR'}
           </button>
         </div>
       </div>
