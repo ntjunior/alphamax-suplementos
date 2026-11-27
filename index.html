@@ -95,22 +95,53 @@
 <div id="header-spacer"></div>
 
 <!-- Black Friday Hero Banner (auto-visível 27/11 a 30/11) -->
-<div id="bf-banner" style="display:none;background:linear-gradient(135deg,#000 0%,#1a1a1a 50%,#e53935 100%);color:#fff;padding:28px 20px;text-align:center;position:relative;overflow:hidden;">
+<style>
+  @keyframes bfGradientShift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
+  @keyframes bfShine { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+  @keyframes bfPulse { 0%,100%{transform:scale(1);filter:drop-shadow(0 0 0 rgba(255,215,0,0))} 50%{transform:scale(1.04);filter:drop-shadow(0 0 14px rgba(255,215,0,.65))} }
+  @keyframes bfStarSpin { 0%{transform:rotate(0) scale(1);opacity:.9} 50%{transform:rotate(180deg) scale(1.2);opacity:1} 100%{transform:rotate(360deg) scale(1);opacity:.9} }
+  @keyframes bfGlowMove { 0%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,20px) scale(1.2)} 100%{transform:translate(0,0) scale(1)} }
+  @keyframes bfGlowMove2 { 0%{transform:translate(0,0) scale(1)} 50%{transform:translate(-30px,-20px) scale(1.3)} 100%{transform:translate(0,0) scale(1)} }
+  @keyframes bfBlink { 0%,100%{opacity:1} 50%{opacity:.4} }
+  @keyframes bfFloat { 0%{transform:translateY(0)} 50%{transform:translateY(-6px)} 100%{transform:translateY(0)} }
+  @keyframes bfSparkle { 0%,100%{opacity:0;transform:scale(0)} 50%{opacity:1;transform:scale(1)} }
+  @keyframes bfClockShake { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-12deg)} 75%{transform:rotate(12deg)} }
+  #bf-banner{background:linear-gradient(135deg,#000 0%,#1a0505 25%,#2b0a0a 50%,#1a0505 75%,#e53935 100%);background-size:300% 300%;animation:bfGradientShift 12s ease infinite;}
+  #bf-banner .bf-title{background:linear-gradient(90deg,#fff 0%,#fff 35%,#ffd700 50%,#fff 65%,#fff 100%);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:bfShine 3s linear infinite;}
+  #bf-banner .bf-off{animation:bfPulse 2s ease-in-out infinite;display:inline-block;}
+  #bf-banner .bf-star{display:inline-block;animation:bfStarSpin 3s ease-in-out infinite;}
+  #bf-banner .bf-oferta{animation:bfBlink 1.8s ease-in-out infinite;}
+  #bf-banner .bf-glow-1{animation:bfGlowMove 8s ease-in-out infinite;}
+  #bf-banner .bf-glow-2{animation:bfGlowMove2 10s ease-in-out infinite;}
+  #bf-banner .bf-countdown-box{display:inline-flex;gap:6px;align-items:center;background:rgba(0,0,0,.35);padding:8px 14px;border-radius:999px;border:1px solid rgba(255,215,0,.35);backdrop-filter:blur(4px);}
+  #bf-banner .bf-clock{animation:bfClockShake 1.2s ease-in-out infinite;display:inline-block;transform-origin:center;}
+  #bf-banner .bf-seg{font-variant-numeric:tabular-nums;font-weight:800;color:#ffd700;min-width:34px;display:inline-block;text-align:center;}
+  #bf-banner .bf-seg-label{font-size:10px;font-weight:600;opacity:.75;text-transform:uppercase;letter-spacing:1px;margin-left:2px;}
+  #bf-banner .bf-sparkle{position:absolute;width:6px;height:6px;background:#ffd700;border-radius:50%;box-shadow:0 0 10px #ffd700;animation:bfSparkle 2.4s ease-in-out infinite;pointer-events:none;}
+  #bf-banner .bf-float{animation:bfFloat 3s ease-in-out infinite;display:inline-block;}
+</style>
+<div id="bf-banner" style="display:none;color:#fff;padding:28px 20px;text-align:center;position:relative;overflow:hidden;">
   <div style="max-width:1100px;margin:0 auto;position:relative;z-index:2;">
-    <div style="font-size:12px;font-weight:700;letter-spacing:3px;color:#ffd700;margin-bottom:6px;">★ OFERTA LIMITADA ★</div>
-    <div style="font-size:clamp(28px,6vw,46px);font-weight:900;letter-spacing:2px;line-height:1;margin-bottom:8px;text-shadow:0 2px 8px rgba(0,0,0,.3);">
+    <div style="font-size:12px;font-weight:700;letter-spacing:3px;color:#ffd700;margin-bottom:6px;" class="bf-oferta"><span class="bf-star">★</span> OFERTA LIMITADA <span class="bf-star">★</span></div>
+    <div class="bf-title" style="font-size:clamp(28px,6vw,46px);font-weight:900;letter-spacing:2px;line-height:1;margin-bottom:8px;">
       BLACK FRIDAY
     </div>
     <div style="font-size:clamp(18px,4vw,28px);font-weight:800;color:#ffd700;margin-bottom:10px;">
-      20% OFF EM TODA A LOJA
+      <span class="bf-off">20% OFF EM TODA A LOJA</span>
     </div>
-    <div style="font-size:14px;font-weight:500;opacity:.95;margin-bottom:4px;">
+    <div style="font-size:14px;font-weight:500;opacity:.95;margin-bottom:10px;">
       Desconto aplicado automaticamente no carrinho
     </div>
-    <div id="bf-countdown" style="font-size:13px;font-weight:600;opacity:.9;margin-top:6px;"></div>
+    <div id="bf-countdown" class="bf-countdown-box" style="font-size:13px;"></div>
   </div>
-  <div style="position:absolute;top:-30px;right:-30px;width:150px;height:150px;background:radial-gradient(circle,rgba(255,215,0,.25),transparent 70%);"></div>
-  <div style="position:absolute;bottom:-30px;left:-30px;width:150px;height:150px;background:radial-gradient(circle,rgba(229,57,53,.3),transparent 70%);"></div>
+  <div class="bf-glow-1" style="position:absolute;top:-30px;right:-30px;width:180px;height:180px;background:radial-gradient(circle,rgba(255,215,0,.35),transparent 70%);"></div>
+  <div class="bf-glow-2" style="position:absolute;bottom:-30px;left:-30px;width:180px;height:180px;background:radial-gradient(circle,rgba(229,57,53,.45),transparent 70%);"></div>
+  <span class="bf-sparkle" style="top:20%;left:10%;animation-delay:0s;"></span>
+  <span class="bf-sparkle" style="top:70%;left:18%;animation-delay:.6s;"></span>
+  <span class="bf-sparkle" style="top:30%;right:12%;animation-delay:1.2s;"></span>
+  <span class="bf-sparkle" style="top:60%;right:22%;animation-delay:1.8s;"></span>
+  <span class="bf-sparkle" style="top:15%;left:55%;animation-delay:.3s;"></span>
+  <span class="bf-sparkle" style="top:80%;left:48%;animation-delay:1.5s;"></span>
 </div>
 
 <script>
@@ -135,15 +166,23 @@
   }
 
   var cd = document.getElementById('bf-countdown');
+  function pad(n){ return n < 10 ? '0' + n : '' + n; }
   function tick(){
     var ms = FIM - Date.now();
     if (ms <= 0) { if (banner) banner.style.display = 'none'; return; }
     var d = Math.floor(ms / 86400000);
     var h = Math.floor((ms % 86400000) / 3600000);
     var m = Math.floor((ms % 3600000) / 60000);
-    if (cd) cd.textContent = '⏰ Termina em ' + d + 'd ' + h + 'h ' + m + 'min';
+    var s = Math.floor((ms % 60000) / 1000);
+    if (cd) cd.innerHTML =
+      '<span class="bf-clock">⏰</span>' +
+      '<span style="opacity:.9">Termina em</span>' +
+      '<span class="bf-seg">' + d + '</span><span class="bf-seg-label">d</span>' +
+      '<span class="bf-seg">' + pad(h) + '</span><span class="bf-seg-label">h</span>' +
+      '<span class="bf-seg">' + pad(m) + '</span><span class="bf-seg-label">min</span>' +
+      '<span class="bf-seg">' + pad(s) + '</span><span class="bf-seg-label">s</span>';
   }
-  tick(); setInterval(tick, 60000);
+  tick(); setInterval(tick, 1000);
 })();
 </script>
 
